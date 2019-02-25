@@ -34,6 +34,20 @@ class Runner(object):
 			
 		print('Max Reward: %.3f' % max(rewards))
 
+	def print_obs(self):
+		obs = self.env.reset()
+		keys = list(obs.keys())
+		print('\nObservation entries: {}\n'.format(keys))
+
+		# Player observations
+		print('------------ {} -------------'.format(keys[0]))
+		val = obs[keys[0]]
+		for item in val:
+			for k,v in item.items():
+				print(k,v,'\n')
+
+
 if __name__ == "__main__":
 	runner = Runner(2,1)
-	runner.run()
+	runner.print_obs()
+	#runner.run()
