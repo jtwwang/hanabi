@@ -1,1 +1,0 @@
-/usr/bin/c++  -O2 -std=c++11 -fPIC  -rdynamic CMakeFiles/game_example.dir/game_example.cc.o  -o game_example hanabi_lib/libhanabi.a 

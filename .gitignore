@@ -1,0 +1,8 @@
+*.a
+*.so
+__pycache__
+CMakeCache.txt
+CMakeFiles
+cmake_install.cmake
+game_example
+Makefile
