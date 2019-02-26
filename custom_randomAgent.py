@@ -14,7 +14,6 @@ class Runner(object):
 		
 
 	def run(self):
-		# Run a random agent for self.eps episodes and print max reward.
 		rewards = []
 		for eps in range(self.eps):
 			print('Running episode: %d' % eps)
@@ -35,25 +34,6 @@ class Runner(object):
 			
 		print('Max Reward: %.3f' % max(rewards))
 
-	def print_obs(self):
-		obs = self.env.reset()
-		keys = list(obs.keys())
-		print('\nObservation entries: {}\n'.format(keys))
-
-		# Player observations
-		print('------------ {} -------------'.format(keys[0]))
-		val = obs[keys[0]]
-		for item in val:
-			for k,v in item.items():
-				print('{} {}: {}\n'.format(k,type(v),v))
-
-		# Current player
-		print('------------ {} -------------'.format(keys[1]))
-		val = obs[keys[1]]
-		print('{}: {}'.format(type(val),val))
-
-
 if __name__ == "__main__":
 	runner = Runner(2,1)
-	runner.print_obs()
-	#runner.run()
+	runner.run()
