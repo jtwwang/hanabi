@@ -26,7 +26,7 @@ class Runner(object):
 
 			while not done:
 				for player in range(self.players):
-					print_obs(obs)
+					self.print_obs(obs)
 					ob = obs['player_observations'][player]
 					action = random.choice(ob['legal_moves'])
 					print('Agent: {} action: {}'.format(obs['current_player'], action))
@@ -52,12 +52,12 @@ class Runner(object):
 		print('------------ {} -------------'.format(keys[1]))
 		val = obs[keys[1]]
 		print('{}: {}'.format(type(val),val))
-
-	def parse_obs(self, obs)
+"""
+	def parse_obs(self, obs):
 		# Return a vecgtorized version of the observation
 		return None
-
+"""
 if __name__ == "__main__":
 	runner = Runner(2,1)
-	runner.print_obs()
+	runner.run()
 	#runner.run()
