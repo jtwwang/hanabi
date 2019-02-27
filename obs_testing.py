@@ -54,6 +54,29 @@ class Runner(object):
 		val = obs[keys[1]]
 		print('{}: {}\n\n'.format(type(val),val))
 
+
+
+	def format_legal_moves(legal_moves, action_dim):
+		"""Returns formatted legal moves.
+
+		This function takes a list of actions and converts it into a fixed size vector
+		of size action_dim. If an action is legal, its position is set to 0 and -Inf
+		otherwise.
+		Ex: legal_moves = [0, 1, 3], action_dim = 5
+			returns [0, 0, -Inf, 0, -Inf]
+
+		Args:
+			legal_moves: list of legal actions.
+			action_dim: int, number of actions.
+
+		Returns:
+			a vector of size action_dim.
+		"""
+		new_legal_moves = np.full(action_dim, -float('inf'))
+		if legal_moves:
+			new_legal_moves[legal_moves] = 0
+		return new_legal_moves
+
 	def parse_observations(observations, num_actions, obs_stacker):
 		""" PULLED FROM rainbow/run_experiment.py, FOR REFERENCE ONLY
 		Deconstructs the rich observation data into relevant components.
