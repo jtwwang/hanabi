@@ -27,6 +27,7 @@ class Runner(object):
 			while not done:
 				for player in range(self.players):
 					self.print_obs(obs)
+					_,_,_=self.parse_obs(obs)
 					ob = obs['player_observations'][player]
 					action = random.choice(ob['legal_moves'])
 					print('Agent: {} action: {}'.format(obs['current_player'], action))
@@ -77,7 +78,7 @@ class Runner(object):
 		observation_vector = obs_stacker.get_observation_stack(current_player)
 		return current_player, legal_moves, observation_vector
 
-	def parse_observations(obs):
+	def parse_obs(self,obs):
 		""" Parses current observation
 		Args:
 			obs (dict): Full observations
@@ -87,7 +88,7 @@ class Runner(object):
 			obs_vector (list): Vectorized observation for current player.
 		"""
 		curr_player = obs['current_player']
-		curr_player_obs = obs['player_observations'][current_player]
+		curr_player_obs = obs['player_observations'][curr_player]
 		legal_moves = curr_player_obs['legal_moves_as_int']
 		obs_vector = curr_player_obs['vectorized']
 
