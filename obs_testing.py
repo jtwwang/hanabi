@@ -4,6 +4,7 @@ import sys
 import getopt
 import rl_env
 import random
+import numpy as np
 
 class Runner(object):
 	"""Runner class."""
@@ -20,19 +21,26 @@ class Runner(object):
 			print('Running episode: %d' % eps)
 
 			obs = self.env.reset() # Observation of all players
+			action_dim = self.env.num_moves() # Total number of possible actions, illegal or not.
 
 			done = False
 			eps_reward = 0
 
 			while not done:
 				for player in range(self.players):
-					self.print_obs(obs)
-					_,_,_=self.parse_obs(obs)
+					print('Agent:{}\n'.format(obs['current_player']))
+					#self.print_obs(obs)
+
+					_, legal_moves, obs_vector = self.parse_obs(obs, action_dim)
+					print('Legal Moves: {}\n'.format(legal_moves))
+					print('Obs Vector: {}\n'.format(obs_vector))
+
 					ob = obs['player_observations'][player]
 					action = random.choice(ob['legal_moves'])
-					print('Agent: {} action: {}'.format(obs['current_player'], action))
+					print('Action: {}\n'.format(action))
 					obs, reward, done, _ = self.env.step(action)
 					eps_reward += reward
+					print('---------------\n')
 			rewards.append(eps_reward)
 			
 		print('Max Reward: %.3f' % max(rewards))
@@ -56,7 +64,7 @@ class Runner(object):
 
 
 
-	def format_legal_moves(legal_moves, action_dim):
+	def format_legal_moves(self, legal_moves, action_dim):
 		"""Returns formatted legal moves.
 
 		This function takes a list of actions and converts it into a fixed size vector
@@ -101,10 +109,12 @@ class Runner(object):
 		observation_vector = obs_stacker.get_observation_stack(current_player)
 		return current_player, legal_moves, observation_vector
 
-	def parse_obs(self,obs):
+	def parse_obs(self, obs, action_dim):
 		""" Parses current observation
 		Args:
 			obs (dict): Full observations
+			action_dim (int): Number of total actions, legal or not.
+
 		Returns:
 			curr_player (int): Whose turn it is.
 			legal_moves (np.array of floats): Illegal moves are -inf, and legal moves are 0.
@@ -113,6 +123,7 @@ class Runner(object):
 		curr_player = obs['current_player']
 		curr_player_obs = obs['player_observations'][curr_player]
 		legal_moves = curr_player_obs['legal_moves_as_int']
+		legal_moves = self.format_legal_moves(legal_moves, action_dim)
 		obs_vector = curr_player_obs['vectorized']
 
 		return curr_player, legal_moves, obs_vector
