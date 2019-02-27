@@ -52,11 +52,30 @@ class Runner(object):
 		print('------------ {} -------------'.format(keys[1]))
 		val = obs[keys[1]]
 		print('{}: {}'.format(type(val),val))
-"""
-	def parse_obs(self, obs):
-		# Return a vecgtorized version of the observation
-		return None
-"""
+
+	def parse_observations(observations, num_actions, obs_stacker):
+		"""Deconstructs the rich observation data into relevant components.
+		Args:
+		observations: dict, containing full observations.
+		num_actions: int, The number of available actions.
+		obs_stacker: Observation stacker object.
+		Returns:
+		current_player: int, Whose turn it is.
+		legal_moves: `np.array` of floats, of length num_actions, whose elements
+			are -inf for indices corresponding to illegal moves and 0, for those
+			corresponding to legal moves.
+		observation_vector: Vectorized observation for the current player.
+		"""
+		current_player = observations['current_player']
+		current_player_observation = (
+			observations['player_observations'][current_player])
+		legal_moves = current_player_observation['legal_moves_as_int']
+		legal_moves = format_legal_moves(legal_moves, num_actions)
+		observation_vector = current_player_observation['vectorized']
+		obs_stacker.add_observation(observation_vector, current_player)
+		observation_vector = obs_stacker.get_observation_stack(current_player)
+		return current_player, legal_moves, observation_vector
+
 if __name__ == "__main__":
 	runner = Runner(2,1)
 	runner.run()
