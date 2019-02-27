@@ -62,8 +62,6 @@ class Runner(object):
 		val = obs[keys[1]]
 		print('{}: {}\n\n'.format(type(val),val))
 
-
-
 	def format_legal_moves(self, legal_moves, action_dim):
 		"""Returns formatted legal moves.
 
@@ -85,35 +83,11 @@ class Runner(object):
 			new_legal_moves[legal_moves] = 0
 		return new_legal_moves
 
-	def parse_observations(observations, num_actions, obs_stacker):
-		""" PULLED FROM rainbow/run_experiment.py, FOR REFERENCE ONLY
-		Deconstructs the rich observation data into relevant components.
-		Args:
-			observations: dict, containing full observations.
-			num_actions: int, The number of available actions.
-			obs_stacker: Observation stacker object.
-		Returns:
-			current_player: int, Whose turn it is.
-			legal_moves: `np.array` of floats, of length num_actions, whose elements
-				are -inf for indices corresponding to illegal moves and 0, for those
-				corresponding to legal moves.
-			observation_vector: Vectorized observation for the current player.
-		"""
-		current_player = observations['current_player']
-		current_player_observation = (
-			observations['player_observations'][current_player])
-		legal_moves = current_player_observation['legal_moves_as_int']
-		legal_moves = format_legal_moves(legal_moves, num_actions)
-		observation_vector = current_player_observation['vectorized']
-		obs_stacker.add_observation(observation_vector, current_player)
-		observation_vector = obs_stacker.get_observation_stack(current_player)
-		return current_player, legal_moves, observation_vector
-
 	def parse_obs(self, obs, action_dim):
 		""" Parses current observation
 		Args:
 			obs (dict): Full observations
-			action_dim (int): Number of total actions, legal or not.
+			action_dim (int): Number of total actions, including illegal.
 
 		Returns:
 			curr_player (int): Whose turn it is.
