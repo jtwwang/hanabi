@@ -11,11 +11,13 @@ class Belief():
         """
         n_players: (int) the number of players in the game
         """
-        self.belief = np.zeros((n_players + 2, 5,10))
+        self.belief = np.zeros((n_players + 1, 5,10))
+        self.my_belief = np.zeros((4,5,5))
 
     def reset(self):
         # reset everything except the fireworks and discard, which never change
         self.belief[2:,:,:] = 0
+        self.my_belief = np.zeros((4,5,5))
 
     def is_valid_color(self,color):
         if color < 0 or color >= 5:
@@ -58,26 +60,24 @@ class Belief():
 
     def calculate_prob(self, index):
         # calculate the probability for each card
-
         rank_p = np.zeros(10)
 
-        full_known = np.sum(self.belief, axis = 0)
-        num_p = np.sum(full_known, axis = 0) # this has 10 elements in it
-        color_p = np.sum(full_known, axis = 1) # this has 5 elements in it
+        full_known = 1 - np.sum(self.belief, axis = 0)
+        
+        for color in range(5):
+            self.my_belief [:, color, 0] = np.sum(full_known[color, 0:3])
+            self.my_belief [:, color, 1] = np.sum(full_known[color, 3:5])
+            self.my_belief [:, color, 2] = np.sum(full_known[color, 5:7])
+            self.my_belief [:, color, 3] = np.sum(full_known[color, 7:9])
+            self.my_belief [:, color, 4] = full_known[color, 9]
 
-        rank_p = np.empty(5)
-        rank_p[0] = np.sum(num_p[0:3])
-        rank_p[1] = np.sum(num_p[3:5])
-        rank_p[2] = np.sum(num_p[5:7])
-        rank_p[3] = np.sum(num_p[7:9])
-        rank_p[4] = num_p[9]
+        # filter by hint
 
-        self.belief[index, :,:] = 1 - full_known
-        for i in range(5):
-            self.belief[index, i, :] *= 1/(10 - color_p[i])
+        # divide by total
+        for card in self.my_belief:
+            card[:,:] /= card.sum()
 
-        print(color_p)
-        print(rank_p)
+        print(self.my_belief)
             
 
 belief = Belief(3)
@@ -100,10 +100,10 @@ def encoded(observation, player):
             continue
         else:
             for card in observed[p]:
-                belief.insert(2 + p, card)
+                belief.insert(1 + p, card)
 
     belief.calculate_prob(2 + player)
-    print(belief.belief)
+    print(observation.card_knowledge())
         
 
 state = game.new_initial_state()
