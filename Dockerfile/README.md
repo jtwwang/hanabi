@@ -1,6 +1,6 @@
 ##Docker Set up
 
-First of all, install [Docker](https://www.docker.com) on your local computer. The get the 
+First of all, install [Docker](https://www.docker.com) on your local computer.
 
 In the Dockerfile folder run:   
 ```
