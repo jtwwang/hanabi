@@ -17,18 +17,25 @@ class Experience():
         self.ptr = 0
         self.full = False
                 
-        # detect the size of the observations
-        env = rl_env.make(num_players = numAgents)
-        obs = env.reset()
-        size_obs = len(obs['player_observations'][0]['vectorized'])
+        
+        try:
+            # detect the size of the observations
+            env = rl_env.make(num_players = numAgents)
+            obs = env.reset()
+            size_obs = len(obs['player_observations'][0]['vectorized'])
 
-        # detect the size of move
-        self.n_moves = env.num_moves()
+            # detect the size of move
+            self.n_moves = env.num_moves()
 
-        # initialize matrices for all values
-        self.moves = np.empty(size, dtype = np.uint8)
-        self.rs = np.empty(size)
-        self.obs = np.empty((size, size_obs), dtype = bool)
+            # initialize matrices for all values
+            self.moves = np.empty(size, dtype = np.uint8)
+            self.rs = np.empty(size)
+            self.obs = np.empty((size, size_obs), dtype = bool)
+        except:
+            # if the environment can't be create, we still can load
+            print("WARNING: the environment could not be created, some \
+                    functionality may be compromised. You CAN still load \
+                    data.")
 
 
     def add(self, ob, reward, move):
