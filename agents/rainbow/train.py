@@ -24,6 +24,10 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
+import sys
+
+sys.path.append('../..')
+
 from absl import app
 from absl import flags
 
@@ -76,7 +80,6 @@ def launch_experiment():
 
   run_experiment.load_gin_configs(FLAGS.gin_files, FLAGS.gin_bindings)
   experiment_logger = logger.Logger('{}/logs'.format(FLAGS.base_dir))
-
   environment = run_experiment.create_environment()
   obs_stacker = run_experiment.create_obs_stacker(environment)
   agent = run_experiment.create_agent(environment, obs_stacker)
