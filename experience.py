@@ -33,6 +33,16 @@ class Experience():
             self.obs = np.empty((size, size_obs), dtype = bool)
         except:
             # if the environment can't be create, we still can load
+            if numAgents == 2 or numAgents == 3:
+                self.n_cards = 5
+            elif numAgents == 4 or numAgents == 4:
+                self.n_cards = 4
+            else:
+                print("ERROR: invalid number of players")
+                return
+
+            self.n_moves = numAgents * 10 + self.n_cards * 2
+
             print("WARNING: the environment could not be created, some \
                     functionality may be compromised. You CAN still load \
                     data.")
