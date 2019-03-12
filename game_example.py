@@ -72,6 +72,8 @@ def run_game(game_parameters):
           i, encoder.encode(state.observation(i))))
     print("--- EndEncodedObservations ---")
 
+  import pdb; pdb.set_trace()
+
   game = pyhanabi.HanabiGame(game_parameters)
   print(game.parameter_string(), end="")
   obs_encoder = pyhanabi.ObservationEncoder(

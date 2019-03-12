@@ -64,6 +64,8 @@ class Runner(object):
     return rewards
 
 if __name__ == "__main__":
+  import pdb; pdb.set_trace()
+    
   flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'SimpleAgent'}
   options, arguments = getopt.getopt(sys.argv[1:], '',
                                      ['players=',
