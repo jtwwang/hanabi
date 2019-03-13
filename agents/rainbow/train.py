@@ -25,8 +25,10 @@ from __future__ import division
 from __future__ import print_function
 
 import sys
+from os import path 
 
 sys.path.append('../..')
+sys.path.append( path.dirname( path.dirname( path.abspath(__file__) ) ) )
 
 from absl import app
 from absl import flags

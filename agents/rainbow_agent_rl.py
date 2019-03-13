@@ -14,10 +14,8 @@
 """Rainbow Agent."""
 
 from rl_env import Agent
-
-import sys
-sys.path.append("./rainbow/")
-import rainbow_agent
+from rainbow.rainbow_agent import RainbowAgent as _RainbowAgent
+from rainbow.run_experiment import format_legal_moves
 
 class RainbowAgent(Agent):
   """Agent that loads and applies a pretrained rainbow model."""
@@ -25,7 +23,7 @@ class RainbowAgent(Agent):
   def __init__(self, config, *args, **kwargs):
     """Initialize the agent."""
     self.config = config
-    self.agent = rainbow_agent.RainbowAgent(
+    self.agent = _RainbowAgent(
         observation_size=1,
         num_actions=self.config['num_moves'],
         num_players=self.config['players'])
@@ -33,22 +31,21 @@ class RainbowAgent(Agent):
     # FIXME: gotta include the checkpointer somehow
     
     
-  def _parse_legal_moves(self, observation):
-    current_player = observations['current_player']
-    current_player_observation = (observations['player_observations'][current_player])
+  def _parse_legal_moves(self, current_player_observation):
     legal_moves = current_player_observation['legal_moves_as_int']
-    legal_moves = self.agent.format_legal_moves(legal_moves, self.config['num_moves'])
+    legal_moves = format_legal_moves(legal_moves, self.config['num_moves'])
     
     return legal_moves
 
   def act(self, observation):
-    """Act based on an observation."""
-    
-    # FIXME: unclear if below two lines needed
+    """Act based on the observation of the current player."""
+    import pdb; pdb.set_trace()
+
+    # Make sure that this player is the current player
     if observation['current_player_offset'] != 0:
       return None
     
-    legal_moves = _parse_legal_moves(observation)
+    legal_moves = self._parse_legal_moves(observation)
     action = self.agent._select_action(observation, legal_moves)
     
     # FIXME: format action to return

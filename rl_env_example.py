@@ -14,14 +14,14 @@
 """A simple episode runner using the RL environment."""
 
 from __future__ import print_function
-
 import sys
 import getopt
 import rl_env
 from agents.random_agent import RandomAgent
 from agents.simple_agent import SimpleAgent
+from agents.rainbow_agent_rl import RainbowAgent
 
-AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent}
+AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent, 'RainbowAgent': RainbowAgent}
 
 
 class Runner(object):
@@ -67,7 +67,7 @@ class Runner(object):
 if __name__ == "__main__":
   import pdb; pdb.set_trace()
     
-  flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'SimpleAgent'}
+  flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'RainbowAgent'}
   options, arguments = getopt.getopt(sys.argv[1:], '',
                                      ['players=',
                                       'num_episodes=',

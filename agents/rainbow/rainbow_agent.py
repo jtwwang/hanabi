@@ -26,10 +26,10 @@ from __future__ import print_function
 
 import functools
 
-import dqn_agent
+from . import dqn_agent
 import gin.tf
 import numpy as np
-import prioritized_replay_memory
+from . import prioritized_replay_memory
 import tensorflow as tf
 
 
