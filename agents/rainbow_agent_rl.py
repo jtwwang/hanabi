@@ -30,6 +30,8 @@ class RainbowAgent(Agent):
         num_actions=self.config['num_moves'],
         num_players=self.config['players'])
     self.agent.eval_mode = True
+    # FIXME: gotta include the checkpointer somehow
+    
     
   def _parse_legal_moves(self, observation):
     current_player = observations['current_player']
