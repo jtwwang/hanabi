@@ -13,6 +13,7 @@
 # limitations under the License.
 """Rainbow Agent."""
 
+import numpy as np
 from rl_env import Agent
 from rainbow.rainbow_agent import RainbowAgent as _RainbowAgent
 from rainbow.run_experiment import format_legal_moves
@@ -24,31 +25,34 @@ class RainbowAgent(Agent):
     """Initialize the agent."""
     self.config = config
     self.agent = _RainbowAgent(
-        observation_size=1,
+        observation_size=658, #FIXME: do not hardcode this
         num_actions=self.config['num_moves'],
         num_players=self.config['players'])
     self.agent.eval_mode = True
     # FIXME: gotta include the checkpointer somehow
     
     
-  def _parse_legal_moves(self, current_player_observation):
+  def _parse_observation(self, current_player_observation):
     legal_moves = current_player_observation['legal_moves_as_int']
     legal_moves = format_legal_moves(legal_moves, self.config['num_moves'])
+    observation_vector = np.array(current_player_observation['vectorized']) #FIXME: this may need to be cast as np.float64
+
+    return legal_moves, observation_vector
     
-    return legal_moves
+  def _decode_action(self, observation, action):
+    action_index = observation
 
   def act(self, observation):
     """Act based on the observation of the current player."""
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
 
     # Make sure that this player is the current player
     if observation['current_player_offset'] != 0:
       return None
     
-    legal_moves = self._parse_legal_moves(observation)
-    action = self.agent._select_action(observation, legal_moves)
-    
-    # FIXME: format action to return
+    legal_moves, observation_vector = self._parse_observation(observation)
+    action = self.agent._select_action(observation_vector, legal_moves)
+    action = observation['legal_moves'][observation['legal_moves_as_int'].index(action)]
     
     return action
 
