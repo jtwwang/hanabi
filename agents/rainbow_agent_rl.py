@@ -32,6 +32,7 @@ class RainbowAgent(Agent):
         num_actions=self.config['num_moves'],
         num_players=self.config['players'])
     self.agent.eval_mode = True
+    #import pdb; pdb.set_trace()
     self.exp_checkpointer = checkpointer.Checkpointer(checkpoint_dir, 'ckpt')
     checkpoint_version = checkpointer.get_latest_checkpoint_number(checkpoint_dir)
     if checkpoint_version >= 0:

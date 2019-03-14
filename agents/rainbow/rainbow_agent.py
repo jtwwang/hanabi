@@ -41,7 +41,7 @@ def rainbow_template(state,
                      num_actions,
                      num_atoms=51,
                      layer_size=512,
-                     num_layers=1):
+                     num_layers=2): # FIXME: Aron 3/14/19: changed from 1 to 2
   r"""Builds a Rainbow Network mapping states to value distributions.
 
   Args:
