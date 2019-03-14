@@ -40,6 +40,7 @@ class Runner(object):
     rewards = []
     for episode in range(flags['num_episodes']):
       observations = self.environment.reset()
+      #import pdb; pdb.set_trace()
       agents = [self.agent_class(self.agent_config)
                 for _ in range(self.flags['players'])]
       done = False
@@ -65,7 +66,7 @@ class Runner(object):
     return rewards
 
 if __name__ == "__main__":
-  import pdb; pdb.set_trace()
+  #import pdb; pdb.set_trace()
     
   flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'RainbowAgent'}
   options, arguments = getopt.getopt(sys.argv[1:], '',

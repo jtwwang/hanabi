@@ -40,6 +40,9 @@ import gin.tf
 import numpy as np
 import tensorflow as tf
 
+import sys
+sys.path.append('/home/aronsar_gmail_com/hanabi/agents/rainbow/')
+import third_party.dopamine.sum_tree
 
 # This constant determines how many iterations a checkpoint is kept for.
 CHECKPOINT_DURATION = 4

@@ -408,7 +408,7 @@ class DQNAgent(object):
       return np.random.choice(legal_action_indices[0])
     else:
       # Convert observation into a batch-based format.
-      # import pdb; pdb.set_trace()
+      #import pdb; pdb.set_trace()
       self.state[0, :, 0] = observation
 
       # Choose the action maximizing the q function for the current state.

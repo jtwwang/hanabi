@@ -17,6 +17,9 @@ import numpy as np
 from rl_env import Agent
 from rainbow.rainbow_agent import RainbowAgent as _RainbowAgent
 from rainbow.run_experiment import format_legal_moves
+from rainbow.third_party.dopamine import checkpointer
+
+checkpoint_dir = '/home/aronsar_gmail_com/hanabi/agents/rainbow/1850-only'
 
 class RainbowAgent(Agent):
   """Agent that loads and applies a pretrained rainbow model."""
@@ -25,13 +28,21 @@ class RainbowAgent(Agent):
     """Initialize the agent."""
     self.config = config
     self.agent = _RainbowAgent(
-        observation_size=658, #FIXME: do not hardcode this
+        observation_size=658, #FIXME: do not hardcode this, something about obs_stacker size
         num_actions=self.config['num_moves'],
         num_players=self.config['players'])
     self.agent.eval_mode = True
-    # FIXME: gotta include the checkpointer somehow
-    
-    
+    self.exp_checkpointer = checkpointer.Checkpointer(checkpoint_dir, 'ckpt')
+    checkpoint_version = checkpointer.get_latest_checkpoint_number(checkpoint_dir)
+    if checkpoint_version >= 0:
+      dqn_dictionary = self.exp_checkpointer.load_checkpoint(checkpoint_version)
+      import pdb; pdb.set_trace()
+      assert self.agent.unbundle(checkpoint_dir, checkpoint_version, dqn_dictionary),\
+              'agent was unable to unbundle'
+      assert 'logs' in dqn_dictionary # FIXME: necessary?
+      assert 'current_iteration' in dqn_dictionary # FIXME: necessary?
+        
+
   def _parse_observation(self, current_player_observation):
     legal_moves = current_player_observation['legal_moves_as_int']
     legal_moves = format_legal_moves(legal_moves, self.config['num_moves'])
@@ -39,13 +50,10 @@ class RainbowAgent(Agent):
 
     return legal_moves, observation_vector
     
-  def _decode_action(self, observation, action):
-    action_index = observation
-
   def act(self, observation):
     """Act based on the observation of the current player."""
-    #import pdb; pdb.set_trace()
-
+    import pdb; pdb.set_trace()
+    
     # Make sure that this player is the current player
     if observation['current_player_offset'] != 0:
       return None
