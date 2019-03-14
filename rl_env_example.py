@@ -41,8 +41,12 @@ class Runner(object):
     for episode in range(flags['num_episodes']):
       observations = self.environment.reset()
       #import pdb; pdb.set_trace()
-      agents = [self.agent_class(self.agent_config)
-                for _ in range(self.flags['players'])]
+      if self.flags['agent_class'] == 'RainbowAgent':
+        agent = self.agent_class(self.agent_config)
+        agents = [agent for _ in range(self.flags['players'])]
+      else:
+        agents = [self.agent_class(self.agent_config)
+                  for _ in range(self.flags['players'])]
       done = False
       episode_reward = 0
       while not done:

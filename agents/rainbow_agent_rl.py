@@ -37,7 +37,7 @@ class RainbowAgent(Agent):
     checkpoint_version = checkpointer.get_latest_checkpoint_number(checkpoint_dir)
     if checkpoint_version >= 0:
       dqn_dictionary = self.exp_checkpointer.load_checkpoint(checkpoint_version)
-      import pdb; pdb.set_trace()
+      #import pdb; pdb.set_trace()
       assert self.agent.unbundle(checkpoint_dir, checkpoint_version, dqn_dictionary),\
               'agent was unable to unbundle'
       assert 'logs' in dqn_dictionary # FIXME: necessary?
@@ -53,7 +53,7 @@ class RainbowAgent(Agent):
     
   def act(self, observation):
     """Act based on the observation of the current player."""
-    import pdb; pdb.set_trace()
+    #import pdb; pdb.set_trace()
     
     # Make sure that this player is the current player
     if observation['current_player_offset'] != 0:
