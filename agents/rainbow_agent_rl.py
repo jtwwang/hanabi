@@ -18,15 +18,8 @@ from rl_env import Agent
 from rainbow_models.rainbow_agent import RainbowAgent as _RainbowAgent
 from rainbow_models.run_experiment import format_legal_moves
 from rainbow_models.third_party.dopamine import checkpointer
-<<<<<<< HEAD
 
 checkpoint_dir = '/home/aronsar_gmail_com/hanabi/agents/rainbow_models/rainbow-model-1'
-=======
-import os
-
-checkpoint_dir = 'agents/rainbow_models/rainbow-model-1'
-checkpint_dit = os.path.join(os.getcwd(), checkpoint_dir)
->>>>>>> 8c79ad066f6ef91dd3ff1175a6bd7da4ad6bed72
 
 class RainbowAgent(Agent):
   """Agent that loads and applies a pretrained rainbow model."""
