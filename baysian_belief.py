@@ -89,11 +89,13 @@ class Belief():
 
                 # FIXME: the following line does not work
                 if not my_card.color_plausible(color):
-                    self.belief[index: index + self.n_cards, color, :] = 0
+                    self.belief[cid + index, color, :] = 0
 
         # divide by total
         for card in self.belief[index:index + self.n_cards, :, :]:
             card[:, :] /= card.sum()
+
+        print(self.belief[index:index + self.n_cards])
 
     def encode(self, observation, player):
         """
@@ -114,8 +116,8 @@ class Belief():
         for color in range(len(fireworks)):
             if fireworks[color] != 0:
                 # insert in the last spot
-                self.insert_many(belief.n_cards *
-                                 belief.n_players, color, fireworks[color])
+                self.insert_many(self.n_cards *
+                                 self.n_players, color, fireworks[color])
 
         # update the discard knowledge
         discard = observation.discard_pile()
