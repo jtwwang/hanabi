@@ -32,7 +32,8 @@ class Runner(object):
     self.flags = flags
     self.environment = rl_env.make('Hanabi-Full', num_players=flags['players'])
     self.agent_config = {'players': flags['players'],
-                         'num_moves': self.environment.num_moves()}
+                         'num_moves': self.environment.num_moves(),
+                         'observation_size': self.environment.vectorized_observation_shape()[0]}
     self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
   def run(self):
@@ -42,6 +43,8 @@ class Runner(object):
       observations = self.environment.reset()
       #import pdb; pdb.set_trace()
       if self.flags['agent_class'] == 'RainbowAgent':
+        # put 2-5 copies of the same agent in a list, because loading
+        # the same tensorflow checkpoint more than once in a session fails
         agent = self.agent_class(self.agent_config)
         agents = [agent for _ in range(self.flags['players'])]
       else:
