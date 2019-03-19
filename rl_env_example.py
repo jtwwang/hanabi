@@ -14,14 +14,14 @@
 """A simple episode runner using the RL environment."""
 
 from __future__ import print_function
-
 import sys
 import getopt
 import rl_env
 from agents.random_agent import RandomAgent
 from agents.simple_agent import SimpleAgent
+from agents.rainbow_agent_rl import RainbowAgent
 
-AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent}
+AGENT_CLASSES = {'SimpleAgent': SimpleAgent, 'RandomAgent': RandomAgent, 'RainbowAgent': RainbowAgent}
 
 
 class Runner(object):
@@ -30,8 +30,10 @@ class Runner(object):
   def __init__(self, flags):
     """Initialize runner."""
     self.flags = flags
-    self.agent_config = {'players': flags['players']}
     self.environment = rl_env.make('Hanabi-Full', num_players=flags['players'])
+    self.agent_config = {'players': flags['players'],
+                         'num_moves': self.environment.num_moves(),
+                         'observation_size': self.environment.vectorized_observation_shape()[0]}
     self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
   def run(self):
@@ -39,8 +41,15 @@ class Runner(object):
     rewards = []
     for episode in range(flags['num_episodes']):
       observations = self.environment.reset()
-      agents = [self.agent_class(self.agent_config)
-                for _ in range(self.flags['players'])]
+      #import pdb; pdb.set_trace()
+      if self.flags['agent_class'] == 'RainbowAgent':
+        # put 2-5 copies of the same agent in a list, because loading
+        # the same tensorflow checkpoint more than once in a session fails
+        agent = self.agent_class(self.agent_config)
+        agents = [agent for _ in range(self.flags['players'])]
+      else:
+        agents = [self.agent_class(self.agent_config)
+                  for _ in range(self.flags['players'])]
       done = False
       episode_reward = 0
       while not done:
@@ -64,7 +73,9 @@ class Runner(object):
     return rewards
 
 if __name__ == "__main__":
-  flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'SimpleAgent'}
+  #import pdb; pdb.set_trace()
+    
+  flags = {'players': 2, 'num_episodes': 1, 'agent_class': 'RainbowAgent'}
   options, arguments = getopt.getopt(sys.argv[1:], '',
                                      ['players=',
                                       'num_episodes=',

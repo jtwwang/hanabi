@@ -6,3 +6,4 @@ CMakeFiles
 cmake_install.cmake
 game_example
 Makefile
+*.pyc
