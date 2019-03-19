@@ -17,9 +17,12 @@ import numpy as np
 import pyhanabi
 from agents.random_agent import RandomAgent
 from agents.simple_agent import SimpleAgent
+from agents.rainbow_agent_rl import RainbowAgent
 
-AGENT_CLASSES = {'SimpleAgent': SimpleAgent,
-        'RandomAgent': RandomAgent}
+AGENT_CLASSES = {
+        'SimpleAgent':  SimpleAgent,
+        'RandomAgent':  RandomAgent,
+        'RainbowAgent': RainbowAgent}
 
 class Runner(object):
     """Runner class."""
@@ -27,8 +30,11 @@ class Runner(object):
     def __init__(self, flags):
         """Initialize runner."""
         self.flags = flags
-        self.agent_config = {'players': flags['players']}
         self.env = rl_env.make('Hanabi-Full', num_players=flags['players'])
+        self.agent_config = {
+                'players': flags['players'],
+                'num_moves' : self.env.num_moves(),
+                'observation_size': self.env.vectorized_observation_shape()[0]}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
     def moves_lookup(self,move, ob):
@@ -63,8 +69,14 @@ class Runner(object):
             print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
-            agents = [self.agent_class(self.agent_config)
-                    for _ in range(self.flags['players'])]
+            if self.flags['agent_class'] == 'RainbowAgent':
+                # put 2-5 copies of the same agent in a list, because loading
+                # the same tensorflow checkpoint more than once in a session fails
+                agent = self.agent_class(self.agent_config)
+                agents = [agent for _ in range(self.flags['players'])]
+            else:
+                agents = [self.agent_class(self.agent_config)
+                        for _ in range(self.flags['players'])]
             done = False
             eps_reward = 0
 
