@@ -10,6 +10,9 @@ import numpy as np
 from experience import Experience
 
 class policy_predictor():
+
+    path = "model.h5"
+
     def __init__(self, input_dim, action_space):
         self.input_dim = input_dim
         self.action_space = action_space
@@ -22,6 +25,7 @@ class policy_predictor():
         x.add(Dense(32, activation='relu'))
         x.add(Dropout(0.1))
         x.add(Dense(16, activation='relu'))
+        x.add(Dropout(0.1))
         x.add(Dense(self.action_space, activation='softmax'))
         return x
 
@@ -42,10 +46,17 @@ class policy_predictor():
                            optimizer=adam, metrics=['accuracy'])
         print()
         self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_data=(X_test, Y_test))
+        self.model.save(self.path)
 
     def predict(self, X):
         pred = self.model.predict(X)
         return pred
+
+    def load(self):
+        try:
+            self.model = load_model(self.path)
+        except:
+            print("Create new model")
 
 
 if __name__ == '__main__':
@@ -75,13 +86,8 @@ if __name__ == '__main__':
     print("LOADED")
 
     pp = policy_predictor(X.shape[1], Y.shape[1])
-
-    try:
-        pp.model = load_model(path)
-    except:
-        print("create new model")
-   
+    pp.load()
+       
     print("init done")
     pp.fit(X_train, Y_train, X_test, Y_test, epochs = 100)
-    pp.model.save(path)
-
+    
