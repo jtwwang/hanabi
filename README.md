@@ -21,7 +21,12 @@ To collect data you can use the script
 ```
 python custom_rl_example.py --agent_class <nameAgent>
 ```
-currently supports 3 classes: `RandomAgent`, `SimpleAgent`, and `RainbowAgent`. However, at the moment Rainbow agent crashes if you run more than one episode. The data is saved in a folder automatically created called `/experience_replay`.
+currently supports 3 classes: `RandomAgent`, `SimpleAgent`, and `RainbowAgent`.The data is saved in a folder automatically created called `/experience_replay`. Other flags you can use:
+```
+--num_episodes <int>
+--players <int 2 to 5>
+--debug <true/false>
+```
 
 ### Policy prediction
 ```
