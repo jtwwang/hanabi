@@ -1,7 +1,6 @@
 from __future__ import print_function
 import tensorflow.keras as keras
-from keras.layers import Dense
-from keras.layers import ReLU
+from keras.layers import Dense, ReLU, Dropout
 from keras.losses import categorical_crossentropy, mean_squared_error
 from keras.models import Sequential
 from keras import regularizers
@@ -18,8 +17,10 @@ class policy_predictor():
 
     def create_dense(self):
         x = Sequential()
-        x.add(Dense(32, input_dim=self.input_dim))
-        x.add(Dense(24, activation='relu'))
+        x.add(Dense(64, input_dim=self.input_dim))
+        x.add(Dropout(0.1))
+        x.add(Dense(32, activation='relu'))
+        x.add(Dropout(0.1))
         x.add(Dense(16, activation='relu'))
         x.add(Dense(self.action_space, activation='softmax'))
         return x
@@ -65,7 +66,7 @@ if __name__ == '__main__':
     Y = Y[p]
 
     # divide in training and test set
-    divider = int(0.7 * X.shape[0])
+    divider = int(0.1 * X.shape[0])
     X_train = X[:divider]
     Y_train = Y[:divider]
     X_test = X[divider:]
@@ -81,6 +82,6 @@ if __name__ == '__main__':
         print("create new model")
    
     print("init done")
-    pp.fit(X_train, Y_train, X_test, Y_test, epochs = 400)
+    pp.fit(X_train, Y_train, X_test, Y_test, epochs = 100)
     pp.model.save(path)
 
