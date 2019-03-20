@@ -65,18 +65,20 @@ class Runner(object):
         global replay
 
         rewards = []
+        
+        if self.flags['agent_class'] == 'RainbowAgent':
+            # put 2-5 copies of the same agent in a list, because loading
+            # the same tensorflow checkpoint more than once in a session fails
+            agent = self.agent_class(self.agent_config)
+            agents = [agent for _ in range(self.flags['players'])]
+        else:
+            agents = [self.agent_class(self.agent_config)
+                    for _ in range(self.flags['players'])]
+        
         for eps in range(flags['num_episodes']):
             print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
-            if self.flags['agent_class'] == 'RainbowAgent':
-                # put 2-5 copies of the same agent in a list, because loading
-                # the same tensorflow checkpoint more than once in a session fails
-                agent = self.agent_class(self.agent_config)
-                agents = [agent for _ in range(self.flags['players'])]
-            else:
-                agents = [self.agent_class(self.agent_config)
-                        for _ in range(self.flags['players'])]
             done = False
             eps_reward = 0
 
