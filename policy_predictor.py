@@ -7,11 +7,13 @@ from keras import regularizers
 from keras import optimizers
 from keras.models import load_model
 import numpy as np
+import getopt
+import sys
 from experience import Experience
 
 class policy_predictor():
 
-    path = "model.h5"
+    path = "predictor.h5"
 
     def __init__(self, input_dim, action_space):
         self.input_dim = input_dim
@@ -22,14 +24,14 @@ class policy_predictor():
         x = Sequential()
         x.add(Dense(64, input_dim=self.input_dim))
         x.add(Dropout(0.1))
-        x.add(Dense(32, activation='relu'))
+        x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.1))
-        x.add(Dense(16, activation='relu'))
+        x.add(Dense(32, activation='relu'))
         x.add(Dropout(0.1))
         x.add(Dense(self.action_space, activation='softmax'))
         return x
 
-    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=1):
+    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=16):
         """
         args:
                 X (int arr): vectorized features
@@ -61,7 +63,18 @@ class policy_predictor():
 
 if __name__ == '__main__':
 
-    path = "model.h5"
+    flags = {'epochs': 400,
+            'batch_size': 16
+            }
+
+    options, arguments = getopt.getopt(sys.argv[1:], '',
+            ['epochs=','batch_size='])
+
+    if arguments:
+        sys.exit()
+    for flag, value in options:
+        flag = flag[2:] # Strip leading --.
+        flags[flag] = type(flags[flag])(value)
 
     print("Loading Data...", end='')
     replay = Experience(2)
@@ -69,25 +82,26 @@ if __name__ == '__main__':
     X = replay._obs()
     Y = replay._one_hot_moves()
 
-    # randomize
     assert X.shape[0] == Y.shape[0]
     n_entries = X.shape[0]
-    p = np.random.permutation(n_entries)
-    X = X[p]
-    Y = Y[p]
 
     # divide in training and test set
-    divider = int(0.1 * X.shape[0])
+    divider = int(0.1 * n_entries)
     X_train = X[:divider]
     Y_train = Y[:divider]
     X_test = X[divider:]
     Y_test = Y[divider:]
 
+    # randomize
+    p = np.random.permutation(X_train.shape[0])
+    X_train = X_train[p]
+    Y_train = Y_train[p]
+    
     print("LOADED")
 
     pp = policy_predictor(X.shape[1], Y.shape[1])
-    pp.load()
+    #pp.load()
        
     print("init done")
-    pp.fit(X_train, Y_train, X_test, Y_test, epochs = 100)
+    pp.fit(X_train, Y_train, X_test, Y_test, epochs = flags['epochs'], batch_size = flags['batch_size'])
     
