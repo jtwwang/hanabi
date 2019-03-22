@@ -29,23 +29,23 @@ class policy_predictor():
         x.add(Dropout(0.1))
         x.add(Dense(32, activation='relu'))
         x.add(Dropout(0.1))
-        x.add(Dense(self.action_space, activation='softmax'))
+        x.add(Dense(self.action_space))
         return x
 
-    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=16):
+    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=16, learning_rate=0.001):
         """
         args:
                 X (int arr): vectorized features
                 y (int arr): one-hot encoding with dimensions(sample_size,action_space)
         """
         adam = optimizers.Adam(
-            lr=0.001,
+            lr=learning_rate,
             beta_1=0.9,
             beta_2=0.999,
             epsilon=None,
             decay=0.0,
             amsgrad=False)
-        self.model.compile(loss='categorical_crossentropy',
+        self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
         print()
         self.model.fit(
@@ -79,11 +79,14 @@ class policy_predictor():
 if __name__ == '__main__':
 
     flags = {'epochs': 400,
-             'batch_size': 16
+             'batch_size': 16,
+             'lr': 0.001
              }
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
-                                       ['epochs=', 'batch_size='])
+                                       ['epochs=',
+                                        'batch_size=',
+                                        'lr='])
 
     if arguments:
         sys.exit()
@@ -119,4 +122,6 @@ if __name__ == '__main__':
 
     print("init done")
     pp.fit(X_train, Y_train, X_test, Y_test,
-           epochs=flags['epochs'], batch_size=flags['batch_size'])
+           epochs=flags['epochs'],
+           batch_size=flags['batch_size'],
+           learning_rate=flags['lr'])
