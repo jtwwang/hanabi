@@ -29,7 +29,13 @@ currently supports 3 classes: `RandomAgent`, `SimpleAgent`, and `RainbowAgent`.T
 ```
 
 ### Policy prediction
+After you collected episodes you can train a neural network to predict the policy by using
 ```
 python policy_predictor.py
+```
+There are two flags that you can currently use:
+```
+--epochs <int>      # to specify the number of epochs
+--batch_size <int>  # to specify the batch size
 ```
 Note: run this script when you already have data in the folder `/experience_replay`.
