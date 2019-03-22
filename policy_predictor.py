@@ -11,6 +11,7 @@ import getopt
 import sys
 from experience import Experience
 
+
 class policy_predictor():
 
     path = "predictor.h5"
@@ -22,7 +23,7 @@ class policy_predictor():
 
     def create_dense(self):
         x = Sequential()
-        x.add(Dense(64, input_dim=self.input_dim))
+        x.add(Dense(128, input_dim=self.input_dim))
         x.add(Dropout(0.1))
         x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.1))
@@ -38,23 +39,37 @@ class policy_predictor():
                 y (int arr): one-hot encoding with dimensions(sample_size,action_space)
         """
         adam = optimizers.Adam(
-                lr=0.001,
-                beta_1=0.9,
-                beta_2=0.999,
-                epsilon=None,
-                decay=0.0,
-                amsgrad=False)
+            lr=0.001,
+            beta_1=0.9,
+            beta_2=0.999,
+            epsilon=None,
+            decay=0.0,
+            amsgrad=False)
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=adam, metrics=['accuracy'])
         print()
-        self.model.fit(X, y, epochs=epochs, batch_size=batch_size, validation_data=(X_test, Y_test))
+        self.model.fit(
+            X,
+            y,
+            epochs=epochs,
+            batch_size=batch_size,
+            validation_data=(X_test, Y_test))
         self.model.save(self.path)
 
     def predict(self, X):
+        """
+        args:
+            X (input)
+        return
+            prediction given the model and the input X
+        """
         pred = self.model.predict(X)
         return pred
 
     def load(self):
+        """
+        function to load the saved model
+        """
         try:
             self.model = load_model(self.path)
         except:
@@ -64,16 +79,16 @@ class policy_predictor():
 if __name__ == '__main__':
 
     flags = {'epochs': 400,
-            'batch_size': 16
-            }
+             'batch_size': 16
+             }
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
-            ['epochs=','batch_size='])
+                                       ['epochs=', 'batch_size='])
 
     if arguments:
         sys.exit()
     for flag, value in options:
-        flag = flag[2:] # Strip leading --.
+        flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
     print("Loading Data...", end='')
@@ -96,12 +111,12 @@ if __name__ == '__main__':
     p = np.random.permutation(X_train.shape[0])
     X_train = X_train[p]
     Y_train = Y_train[p]
-    
+
     print("LOADED")
 
     pp = policy_predictor(X.shape[1], Y.shape[1])
-    #pp.load()
-       
+    pp.load()
+
     print("init done")
-    pp.fit(X_train, Y_train, X_test, Y_test, epochs = flags['epochs'], batch_size = flags['batch_size'])
-    
+    pp.fit(X_train, Y_train, X_test, Y_test,
+           epochs=flags['epochs'], batch_size=flags['batch_size'])
