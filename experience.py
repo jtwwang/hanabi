@@ -6,7 +6,7 @@ class Experience():
 
     path = "experience_replay"
 
-    def __init__(self, numAgents, size = 1000000):
+    def __init__(self, numAgents, agent_class, size = 1000000):
         """
         args:
             numAgents (int)
@@ -16,7 +16,7 @@ class Experience():
         self.size = size
         self.ptr = 0
         self.full = False
-                
+        self.path = os.path.join(self.path, agent_class)
         
         try:
             # detect the size of the observations
