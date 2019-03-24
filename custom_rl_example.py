@@ -129,7 +129,7 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
     # initialize the replay memory
-    replay = exp.Experience(flags['players'])
+    replay = exp.Experience(flags['players'], flags['agent_class'])
 
     # run the episodes
     runner = Runner(flags)
