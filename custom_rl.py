@@ -18,11 +18,13 @@ import pyhanabi
 from agents.random_agent import RandomAgent
 from agents.simple_agent import SimpleAgent
 from agents.rainbow_agent_rl import RainbowAgent
+from agents.mc_agent import MCAgent
 
 AGENT_CLASSES = {
         'SimpleAgent':  SimpleAgent,
         'RandomAgent':  RandomAgent,
-        'RainbowAgent': RainbowAgent}
+        'RainbowAgent': RainbowAgent,
+        'MCAgent': MCAgent}
 
 class Runner(object):
     """Runner class."""
