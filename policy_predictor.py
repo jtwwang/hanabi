@@ -10,7 +10,7 @@ import numpy as np
 import getopt
 import sys
 from experience import Experience
-
+from sklearn.model_selection import KFold
 
 class policy_predictor():
 
@@ -32,7 +32,7 @@ class policy_predictor():
         x.add(Dense(self.action_space))
         return x
 
-    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=16, learning_rate=0.001):
+    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=32, learning_rate=0.001):
         """
         args:
                 X (int arr): vectorized features
@@ -52,8 +52,7 @@ class policy_predictor():
             X,
             y,
             epochs=epochs,
-            batch_size=batch_size,
-            validation_data=(X_test, Y_test))
+            batch_size=batch_size)
         self.model.save(self.path)
 
     def predict(self, X):
@@ -76,52 +75,75 @@ class policy_predictor():
             print("Create new model")
 
 
+def extract_data(agent_class, num_players):
+    """
+    args:
+        agent_class (string)
+        num_player (int)
+    """
+    print("Loading Data...", end='')
+    replay = Experience(num_players, agent_class)
+    replay.load()
+    X = replay._obs()
+    Y = replay._one_hot_moves()
+
+    assert X.shape[0] == Y.shape[0]
+
+    print("LOADED")
+    return X, Y
+
 if __name__ == '__main__':
 
     flags = {'epochs': 400,
-             'batch_size': 16,
-             'lr': 0.001
+             'batch_size': 32,
+             'lr': 0.001,
+             'agent_class': 'SimpleAgent'
              }
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['epochs=',
                                         'batch_size=',
-                                        'lr='])
+                                        'lr=',
+                                        'agent_class='])
 
     if arguments:
         sys.exit()
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
+   
+   # data
+    X,Y = extract_data(flags['agent_class'],2)
+    max_entries = 5000
 
-    print("Loading Data...", end='')
-    replay = Experience(2)
-    replay.load()
-    X = replay._obs()
-    Y = replay._one_hot_moves()
+    # do cross validation
+    folds = 5
+    kf = KFold(n_splits=folds)
+    mean = 0
 
-    assert X.shape[0] == Y.shape[0]
-    n_entries = X.shape[0]
+    for test_id, train_id in kf.split(X):
+        # split the data
+        X_train, X_test = X[train_id], X[test_id]
+        y_train, y_test = Y[train_id], Y[test_id]
+        
+        # get the max amount of training
+        max_entries = min(max_entries, X_train.shape[0])
+        X_train = X_train[:max_entries]
+        y_train = y_train[:max_entries]
+            
+        # initialize the predictor (again)
+        pp = policy_predictor(X.shape[1], Y.shape[1])
 
-    # divide in training and test set
-    divider = int(0.1 * n_entries)
-    X_train = X[:divider]
-    Y_train = Y[:divider]
-    X_test = X[divider:]
-    Y_test = Y[divider:]
+        pp.fit(X_train, y_train, X_test, y_test,
+                epochs=flags['epochs'],
+                batch_size=flags['batch_size'],
+                learning_rate=flags['lr'])
 
-    # randomize
-    p = np.random.permutation(X_train.shape[0])
-    X_train = X_train[p]
-    Y_train = Y_train[p]
+        # calculate accuracy and add it to the mean
+        score = pp.model.evaluate(X_test, y_test, verbose=0)
+        mean += score[1]
 
-    print("LOADED")
-
-    pp = policy_predictor(X.shape[1], Y.shape[1])
-    pp.load()
-
-    print("init done")
-    pp.fit(X_train, Y_train, X_test, Y_test,
-           epochs=flags['epochs'],
-           batch_size=flags['batch_size'],
-           learning_rate=flags['lr'])
+    # calculate the mean
+    mean = mean/folds
+    print('Average: ', end='')
+    print(mean)
