@@ -32,7 +32,7 @@ class policy_predictor():
         x.add(Dense(self.action_space))
         return x
 
-    def fit(self, X, y, X_test, Y_test, epochs=100, batch_size=32, learning_rate=0.001):
+    def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
         """
         args:
                 X (int arr): vectorized features
@@ -92,33 +92,9 @@ def extract_data(agent_class, num_players):
     print("LOADED")
     return X, Y
 
-if __name__ == '__main__':
-
-    flags = {'epochs': 400,
-             'batch_size': 32,
-             'lr': 0.001,
-             'agent_class': 'SimpleAgent'
-             }
-
-    options, arguments = getopt.getopt(sys.argv[1:], '',
-                                       ['epochs=',
-                                        'batch_size=',
-                                        'lr=',
-                                        'agent_class='])
-
-    if arguments:
-        sys.exit()
-    for flag, value in options:
-        flag = flag[2:]  # Strip leading --.
-        flags[flag] = type(flags[flag])(value)
-   
-   # data
-    X,Y = extract_data(flags['agent_class'],2)
-    max_entries = 5000
-
-    # do cross validation
-    folds = 5
-    kf = KFold(n_splits=folds)
+def cross_validation(k, max_entries):
+    global flags
+    kf = KFold(n_splits=k)
     mean = 0
 
     for test_id, train_id in kf.split(X):
@@ -134,7 +110,7 @@ if __name__ == '__main__':
         # initialize the predictor (again)
         pp = policy_predictor(X.shape[1], Y.shape[1])
 
-        pp.fit(X_train, y_train, X_test, y_test,
+        pp.fit(X_train, y_train,
                 epochs=flags['epochs'],
                 batch_size=flags['batch_size'],
                 learning_rate=flags['lr'])
@@ -144,6 +120,46 @@ if __name__ == '__main__':
         mean += score[1]
 
     # calculate the mean
-    mean = mean/folds
-    print('Average: ', end='')
-    print(mean)
+    mean = mean/k
+    return mean
+
+
+if __name__ == '__main__':
+
+    flags = {'epochs': 400,
+             'batch_size': 32,
+             'lr': 0.001,
+             'agent_class': 'SimpleAgent',
+             'cv': False
+             }
+
+    options, arguments = getopt.getopt(sys.argv[1:], '',
+                                       ['epochs=',
+                                        'batch_size=',
+                                        'lr=',
+                                        'agent_class=',
+                                        'cv='])
+
+    if arguments:
+        sys.exit()
+    for flag, value in options:
+        flag = flag[2:]  # Strip leading --.
+        flags[flag] = type(flags[flag])(value)
+   
+   # data
+    X,Y = extract_data(flags['agent_class'],2)
+
+    if (flags['cv']):
+        # do cross validation
+        k = 5
+        max_entries = 5000
+        mean = cross_validation(k, max_entries)
+        print('Average: ', end='')
+        print(mean)
+    else:
+        pp = policy_predictor(X.shape[1], Y.shape[1])
+        pp.load()
+        pp.fit(X,Y,
+                epochs = flags['epochs'],
+                batch_size = flags['batch_size'],
+                learning_rate = flags['lr'])
