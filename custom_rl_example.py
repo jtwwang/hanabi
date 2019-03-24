@@ -97,7 +97,7 @@ class Runner(object):
                     obs, reward, done, _ = self.env.step(action)
 
                     # add the move to the memory
-                    replay.add(ob, reward, move)
+                    replay.add(ob, reward, move, eps)
 
                     eps_reward += reward
 

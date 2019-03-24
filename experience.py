@@ -10,6 +10,7 @@ class Experience():
         """
         args:
             numAgents (int)
+            agent_class (string): the class of the agent ('RainbowAgent', 'SimpleAgent')
             size (int) (optional)
         """
 
@@ -31,6 +32,7 @@ class Experience():
             self.moves = np.empty(size, dtype = np.uint8)
             self.rs = np.empty(size)
             self.obs = np.empty((size, size_obs), dtype = bool)
+            self.eps = np.empty(size, dtype = np.uint16)
         except:
             # if the environment can't be create, we still can load
             if numAgents == 2 or numAgents == 3:
@@ -48,17 +50,19 @@ class Experience():
                     data.")
 
 
-    def add(self, ob, reward, move):
+    def add(self, ob, reward, move, eps):
         """
         args:
             ob: the observation from the current player
             reward (int): the reward obtain at this step
             move (int): the action performed by the agent
+            eps (int): the number of the episode
         """
 
         self.moves[self.ptr] = move
         self.obs[self.ptr,:] = ob['vectorized']
         self.rs[self.ptr] = reward
+        self.eps[self.ptr] = eps
 
         if self.ptr == self.size - 1:
             # set the flag to true if we reached the end of the matrix
@@ -89,6 +93,7 @@ class Experience():
         np.save(os.path.join(self.path, "obs"), packed_obs)
         np.save(os.path.join(self.path, "rewards"), self.rs[:index])
         np.save(os.path.join(self.path, "moves"), self.moves[:index])
+        np.save(os.path.join(self.path, "eps"), self.eps[:index])
 
     def load(self):
         """
@@ -103,12 +108,13 @@ class Experience():
         self.moves = np.load(os.path.join(self.path, "moves.npy"))
         self.obs = np.unpackbits(packed_obs, axis = 1)
         self.rs = np.load(os.path.join(self.path, "rewards.npy"))
+        self.eps = np.load(os.path.join(self.path, "eps.npy"))
 
         self.ptr = len(self.moves)
         if self.ptr == self.size - 1:
             self.full = True
        
-        return [self.moves, self.rs, self.obs]
+        return [self.moves, self.rs, self.obs, self.eps]
 
     def _obs(self):
         """
