@@ -35,7 +35,10 @@ python policy_predictor.py
 ```
 There are two flags that you can currently use:
 ```
---epochs <int>      # to specify the number of epochs
---batch_size <int>  # to specify the batch size
+--epochs <int>          # to set the number of epochs
+--batch_size <int>      # to set the batch size
+--lr <float>            # to set the learning rate
+--agent_class <string>  # to choose the data for a specific agent class
 ```
-Note: run this script when you already have data in the folder `/experience_replay`.
+Currently, as we are working on the model, the script runs a 5-folds evaluations of the model of a specific agent. A model from the last run is saved with the name `predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
+
