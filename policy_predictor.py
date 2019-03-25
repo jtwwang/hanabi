@@ -9,17 +9,17 @@ from keras.models import load_model
 import numpy as np
 import getopt
 import sys
+import os
 from experience import Experience
 from sklearn.model_selection import KFold
 
 class policy_predictor():
 
-    path = "predictor.h5"
-
-    def __init__(self, input_dim, action_space):
+    def __init__(self, input_dim, action_space, agent_class):
         self.input_dim = input_dim
         self.action_space = action_space
         self.model = self.create_dense()
+        self.path = os.path.join("model",agent_class)
 
     def create_dense(self):
         x = Sequential()
@@ -54,7 +54,22 @@ class policy_predictor():
             y,
             epochs=epochs,
             batch_size=batch_size)
-        self.model.save(self.path)
+        self.save()
+
+    def save(self):
+
+        if not os.path.exists(self.path):
+            try:
+                os.makedirs(self.path)
+            except OSError:
+                print("Creation of the directory %s failed" % self.path)
+            else:
+                print("Successfully created the directory %s" % self.path)
+
+        try:
+            self.model.save(os.path.join(self.path,"predictor.h5"))
+        except:
+            print("something wrong")
 
     def predict(self, X):
         """
@@ -71,7 +86,7 @@ class policy_predictor():
         function to load the saved model
         """
         try:
-            self.model = load_model(self.path)
+            self.model = load_model(os.path.join(self.path,"predictor.h5"))
         except:
             print("Create new model")
 
@@ -155,7 +170,7 @@ if __name__ == '__main__':
         print('Average: ', end='')
         print(mean)
     else:
-        pp = policy_predictor(X.shape[1], Y.shape[1])
+        pp = policy_predictor(X.shape[1], Y.shape[1], flags['agent_class'])
         pp.load()
         pp.fit(X,Y,
                 epochs = flags['epochs'],
