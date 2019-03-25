@@ -32,18 +32,6 @@ class Belief():
         self.belief[:, :, :] = 0
         self.discard_belief[:, :] = 0
 
-    def insert(self, index, card):
-        """
-            index (int): which we are inserting
-            card (object): the characteristics of the card to insert
-        """
-        color = self.color_map[card['color']]
-        rank = card['rank']
-
-        # set the probability for that specific number to 1
-        # because we know it exists
-        self.belief[index, color, rank] = 1
-
     def insert_discard(self, card):
         """
             for the discard pile we don't need to know the specific order of the card
@@ -99,11 +87,9 @@ class Belief():
         self.belief[index: index + self.n_cards] = np.multiply(self.belief[index:index + self.n_cards], mask)
 
         # divide by total
-        for card in self.belief[index:index + self.n_cards]:
-            if card.sum() == 0:
-                print(card.sum())
-                exit()
+        for card in self.belief[:self.n_cards]:
             card /= card.sum()
+
 
     def encode(self, obs, player_id):
         """
@@ -141,4 +127,4 @@ class Belief():
 
         self.calculate_prob(player_id, ob)
 
-        return self.belief
+        return self.belief[:self.n_cards]
