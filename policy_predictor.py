@@ -33,6 +33,7 @@ class policy_predictor():
         return x
 
     def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
+
         """
         args:
                 X (int arr): vectorized features
@@ -123,15 +124,13 @@ def cross_validation(k, max_entries):
     mean = mean/k
     return mean
 
-
 if __name__ == '__main__':
 
     flags = {'epochs': 400,
              'batch_size': 32,
              'lr': 0.001,
              'agent_class': 'SimpleAgent',
-             'cv': False
-             }
+             'cv': False}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['epochs=',
@@ -139,7 +138,6 @@ if __name__ == '__main__':
                                         'lr=',
                                         'agent_class=',
                                         'cv='])
-
     if arguments:
         sys.exit()
     for flag, value in options:
