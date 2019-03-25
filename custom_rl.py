@@ -76,6 +76,9 @@ class Runner(object):
         else:
             agents = [self.agent_class(self.agent_config)
                     for _ in range(self.flags['players'])]
+            if self.flags['agent_class'] == 'MCAgent':
+                for agent in range(len(agents)):
+                    agents[agent].player_id = agent
         
         for eps in range(flags['num_episodes']):
             print('Running episode: %d' % eps)
