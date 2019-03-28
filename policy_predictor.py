@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 import tensorflow.keras as keras
 from keras.layers import Dense, ReLU, Dropout
 from keras.losses import categorical_crossentropy, mean_squared_error
@@ -10,10 +11,13 @@ import numpy as np
 import getopt
 import sys
 import os
+# shut up info and warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 from experience import Experience
 from sklearn.model_selection import KFold
 
-class policy_predictor():
+class policy_net():
 
     def __init__(self, input_dim, action_space, agent_class):
         self.input_dim = input_dim
@@ -124,7 +128,7 @@ def cross_validation(k, max_entries):
         y_train = y_train[:max_entries]
             
         # initialize the predictor (again)
-        pp = policy_predictor(X.shape[1], Y.shape[1])
+        pp = policy_net(X.shape[1], Y.shape[1])
 
         pp.fit(X_train, y_train,
                 epochs=flags['epochs'],
@@ -170,7 +174,7 @@ if __name__ == '__main__':
         print('Average: ', end='')
         print(mean)
     else:
-        pp = policy_predictor(X.shape[1], Y.shape[1], flags['agent_class'])
+        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
         pp.load()
         pp.fit(X,Y,
                 epochs = flags['epochs'],
