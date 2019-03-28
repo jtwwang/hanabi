@@ -11,7 +11,7 @@ pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
 cmake .
 make
-python custom_rl_example.py      # Runs RL episodes
+python custom_rl.py      # Runs RL episodes
 python game_example.py           # Plays a game using the lower level interface
 ```
 
@@ -20,7 +20,7 @@ python game_example.py           # Plays a game using the lower level interface
 ### Data collection
 To collect data you can use the script
 ```
-python custom_rl_example.py --agent_class <nameAgent>
+python custom_rl.py --agent_class <nameAgent>
 ```
 currently supports 3 classes: `RandomAgent`, `SimpleAgent`, and `RainbowAgent`.The data is saved in a folder automatically created called `/experience_replay`. Other flags you can use:
 ```
