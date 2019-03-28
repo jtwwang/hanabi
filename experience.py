@@ -48,7 +48,10 @@ class Experience():
             self.moves = np.empty(size, dtype=np.uint8)
             self.rs = np.empty(size)
             self.obs = np.empty((size, size_obs), dtype=bool)
-            self.eps = np.empty(size, dtype=np.uint16)
+            self.eps = []
+            
+            # initialize last episode
+            self.last_ep = -1
         except:
             # if the environment can't be create, we still can load
             if numAgents == 2 or numAgents == 3:
@@ -65,6 +68,18 @@ class Experience():
                     functionality may be compromised. You CAN still load \
                     data.")
 
+    def update_ep(self, eps):
+        if eps != self.last_ep:
+            if self.last_ep != -1:
+                # append to the list the extreme points of the last episode
+                self.eps.append((self.ep_start_id, self.ptr))
+                
+            # save the id of the new episode
+            self.ep_start_id = self.ptr
+
+        # update which episode we are in
+        self.last_ep = eps
+
     def add(self, ob, reward, move, eps):
         """
         args:
@@ -77,8 +92,9 @@ class Experience():
         self.moves[self.ptr] = move
         self.obs[self.ptr, :] = ob['vectorized']
         self.rs[self.ptr] = reward
-        self.eps[self.ptr] = eps
 
+        self.update_ep(eps)
+        
         if self.ptr == self.size - 1:
             # set the flag to true if we reached the end of the matrix
             self.full = True
@@ -99,6 +115,9 @@ class Experience():
             index = self.size
         else:
             index = self.ptr
+
+        # update episodes
+        self.update_ep(self.last_ep + 1)
 
         # pack bits of observations for compression
         packed_obs = np.packbits(self.obs[:index, :], axis=1)

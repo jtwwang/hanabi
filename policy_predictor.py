@@ -1,7 +1,6 @@
+from __future__ import print_function
 from sklearn.model_selection import KFold
 from experience import Experience
-from __future__ import print_function
-
 import tensorflow.keras as keras
 from keras.layers import Dense, ReLU, Dropout
 from keras.losses import categorical_crossentropy, mean_squared_error
@@ -105,30 +104,29 @@ def extract_data(agent_class):
     replay.load()
     X = replay._obs()
     Y = replay._one_hot_moves()
+    eps = replay.eps
 
     assert X.shape[0] == Y.shape[0]
 
     print("LOADED")
-    return X, Y
+    return X, Y, eps
 
 
-def cross_validation(k, max_entries):
+def cross_validation(k, max_ep):
     global flags
-    kf = KFold(n_splits=k)
     mean = 0
 
-    for test_id, train_id in kf.split(X):
+    X,Y,eps = extract_data(flags['agent_class'])
+
+    for i in range(k):
         # split the data
+        train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
+        test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
         X_train, X_test = X[train_id], X[test_id]
         y_train, y_test = Y[train_id], Y[test_id]
 
-        # get the max amount of training
-        max_entries = min(max_entries, X_train.shape[0])
-        X_train = X_train[:max_entries]
-        y_train = y_train[:max_entries]
-
         # initialize the predictor (again)
-        pp = policy_net(X.shape[1], Y.shape[1])
+        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
 
         pp.fit(X_train, y_train,
                epochs=flags['epochs'],
@@ -163,18 +161,18 @@ if __name__ == '__main__':
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
-
-   # data
-    X, Y = extract_data(flags['agent_class'])
-
+   
     if (flags['cv']):
         # do cross validation
         k = 5
-        max_entries = 5000
-        mean = cross_validation(k, max_entries)
+        max_episodes = 100
+        mean = cross_validation(k, max_episodes)
         print('Average: ', end='')
         print(mean)
     else:
+        # data
+        X, Y, _ = extract_data(flags['agent_class'])
+
         pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
         pp.load()
         pp.fit(X, Y,
