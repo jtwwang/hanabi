@@ -1,3 +1,5 @@
+from sklearn.model_selection import KFold
+from experience import Experience
 from __future__ import print_function
 
 import tensorflow.keras as keras
@@ -14,8 +16,6 @@ import os
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-from experience import Experience
-from sklearn.model_selection import KFold
 
 class policy_net():
 
@@ -23,7 +23,7 @@ class policy_net():
         self.input_dim = input_dim
         self.action_space = action_space
         self.model = self.create_dense()
-        self.path = os.path.join("model",agent_class)
+        self.path = os.path.join("model", agent_class)
 
     def create_dense(self):
         x = Sequential()
@@ -37,7 +37,6 @@ class policy_net():
         return x
 
     def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
-
         """
         args:
                 X (int arr): vectorized features
@@ -71,7 +70,7 @@ class policy_net():
                 print("Successfully created the directory %s" % self.path)
 
         try:
-            self.model.save(os.path.join(self.path,"predictor.h5"))
+            self.model.save(os.path.join(self.path, "predictor.h5"))
         except:
             print("something wrong")
 
@@ -90,19 +89,19 @@ class policy_net():
         function to load the saved model
         """
         try:
-            self.model = load_model(os.path.join(self.path,"predictor.h5"))
+            self.model = load_model(os.path.join(self.path, "predictor.h5"))
         except:
             print("Create new model")
 
 
-def extract_data(agent_class, num_players):
+def extract_data(agent_class):
     """
     args:
         agent_class (string)
         num_player (int)
     """
     print("Loading Data...", end='')
-    replay = Experience(num_players, agent_class)
+    replay = Experience(agent_class, load=True)
     replay.load()
     X = replay._obs()
     Y = replay._one_hot_moves()
@@ -111,6 +110,7 @@ def extract_data(agent_class, num_players):
 
     print("LOADED")
     return X, Y
+
 
 def cross_validation(k, max_entries):
     global flags
@@ -121,19 +121,19 @@ def cross_validation(k, max_entries):
         # split the data
         X_train, X_test = X[train_id], X[test_id]
         y_train, y_test = Y[train_id], Y[test_id]
-        
+
         # get the max amount of training
         max_entries = min(max_entries, X_train.shape[0])
         X_train = X_train[:max_entries]
         y_train = y_train[:max_entries]
-            
+
         # initialize the predictor (again)
         pp = policy_net(X.shape[1], Y.shape[1])
 
         pp.fit(X_train, y_train,
-                epochs=flags['epochs'],
-                batch_size=flags['batch_size'],
-                learning_rate=flags['lr'])
+               epochs=flags['epochs'],
+               batch_size=flags['batch_size'],
+               learning_rate=flags['lr'])
 
         # calculate accuracy and add it to the mean
         score = pp.model.evaluate(X_test, y_test, verbose=0)
@@ -142,6 +142,7 @@ def cross_validation(k, max_entries):
     # calculate the mean
     mean = mean/k
     return mean
+
 
 if __name__ == '__main__':
 
@@ -162,9 +163,9 @@ if __name__ == '__main__':
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
-   
+
    # data
-    X,Y = extract_data(flags['agent_class'],2)
+    X, Y = extract_data(flags['agent_class'])
 
     if (flags['cv']):
         # do cross validation
@@ -176,7 +177,7 @@ if __name__ == '__main__':
     else:
         pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
         pp.load()
-        pp.fit(X,Y,
-                epochs = flags['epochs'],
-                batch_size = flags['batch_size'],
-                learning_rate = flags['lr'])
+        pp.fit(X, Y,
+               epochs=flags['epochs'],
+               batch_size=flags['batch_size'],
+               learning_rate=flags['lr'])

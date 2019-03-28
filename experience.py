@@ -1,12 +1,14 @@
 import numpy as np
 import rl_env
 import os
+import pickle
+
 
 class Experience():
 
     path = "experience_replay"
 
-    def __init__(self, numAgents, agent_class, size = 1000000):
+    def __init__(self, agent_class, numAgents=-1, load=False, size=1000000):
         """
         args:
             numAgents (int)
@@ -18,10 +20,24 @@ class Experience():
         self.ptr = 0
         self.full = False
         self.path = os.path.join(self.path, agent_class)
-        
+
+        if not load and numAgents == -1:
+            print(
+                "Bad parameter initialization. Use either 'numAgents' or 'load' to initialize the object.")
+            exit()
+        else:
+            if load:
+                # load the configurations from file
+                self.config = pickle.load(
+                    open(os.path.join(self.path, "config.pickle"), "rb"))
+                numAgents = self.config["numAgents"]
+            else:
+                self.config = {}                        # create empty dict
+                self.config["numAgents"] = numAgents    # insert config data
+
         try:
             # detect the size of the observations
-            env = rl_env.make(num_players = numAgents)
+            env = rl_env.make(num_players=numAgents)
             obs = env.reset()
             size_obs = len(obs['player_observations'][0]['vectorized'])
 
@@ -29,10 +45,10 @@ class Experience():
             self.n_moves = env.num_moves()
 
             # initialize matrices for all values
-            self.moves = np.empty(size, dtype = np.uint8)
+            self.moves = np.empty(size, dtype=np.uint8)
             self.rs = np.empty(size)
-            self.obs = np.empty((size, size_obs), dtype = bool)
-            self.eps = np.empty(size, dtype = np.uint16)
+            self.obs = np.empty((size, size_obs), dtype=bool)
+            self.eps = np.empty(size, dtype=np.uint16)
         except:
             # if the environment can't be create, we still can load
             if numAgents == 2 or numAgents == 3:
@@ -49,7 +65,6 @@ class Experience():
                     functionality may be compromised. You CAN still load \
                     data.")
 
-
     def add(self, ob, reward, move, eps):
         """
         args:
@@ -60,40 +75,43 @@ class Experience():
         """
 
         self.moves[self.ptr] = move
-        self.obs[self.ptr,:] = ob['vectorized']
+        self.obs[self.ptr, :] = ob['vectorized']
         self.rs[self.ptr] = reward
         self.eps[self.ptr] = eps
 
         if self.ptr == self.size - 1:
             # set the flag to true if we reached the end of the matrix
             self.full = True
-        self.ptr = (self.ptr + 1) % self.size # increment pointer
- 
+        self.ptr = (self.ptr + 1) % self.size  # increment pointer
 
     def save(self):
 
         # if it doesn't exists, create directory
         if not os.path.exists(self.path):
-            try:  
+            try:
                 os.makedirs(self.path)
-            except OSError:  
+            except OSError:
                 print ("Creation of the directory %s failed" % self.path)
-            else:  
+            else:
                 print ("Successfully created the directory %s" % self.path)
-            
+
         if self.full:
             index = self.size
         else:
             index = self.ptr
-        
+
         # pack bits of observations for compression
-        packed_obs = np.packbits(self.obs[:index,:], axis = 1)
-                        
+        packed_obs = np.packbits(self.obs[:index, :], axis=1)
+
         # save to file
         np.save(os.path.join(self.path, "obs"), packed_obs)
         np.save(os.path.join(self.path, "rewards"), self.rs[:index])
         np.save(os.path.join(self.path, "moves"), self.moves[:index])
         np.save(os.path.join(self.path, "eps"), self.eps[:index])
+
+        # pickle the configurations
+        pickle.dump(self.config, open(
+            os.path.join(self.path, "config.pickle"), "wb"))
 
     def load(self):
         """
@@ -106,14 +124,14 @@ class Experience():
         packed_obs = np.load(os.path.join(self.path, "obs.npy"))
 
         self.moves = np.load(os.path.join(self.path, "moves.npy"))
-        self.obs = np.unpackbits(packed_obs, axis = 1)
+        self.obs = np.unpackbits(packed_obs, axis=1)
         self.rs = np.load(os.path.join(self.path, "rewards.npy"))
         self.eps = np.load(os.path.join(self.path, "eps.npy"))
 
         self.ptr = len(self.moves)
         if self.ptr == self.size - 1:
             self.full = True
-       
+
         return [self.moves, self.rs, self.obs, self.eps]
 
     def _obs(self):
@@ -126,7 +144,7 @@ class Experience():
         else:
             index = self.ptr
 
-        return self.obs[:index,:]
+        return self.obs[:index, :]
 
     def _one_hot_moves(self):
         """
@@ -145,4 +163,3 @@ class Experience():
         a[np.arange(index), self.moves[:index]] = 1
 
         return a
-
