@@ -31,6 +31,7 @@ class Experience():
                 self.config = pickle.load(
                     open(os.path.join(self.path, "config.pickle"), "rb"))
                 numAgents = self.config["numAgents"]
+                
             else:
                 self.config = {}                        # create empty dict
                 self.config["numAgents"] = numAgents    # insert config data
@@ -39,7 +40,7 @@ class Experience():
             # detect the size of the observations
             env = rl_env.make(num_players=numAgents)
             obs = env.reset()
-            size_obs = len(obs['player_observations'][0]['vectorized'])
+            self.config["size_obs"] = len(obs['player_observations'][0]['vectorized'])
 
             # detect the size of move
             self.n_moves = env.num_moves()
@@ -47,7 +48,7 @@ class Experience():
             # initialize matrices for all values
             self.moves = np.empty(size, dtype=np.uint8)
             self.rs = np.empty(size)
-            self.obs = np.empty((size, size_obs), dtype=bool)
+            self.obs = np.empty((size, self.config["size_obs"]), dtype=bool)
             self.eps = []
             
             # initialize last episode
@@ -146,10 +147,15 @@ class Experience():
         self.obs = np.unpackbits(packed_obs, axis=1)
         self.rs = np.load(os.path.join(self.path, "rewards.npy"))
         self.eps = np.load(os.path.join(self.path, "eps.npy"))
-
+        
+        # restore pointer to end
         self.ptr = len(self.moves)
         if self.ptr == self.size - 1:
             self.full = True
+
+        # restore size observation
+        size_obs = self.config["size_obs"]
+        self.obs = self.obs[:,:size_obs]
 
         return [self.moves, self.rs, self.obs, self.eps]
 
