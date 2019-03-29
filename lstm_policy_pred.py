@@ -172,7 +172,7 @@ if __name__ == '__main__':
              'batch_size': 32,
              'lr': 0.001,
              'agent_class': 'SimpleAgent',
-             'cv': False}
+             'cv': -1}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['epochs=',
@@ -186,10 +186,9 @@ if __name__ == '__main__':
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
    
-    if (flags['cv']):
+    if (flags['cv'] > 0):
         # do cross validation
-        k = 5
-        mean = cross_validation(k)
+        mean = cross_validation(flags['cv'])
         print('Average: ', end='')
         print(mean)
     else:
