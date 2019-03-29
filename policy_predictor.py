@@ -1,5 +1,4 @@
 from __future__ import print_function
-from sklearn.model_selection import KFold
 from experience import Experience
 import tensorflow.keras as keras
 from keras.layers import Dense, ReLU, Dropout
@@ -12,6 +11,7 @@ import numpy as np
 import getopt
 import sys
 import os
+import math
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -105,7 +105,6 @@ def extract_data(agent_class):
     X = replay._obs()
     Y = replay._one_hot_moves()
     eps = replay.eps
-
     assert X.shape[0] == Y.shape[0]
 
     print("LOADED")
@@ -117,6 +116,7 @@ def cross_validation(k, max_ep):
     mean = 0
 
     X,Y,eps = extract_data(flags['agent_class'])
+    max_ep = min(max_ep, math.floor(len(eps)/k))
 
     for i in range(k):
         # split the data
