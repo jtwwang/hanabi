@@ -100,7 +100,7 @@ class policy_net():
     def evaluate(self, X, y):
         self.X = X
         self.y = y
-        score = self.model.evaluate_generator(self.train_generator(), steps = 300)
+        score = self.model.evaluate_generator(self.train_generator(), steps = X.shape[0])
         return score
 
     def load(self):
@@ -144,10 +144,10 @@ def cross_validation(k):
     X,Y,eps = extract_data(flags['agent_class'])
     kf = KFold(n_splits=k)
     
-    for train_index, test_index in kf.split(eps):
+    for big_slice, small_slice in kf.split(eps):
         # split the data
-        X_train, X_test = np.asarray(X)[train_index], np.asarray(X)[test_index]
-        y_train, y_test = np.asarray(Y)[train_index], np.asarray(Y)[test_index]
+        X_train, X_test = np.asarray(X)[small_slice], np.asarray(X)[big_slice]
+        y_train, y_test = np.asarray(Y)[small_slice], np.asarray(Y)[big_slice]
 
         # initialize the predictor (again)
         input_dim = X[0].shape[1]
