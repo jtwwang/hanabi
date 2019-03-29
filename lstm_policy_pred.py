@@ -67,9 +67,7 @@ class policy_net():
         self.model.fit_generator(
                 self.train_generator(),
                 steps_per_epoch = len(X),
-                epochs = epochs,
-                use_multiprocessing = True,
-                workers = 3)
+                epochs = epochs)
         self.save()
 
     def save(self):
