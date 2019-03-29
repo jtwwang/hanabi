@@ -17,4 +17,5 @@ Assuming `n` player game:
 - `hand_size` bits for which card was just played, one-hot
 - 25 bits for card just played/discarded, one-hot
 - `n` * `hand_size` * 35 bits for card knowledge
-- 2 bits
+- 1 bit: whether or not it was successful
+- 1 bit: whether or not we added an information token
