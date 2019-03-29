@@ -12,6 +12,7 @@ import getopt
 import sys
 import os
 import math
+from sklearn.model_selection import KFold
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -27,7 +28,7 @@ class policy_net():
 
     def create_lstm(self):
         x = Sequential()
-        x.add(LSTM(128, input_shape=(None,self.input_dim), return_sequences=True))
+        x.add(LSTM(32, input_shape=(None,self.input_dim), return_sequences=True))
         x.add(Dropout(0.1))
         x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.1))
@@ -52,7 +53,7 @@ class policy_net():
         """
         
         self.X = X
-        self.Y = Y
+        self.y = y
 
         adam = optimizers.Adam(
             lr=learning_rate,
@@ -63,7 +64,12 @@ class policy_net():
             amsgrad=False)
         self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
-        self.model.fit(self.train_generator(), epochs = epochs, batch_size = 1)
+        self.model.fit_generator(
+                self.train_generator(),
+                steps_per_epoch = len(X),
+                epochs = epochs,
+                use_multiprocessing = True,
+                workers = 3)
         self.save()
 
     def save(self):
@@ -90,6 +96,12 @@ class policy_net():
         """
         pred = self.model.predict(X)
         return pred
+
+    def evaluate(self, X, y):
+        self.X = X
+        self.y = y
+        score = self.model.evaluate_generator(self.train_generator(), steps = 300)
+        return score
 
     def load(self):
         """
@@ -125,23 +137,22 @@ def extract_data(agent_class):
     return X, y, eps
 
 
-def cross_validation(k, max_ep):
+def cross_validation(k):
     global flags
     mean = 0
 
     X,Y,eps = extract_data(flags['agent_class'])
-    max_ep = min(max_ep, floor(len(eps)/k))
-
-    for i in range(k):
+    kf = KFold(n_splits=k)
+    
+    for train_index, test_index in kf.split(eps):
         # split the data
-        train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
-        test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
-        X_train, X_test = X[train_id], X[test_id]
-        y_train, y_test = Y[train_id], Y[test_id]
+        X_train, X_test = np.asarray(X)[train_index], np.asarray(X)[test_index]
+        y_train, y_test = np.asarray(Y)[train_index], np.asarray(Y)[test_index]
 
         # initialize the predictor (again)
-        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
-        pp.model.summary()
+        input_dim = X[0].shape[1]
+        output_dim = Y[0].shape[1]
+        pp = policy_net(input_dim, output_dim, flags['agent_class'])
 
         pp.fit(X_train, y_train,
                epochs=flags['epochs'],
@@ -149,7 +160,7 @@ def cross_validation(k, max_ep):
                learning_rate=flags['lr'])
 
         # calculate accuracy and add it to the mean
-        score = pp.model.evaluate(X_test, y_test, verbose=0)
+        score = pp.evaluate(X_test, y_test)
         mean += score[1]
 
     # calculate the mean
@@ -180,8 +191,7 @@ if __name__ == '__main__':
     if (flags['cv']):
         # do cross validation
         k = 5
-        max_episodes = 100
-        mean = cross_validation(k, max_episodes)
+        mean = cross_validation(k)
         print('Average: ', end='')
         print(mean)
     else:
@@ -190,7 +200,6 @@ if __name__ == '__main__':
         input_dim = X[0].shape[1]
         output_dim = Y[0].shape[1]
         pp = policy_net(input_dim, output_dim, flags['agent_class'])
-        pp.model.summary()
         pp.load()
         pp.fit(X, Y,
                epochs=flags['epochs'],
