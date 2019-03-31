@@ -46,6 +46,8 @@ There are two flags that you can currently use:
 --batch_size <int>      # to set the batch size
 --lr <float>            # to set the learning rate
 --agent_class <string>  # to choose the data for a specific agent class
+--cv <int>		# to use cross validation with a specific number of folds
 ```
-Currently, as we are working on the model, the script runs a 5-folds evaluations of the model of a specific agent. A model from the last run is saved with the name `predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
+
+If not doing cross validation, the trainging uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
 
