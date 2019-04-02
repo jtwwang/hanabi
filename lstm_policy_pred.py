@@ -25,32 +25,25 @@ class policy_net():
 		self.action_space = action_space
 		self.model = self.create_lstm()
 		self.path = os.path.join("model", agent_class)
+		self.checkpoint_path = os.path.join(self.path,'checkpoints')
 		self.moves = 0 # total number of moves across all games
 
 	def create_lstm(self):
 		x = Sequential()
 		x.add(LSTM(32, input_shape=(None,self.input_dim), return_sequences=True))
-		x.add(Dropout(0.1))
+		x.add(Dropout(rate=0.1))
 		x.add(Dense(64, activation='relu'))
-		x.add(Dropout(0.1))
+		x.add(Dropout(rate=0.1))
 		x.add(Dense(32, activation='relu'))
-		x.add(Dropout(0.1))
+		x.add(Dropout(rate=0.1))
 		x.add(Dense(self.action_space))
 		return x
-	"""
-	def train_generator(self):
-		i = 0
-		# Iterate through all the samples
-		while True:
-			# Iterate thorugh all the moves
-			for j in range(self.X[i].shape[0]):
-
-				feature = np.reshape(self.X[i][j], (1, self.X[i][j].shape[0], self.X[i][j].shape[1]))
-				label = np.reshape(self.y[i][j], (1, self.y[i][j].shape[0], self.y[i][j].shape[1]))
-				yield feature, label
-			i = (i + 1) % len(self.X)
-	"""
 	
+	def seperate_player_obs(self):
+		""" Seperates observations into what each player sees
+		"""
+		return None
+
 	def train_generator(self):
 		i = 0
 		while True:
@@ -65,6 +58,7 @@ class policy_net():
 			self.moves += X[i].shape[0]
 		print(self.moves)
 	"""
+
 
 
 	def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
@@ -88,10 +82,23 @@ class policy_net():
 		self.model.compile(loss='cosine_proximity',
 						   optimizer=adam, metrics=['accuracy'])
 
+		# Create checkpoint directory
+		if not os.path.exists(self.checkpoint_path):
+			try:
+				os.makedirs(self.checkpoint_path)
+			except OSError:
+				print("Creation of the directory %s failed" % self.checkpoint_path)
+
+		
+		checkpoints = keras.callbacks.ModelCheckpoint(
+									os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
+                                    save_weights_only=True, period=1)
+		
 		self.model.fit_generator(
 				self.train_generator(),
 				steps_per_epoch = X.shape[0],
-				epochs = epochs)
+				epochs = epochs,
+				callbacks = [checkpoints])
 
 		self.save()
 
@@ -166,9 +173,10 @@ def cross_validation(k):
 
 	X,Y,eps = extract_data(flags['agent_class'])
 	kf = KFold(n_splits=k)
-	
+	i = 0
 	for training_indices, testing_indices in kf.split(eps):
-
+		print("\n==========\nSplit {}\n==========\n".format(i))
+		i += 1
 
 		# split the data
 		X_train, X_test = np.asarray(X)[training_indices], np.asarray(X)[testing_indices]
@@ -216,7 +224,7 @@ if __name__ == '__main__':
 	if (flags['cv'] > 0):
 		# do cross validation
 		mean = cross_validation(flags['cv'])
-		print('Average: ', end='')
+		print('Average score: ', end='')
 		print(mean)
 	else:
 		# data
