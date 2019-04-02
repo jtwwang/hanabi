@@ -51,7 +51,7 @@ char* CardKnowledgeToString(pyhanabi_card_knowledge_t* knowledge) {
   return strdup(str.c_str());
 }
 
-int ColorWasHinted(pyhanabi_card_knowledge_t* knowledge) {
+bool ColorWasHinted(pyhanabi_card_knowledge_t* knowledge) {
   REQUIRE(knowledge != nullptr);
   REQUIRE(knowledge->knowledge != nullptr);
   return reinterpret_cast<

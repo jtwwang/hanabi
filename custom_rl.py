@@ -9,7 +9,10 @@
 
 from __future__ import print_function
 
+import os
 import sys
+sys.path.insert(0, os.path.join(os.getcwd(), 'agents')) # To find local modules
+
 import getopt
 import rl_env
 import experience as exp
