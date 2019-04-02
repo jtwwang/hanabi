@@ -5,8 +5,6 @@ class state_translator:
     Based on the vector encoding logic established in hanabi_lib/canonical_encoders.cc
     """
     stateVector = [] #entire state vector
-    playerCount
-    stateVectorSize
 
     handSpace = [] #information about each card visible in players hands
     playerMissingCards = [] #a single bit indicating if a player has a handsize below max
@@ -31,84 +29,82 @@ class state_translator:
 
 
     def __init__(self, givenStateVector, givenPlayerCount):
-        stateVector = givenStateVector
-        playerCount = givenPlayerCount
-        stateVectorSize = len(stateVector)
-        decodeVector(stateVector)
+        self.stateVector = givenStateVector
+        self.playerCount = givenPlayerCount
+        self.stateVectorSize = len(self.stateVector)
+        self.decodeVector()
 
-    def encodeVector():
-        stateVector = handSpace + playerMissingCards + currentDeck + boardSpace + infoTokens + lifeTokens + discardSpace + lastActivePlayer + lastMoveType + lastMoveTarget + colorRevealed + rankRevealed + cardRevealed + positionPlayed + cardPlayed + prevPlay + cardKnowledge
+    def encodeVector(self):
+        self.stateVector = self.handSpace + self.playerMissingCards + self.currentDeck + self.boardSpace + self.infoTokens + self.lifeTokens + self.discardSpace + self.lastActivePlayer + self.lastMoveType + self.lastMoveTarget + self.colorRevealed + self.rankRevealed + self.cardRevealed + self.positionPlayed + self.cardPlayed + self.prevPlay + self.cardKnowledge
 
-        if (len(stateVector) != stateVectorSize):
+        if (len(self.stateVector) != self.stateVectorSize):
             raise ValueError('stateVector size has changed since last encodeVector() call.')
 
-    def decodeVector(stateVector):
-        if(playerCount == 2 or playerCount == 3):
+    def decodeVector(self):
+        if(self.playerCount == 2 or self.playerCount == 3):
             handSize = 5
-        elif(playerCount == 4 or playerCount == 5):
+        elif(self.playerCount == 4 or self.playerCount == 5):
             handSize = 4
-        else
-            raise ValueError('playerCount is invalid number')
+        else:
+            raise ValueError('self.playerCount is invalid number')
 
         prevIndex = 0
 
-        numCardsSeen = (playerCount - 1) * handSize
-        handSpace = stateVector[prevIndex:(prevIndex+numCardsSeen)]
+        numCardsSeen = (self.playerCount - 1) * handSize
+        self.handSpace = self.stateVector[prevIndex:(prevIndex+numCardsSeen)]
         prevIndex += numCardsSeen
 
-        playerMissingCards = stateVector[prevIndex:(prevIndex+playerCount)]
-        prevIndex += playerCount
+        self.playerMissingCards = self.stateVector[prevIndex:(prevIndex+self.playerCount)]
+        prevIndex += self.playerCount
 
         deckSize = 50 - numCardsSeen #Assumes 50 cards in game total.
-        currentDeck = stateVector[prevIndex:(prevIndex+deckSize)]
+        self.currentDeck = self.stateVector[prevIndex:(prevIndex+deckSize)]
         prevIndex += deckSize
 
         maxBoardSpace = 25
-        boardSpace = stateVector[prevIndex:(prevIndex+maxBoardSpace)]
+        self.boardSpace = self.stateVector[prevIndex:(prevIndex+maxBoardSpace)]
         prevIndex += maxBoardSpace
 
         numInfoTokens = 8
-        infoTokens = stateVector[prevIndex:(prevIndex+numInfoTokens)]
+        self.infoTokens = self.stateVector[prevIndex:(prevIndex+numInfoTokens)]
         prevIndex += numInfoTokens
 
         numLifeTokens = 3
-        lifeTokens = stateVector[prevIndex:(prevIndex + numLifeTokens)]
+        self.lifeTokens = self.stateVector[prevIndex:(prevIndex + numLifeTokens)]
         prevIndex += numLifeTokens
 
-        discardSpace = stateVector[prevIndex:(prevIndex + 50)]
+        self.discardSpace = self.stateVector[prevIndex:(prevIndex + 50)]
         prevIndex += 50
 
-        lastActivePlayer = stateVector[prevIndex:(prevIndex + playerCount)]
-        prevIndex += playerCount
+        self.lastActivePlayer = self.stateVector[prevIndex:(prevIndex + self.playerCount)]
+        prevIndex += self.playerCount
 
-        lastMoveType = stateVector[prevIndex:(prevIndex + 4)]
+        self.lastMoveType = self.stateVector[prevIndex:(prevIndex + 4)]
         prevIndex += 4
 
-        lastMoveTarget = stateVector[prevIndex:(prevIndex + playerCount)]
-        prevIndex += playerCount
+        self.lastMoveTarget = self.stateVector[prevIndex:(prevIndex + self.playerCount)]
+        prevIndex += self.playerCount
 
-        colorRevealed = stateVector[prevIndex:(prevIndex + 5)]
+        self.colorRevealed = self.stateVector[prevIndex:(prevIndex + 5)]
         prevIndex += 5
 
-        rankRevealed = stateVector[prevIndex:(prevIndex + 5)]
+        self.rankRevealed = self.stateVector[prevIndex:(prevIndex + 5)]
         prevIndex += 5
 
-        cardRevealed = stateVector[prevIndex:(prevIndex + handSize)]
+        self.cardRevealed = self.stateVector[prevIndex:(prevIndex + handSize)]
         prevIndex += handSize
 
         #in the context of the next two arrays, 'played' means played or discarded
-        positionPlayed = stateVector[prevIndex:(prevIndex + handSize)]
+        self.positionPlayed = self.stateVector[prevIndex:(prevIndex + handSize)]
         prevIndex += handSize
 
-        cardPlayed = stateVector[prevIndex:(prevIndex + 25)]
+        self.cardPlayed = self.stateVector[prevIndex:(prevIndex + 25)]
         prevIndex += 25
 
-        prevPlay = stateVector[prevIndex:(prevIndex + 2)]
+        self.prevPlay = self.stateVector[prevIndex:(prevIndex + 2)]
         prevIndex += 2
 
-        cardKnowledge = stateVector[prevIndex:(prevIndex + playerCount * handSize * 35)]
+        self.cardKnowledge = self.stateVector[prevIndex:(prevIndex + self.playerCount * handSize * 35)]
 
-
-
-    def getStateVector():
-        return stateVector
+    def getStateVector(self):
+        return self.stateVector
