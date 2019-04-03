@@ -32,8 +32,8 @@ class MCAgent(Agent):
         # load the predictor
         agent_class = 'SimpleAgent' #FIXME: temporary
 
-        pp = policy_net(config['observation_size'], config['num_moves'], agent_class)
-        pp.load()
+        self.pp = policy_net(config['observation_size'], config['num_moves'], agent_class)
+        self.pp.load()
 
     def sample(self,card):
         """ sample a card from distribution"""
@@ -54,18 +54,25 @@ class MCAgent(Agent):
             vectorized (list): the observations in a vectorized form
         """
         v_sample = []
-        translated = state_translator(vectorized, self.config['players'])
-        print(self.my_belief.shape)
-        card = self.my_belief[0]
+        translated_to_sample = state_translator(vectorized, self.config['players'])
         for i in range(self.my_belief.shape[0]):
-            v = self.sample(card).tolist()
+            v = self.sample(self.my_belief[i]).tolist()
             v_sample = v_sample + v
-            print(len(v_sample))
-            #self.my_belief = 
+            
+            # update the card knowledge accordingly to the sample
+            translated_to_sample.cardKnowledge[i*35:i*35 + 25] = v
 
-        print(len(translated.handSpace))
+            # update the belief accordingly to the new knowledge
+            translated_to_sample.encodeVector()
+            re_encoded = translated_to_sample.stateVector
+            self.my_belief = self.belief.encode(re_encoded, self.player_id)
 
-        return v_sample
+        # take the original vector, and change the observations
+        translated = state_translator(vectorized, self.config['players'])
+        translated.handSpace = v_sample
+        translated.encodeVector()
+
+        return translated.stateVector
 
     def encode(self, ob):
         """returns an hashable state from the observation"""
@@ -115,13 +122,17 @@ class MCAgent(Agent):
                 history.append(state)               # append the state to the history of the rollout
 
                 # set my belief
-                self.my_belief = self.belief.encode(obs, self.player_id)
+                self.my_belief = self.belief.encode(vectorized, self.player_id)
 
                 # other players' moves
-                for p in range(self.config['players']):
+                for p in range(self.config['players'] - 1):
                     # choose random sample
                     vectorized = self.sampled_vector(vectorized)
+                    obs_input = np.asarray(vectorized, dtype = np.float32).reshape((1,-1))
+
                     # predict the move
+                    # FIXME: filter out illegal moves
+                    action_predicted = np.argmax(self.pp.predict(obs_input))
 
                     # if move is hint, calculate the score and terminate
 
