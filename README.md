@@ -40,7 +40,8 @@ The data is saved in a folder automatically created called `/experience_replay`.
 ### Policy prediction
 After you collected episodes you can train a neural network to predict the policy by using
 ```
-python policy_predictor.py
+python lstm_policy_pred.py # lstm
+python policy_predictor.py # dense
 ```
 There are two flags that you can currently use:
 ```
