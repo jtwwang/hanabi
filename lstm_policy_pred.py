@@ -13,6 +13,7 @@ import sys
 import os
 import math
 from sklearn.model_selection import KFold
+
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -26,7 +27,7 @@ class policy_net():
 		self.model = self.create_lstm()
 		self.path = os.path.join("model", agent_class)
 		self.checkpoint_path = os.path.join(self.path,'checkpoints')
-		self.moves = 0 # total number of moves across all games
+		#self.moves = 0 # total number of moves across all games
 
 	def create_lstm(self):
 		x = Sequential()
@@ -39,19 +40,25 @@ class policy_net():
 		x.add(Dense(self.action_space))
 		return x
 	
-	def seperate_player_obs(self):
+	def separate_player_obs(self, X, y, players=2):
 		""" Seperates observations into what each player sees
 		"""
-		return None
+		X_sep = []
+		y_sep = []
+		for player in range(players):
+			X_sep.append(np.asarray(X[player::players]))
+			y_sep.append(np.asarray(y[player::players]))
+		return X_sep, y_sep
+
 
 	def train_generator(self):
 		i = 0
 		while True:
-			x_train = np.reshape(self.X[i],(1,self.X[i].shape[0],self.X[i].shape[1]))
-			y_train = np.reshape(self.y[i],(1,self.y[i].shape[0],self.y[i].shape[1]))
+			for x_train, y_train in self.separate_player_obs(self.X[i], self.y[i]):
+				x_train = np.reshape(x_train,(1,x_train.shape[0],x_train.shape[1]))
+				y_train = np.reshape(y_train,(1,y_train.shape[0],y_train.shape[1]))
+				yield x_train, y_train
 			i = (i + 1) % len(self.X)
-			yield x_train, y_train
-	
 	"""
 	def getMoves(self, X):
 		for i in range(X.shape[0]):
@@ -68,8 +75,10 @@ class policy_net():
 				y (int arr): one-hot encoding with dimensions(sample_size,action_space)
 		"""
 		
-		self.X = X
-		self.y = y
+		self.X = np.asarray(X)
+		self.y = np.asarray(y)
+		print(type(self.X))
+		print(X[0])
 
 
 		adam = optimizers.Adam(
@@ -96,7 +105,7 @@ class policy_net():
 		
 		self.model.fit_generator(
 				self.train_generator(),
-				steps_per_epoch = X.shape[0],
+				steps_per_epoch = self.X.shape[0],
 				epochs = epochs,
 				callbacks = [checkpoints])
 
