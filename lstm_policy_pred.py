@@ -92,7 +92,7 @@ class policy_net():
 		
 		checkpoints = keras.callbacks.ModelCheckpoint(
 									os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
-                                    save_weights_only=True, period=1)
+                                    save_weights_only=True, period=50)
 		
 		self.model.fit_generator(
 				self.train_generator(),
