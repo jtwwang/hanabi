@@ -106,5 +106,66 @@ class state_translator:
 
         self.cardKnowledge = self.stateVector[prevIndex:(prevIndex + self.playerCount * handSize * 35)]
 
+    def decrese_infoToken(self):
+        # decrease the number of hint tokens
+        for token in range(len(self.infoTokens)):
+            if self.infoTokens[token] == 0:
+                self.infoTokens[token] = 1
+                break
+
+    def increse_infoToken(self):
+        # increase the number of hint tokens
+        for token in range(len(self.infoTokens)):
+            if self.infoTokens[token] == 1:
+                self.infoTokens[token] = 0
+                break
+
     def getStateVector(self):
         return self.stateVector
+
+    def update_lastPlayer(self, player_id):
+        """
+        Updates the lastActivePlayer
+        Args:
+            player_id (int): the id of the player that just made a move
+        """
+        # FIXME: I don't think this is correct
+        # update the last player
+        for i in range(len(self.lastActivePlayer)):
+            if i == player_id:  self.lastActivePlayer[i] = 1
+            else:               self.lastActivePlayer[i] = 0
+
+    def update_lastMove(self,move):
+        # update the move type
+        if move['action_type'] == 'REVEAL_COLOR':
+            self.lastMoveType = [0,0,1,0]
+        elif move['action_type'] == 'REVEAL_RANK':
+            self.lastMoveType = [0,0,0,1]
+        elif move['action_type'] == 'PLAY':
+            self.lastMoveType = [1,0,0,0]
+        elif move['action_type'] == 'DISCARD':
+            self.lastMoveType = [0,1,0,0]
+        else:
+            raise ValueError("Invalid action_type")
+
+        # color hinted
+        try:    color = move['color']
+        except: color = -1
+        for c in range(len(self.colorRevealed)):
+            if c == color:  self.colorRevealed[c] = 1
+            else:           self.colorRevealed[c] = 0
+
+        # rank hinted
+        try:    rank = move['rank']
+        except: rank = -1
+        for r in range(len(self.rankRevealed)):
+            if r == rank:   self.rankRevealed[r] = 1
+            else:           self.rankRevealed[r] = 0
+    
+        # update the move target
+        try:    target = move['target_offset']
+        except: target = -1
+        for t in range(len(self.lastMoveTarget)):
+            if t == target: self.lastMoveTarget[t] = 1
+            else:           self.lastMoveTarget[t] = 0        
+
