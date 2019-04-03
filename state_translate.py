@@ -36,7 +36,6 @@ class state_translator:
 
     def encodeVector(self):
         self.stateVector = self.handSpace + self.playerMissingCards + self.currentDeck + self.boardSpace + self.infoTokens + self.lifeTokens + self.discardSpace + self.lastActivePlayer + self.lastMoveType + self.lastMoveTarget + self.colorRevealed + self.rankRevealed + self.cardRevealed + self.positionPlayed + self.cardPlayed + self.prevPlay + self.cardKnowledge
-
         if (len(self.stateVector) != self.stateVectorSize):
             raise ValueError('stateVector size has changed since last encodeVector() call.')
 
@@ -57,7 +56,7 @@ class state_translator:
         self.playerMissingCards = stateVector[prevIndex:(prevIndex+self.playerCount)]
         prevIndex += self.playerCount
 
-        deckSize = 50 - numCardsSeen #Assumes 50 cards in game total.
+        deckSize = 50 - (self.playerCount * handSize) #Assumes 50 cards in game total.
         self.currentDeck = stateVector[prevIndex:(prevIndex+deckSize)]
         prevIndex += deckSize
 
