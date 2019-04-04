@@ -76,9 +76,10 @@ class MCAgent(Agent):
 
         return translated.stateVector
 
-    def encode(self, ob):
+    def encode(self, vectorized, move):
         """returns an hashable state from the observation"""
-        return str(ob)
+        encoded = str(vectorized) + str(move)
+        return encoded
 
     def update_visits(self, state):
         """
@@ -113,24 +114,29 @@ class MCAgent(Agent):
         self.stats = {}  # create empty dictionary to save stats of all nodes
 
         self.env = env
-        self.root = env.state.copy()        # set the root from the state of the game
-        vectorized = env.observation_encoder.encode(
-            self.root.observation(self.player_id))
-        state = self.encode(vectorized)     # make it hashable
-        self.update_visits(state)           # increment number of visits
-
+        self.root = env.state        # set the root from the state of the game
+               
         # random rollouts
-        rollouts = 2
+        rollouts = 1000
         for r in range(rollouts):
             depth = 0                       # reset the depth
             history = []                    # reset the history of the rollout
-            game_state = self.root          # reset the state of the rollout
+            game_state = self.root.copy()          # reset the state of the rollout
+            vectorized = env.observation_encoder.encode(
+                game_state.observation(self.player_id))
 
-            while depth < self.max_depth and not game_state.is_terminal():
+            while depth < self.max_depth:
+                if game_state.is_terminal():
+                    break
 
                 # choose random action
                 legal_moves = game_state.legal_moves()
                 move = random.choice(legal_moves)
+
+                state = self.encode(vectorized, move)   # make it hashable
+                self.update_visits(state)               # increment visits
+                # append the state to the history of the rollout
+                history.append(state)
 
                 game_state.apply_move(move)    # make a move
 
@@ -140,12 +146,7 @@ class MCAgent(Agent):
 
                 vectorized = env.observation_encoder.encode(
                     game_state.observation(self.player_id))
-                state = self.encode(vectorized)     # make it hashable
-                # increment number of visits
-                self.update_visits(state)
-                # append the state to the history of the rollout
-                history.append(state)
-
+                
                 # set my belief
                 self.my_belief = self.belief.encode(vectorized, self.player_id)
 
@@ -162,7 +163,13 @@ class MCAgent(Agent):
 
                     # predict the move
                     move = self.select_from_prediction(obs_input, game_state)
-                    game_state.apply_move(move)
+
+                    state = self.encode(vectorized, move)   # make it hashable
+                    self.update_visits(state)               # increment visits
+                    # append the state to the history of the rollout
+                    history.append(state)
+
+                    game_state.apply_move(move) # make move
 
                     hint = True
                     if game_state.cur_player() == pyhanabi.CHANCE_PLAYER_ID:
@@ -171,9 +178,6 @@ class MCAgent(Agent):
 
                     vectorized = env.observation_encoder.encode(
                             game_state.observation(self.player_id))
-                    state = self.encode(vectorized)
-                    self.update_visits(state)
-                    history.append(state)
                     
                     # if move is hint, calculate the score and terminate
                     if hint:
@@ -183,11 +187,32 @@ class MCAgent(Agent):
                 depth += 1
 
             # after the rollout has ended
-            translated = state_translator(vectorized, self.config['players'])
-            score = sum(translated.boardSpace)
-            print(score)
+            if not game_state.is_terminal():
+                translated = state_translator(vectorized, self.config['players'])
+                score = sum(translated.boardSpace)
+            else:
+                score = 0
 
             for i in range(len(history)):
-                pass
+                state_index = history[len(history) - 1 - i]
+                self.stats[state_index]['value'] += score
+        
+        values = []
+        vectorized = env.observation_encoder.encode(
+            self.root.observation(self.player_id))
+        legal_moves = self.root.copy().legal_moves()
+        for move in legal_moves:
+            state = self.encode(vectorized, move)     # make it hashable
+            value = float(self.stats[state]['value'])
+            visits = float(self.stats[state]['visits'])
+            values.append(value/visits)
 
-        return random.choice(obs['legal_moves'])  # FIXME:
+        best = values.index(max(values))
+
+        verbose = True
+        if verbose:
+            for v in values:
+                print("%.2f" %v)
+            print("best action %s" % legal_moves[best])
+
+        return obs['legal_moves'][best]
