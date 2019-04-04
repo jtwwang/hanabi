@@ -48,7 +48,6 @@ class policy_net():
 		"""
 		X_sep_all = []
 		y_sep_all = []
-		#print("X: ({}, {})".format(len(X), len(X[0])))
 		for player in range(players):
 			X_sep_all.append(np.asarray(X[player::players]))
 			y_sep_all.append(np.asarray(y[player::players]))
@@ -64,15 +63,8 @@ class policy_net():
 				#print("X_sep: {}".format(X_sep.shape))
 				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
 				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
-				#print("x_train: {}".format(X_train.shape))
 				yield X_train, y_train
 			i = (i + 1) % len(self.X)
-	"""
-	def getMoves(self, X):
-		for i in range(X.shape[0]):
-			self.moves += X[i].shape[0]
-		print(self.moves)
-	"""
 
 
 
