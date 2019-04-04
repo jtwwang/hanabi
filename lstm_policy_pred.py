@@ -31,7 +31,9 @@ class policy_net():
 
 	def create_lstm(self):
 		x = Sequential()
-		x.add(LSTM(32, input_shape=(None,self.input_dim), return_sequences=True))
+		x.add(LSTM(32, input_shape=(None,self.input_dim), return_sequences=True,
+			  recurrent_regularizer=regularizers.l2(0.001),
+			  kernel_regularizer=regularizers.l2(0.001)))
 		x.add(Dropout(rate=0.1))
 		x.add(Dense(64, activation='relu'))
 		x.add(Dropout(rate=0.1))
