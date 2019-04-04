@@ -42,22 +42,30 @@ class policy_net():
 	
 	def separate_player_obs(self, X, y, players=2):
 		""" Seperates observations into what each player sees
+		Returns:
+			X_sep_all (np arr): obs belonging to a single agent
+			y_sep_all (np arr): labels belonging to a single agent
 		"""
-		X_sep = []
-		y_sep = []
+		X_sep_all = []
+		y_sep_all = []
+		#print("X: ({}, {})".format(len(X), len(X[0])))
 		for player in range(players):
-			X_sep.append(np.asarray(X[player::players]))
-			y_sep.append(np.asarray(y[player::players]))
-		return X_sep, y_sep
+			X_sep_all.append(np.asarray(X[player::players]))
+			y_sep_all.append(np.asarray(y[player::players]))
+			#print("X_sep: {}".format(X_sep_all[player].shape))
+		return X_sep_all, y_sep_all
 
 
 	def train_generator(self):
 		i = 0
 		while True:
-			for x_train, y_train in self.separate_player_obs(self.X[i], self.y[i]):
-				x_train = np.reshape(x_train,(1,x_train.shape[0],x_train.shape[1]))
-				y_train = np.reshape(y_train,(1,y_train.shape[0],y_train.shape[1]))
-				yield x_train, y_train
+			X_sep_all, y_sep_all = self.separate_player_obs(self.X[i], self.y[i])
+			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
+				#print("X_sep: {}".format(X_sep.shape))
+				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
+				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
+				#print("x_train: {}".format(X_train.shape))
+				yield X_train, y_train
 			i = (i + 1) % len(self.X)
 	"""
 	def getMoves(self, X):
@@ -77,8 +85,8 @@ class policy_net():
 		
 		self.X = np.asarray(X)
 		self.y = np.asarray(y)
-		print(type(self.X))
-		print(X[0])
+		#print(type(self.X))
+		#print(X[0])
 
 
 		adam = optimizers.Adam(
