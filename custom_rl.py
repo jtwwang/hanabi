@@ -83,12 +83,15 @@ class Runner(object):
                 for agent in range(len(agents)):
                     agents[agent].player_id = agent
         
+        avg_steps = 0
+
         for eps in range(flags['num_episodes']):
             print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
             done = False
             eps_reward = 0
+            n_steps = 0
 
             while not done:
                 for agent_id, agent in enumerate(agents):
@@ -96,6 +99,7 @@ class Runner(object):
                     action = agent.act(ob)
 
                     move = self.moves_lookup(action, ob)
+                    n_steps += 1
 
                     # for debugging purpose
                     if flags['debug']:
@@ -112,9 +116,11 @@ class Runner(object):
                     if done:
                         break
             rewards.append(eps_reward)
+            avg_steps += n_steps
 
-        print('Max Reward: %.3f' % max(rewards))
-
+        n_eps = int(flags['num_episodes'])
+        print('Average Reward: %.3f' % (sum(rewards)/n_eps))
+        print('Average steps: %.2f' % (avg_steps/n_eps))
 
 if __name__ == "__main__":
     
