@@ -15,6 +15,7 @@ import math
 from sklearn.model_selection import KFold
 from matplotlib import pyplot as plt
 from IPython.display import clear_output
+from time import time
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -132,7 +133,8 @@ class policy_net():
 		checkpoints = keras.callbacks.ModelCheckpoint(
 									os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
                                     save_weights_only=True, period=50)
-		plot_acc = PlotAcc()
+		#plot_acc = PlotAcc()
+		tensorboard = keras.callbacks.TensorBoard(log_dir="./logs")
 
 		self.model.fit_generator(
 				self.train_generator(X_train, y_train),
@@ -141,7 +143,7 @@ class policy_net():
 				validation_data=self.train_generator(X_test, y_test),
 				validation_steps=X_test.shape[0],
 				#validation_freq=2,
-				callbacks = [checkpoints, plot_acc])
+				callbacks = [checkpoints, tensorboard])
 
 		self.save()
 
