@@ -22,9 +22,11 @@ from agents.random_agent import RandomAgent
 from agents.simple_agent import SimpleAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.mc_agent import MCAgent
+from agents.second_agent import SecondAgent
 
 AGENT_CLASSES = {
         'SimpleAgent':  SimpleAgent,
+        'SecondAgent': SecondAgent,
         'RandomAgent':  RandomAgent,
         'RainbowAgent': RainbowAgent,
         'MCAgent': MCAgent}
