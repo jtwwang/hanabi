@@ -14,6 +14,7 @@ import os
 import math
 from sklearn.model_selection import KFold
 from matplotlib import pyplot as plt
+from IPython.display import clear_output
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
@@ -42,7 +43,7 @@ class PlotAcc(keras.callbacks.Callback):
         plt.plot(self.x, self.acc, label="acc")
         plt.plot(self.x, self.val_acc, label="val_acc")
         plt.legend()
-        plt.show();
+        plt.show(block=False);
 
 class policy_net():
 
@@ -83,28 +84,30 @@ class policy_net():
 		return X_sep_all, y_sep_all
 
 
-	def train_generator(self):
+	def train_generator(self, X, y):
 		i = 0
 		while True:
-			X_sep_all, y_sep_all = self.separate_player_obs(self.X[i], self.y[i])
+			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i])
 			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
 				#print("X_sep: {}".format(X_sep.shape))
 				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
 				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
 				yield X_train, y_train
-			i = (i + 1) % len(self.X)
+			i = (i + 1) % len(X)
 
 
 
-	def fit(self, X_train, y_train, X_fit, y_fit, epochs=100, batch_size=32, learning_rate=0.001):
+	def fit(self, X_train, y_train, X_test, y_test, epochs=100, batch_size=32, learning_rate=0.001):
 		"""
 		args:
 				X (int arr): vectorized features
 				y (int arr): one-hot encoding with dimensions(sample_size,action_space)
 		"""
 		
-		self.X_train = np.asarray(X_train)
-		self.y_train = np.asarray(y_train)
+		X_train = np.asarray(X_train)
+		y_train = np.asarray(y_train)
+		X_test = np.asarray(X_test)
+		y_test = np.asarray(y_test)
 		#print(type(self.X))
 		#print(X[0])
 
@@ -132,9 +135,12 @@ class policy_net():
 		plot_acc = PlotAcc()
 
 		self.model.fit_generator(
-				self.train_generator(),
-				steps_per_epoch = self.X_train.shape[0],
+				self.train_generator(X_train, y_train),
+				steps_per_epoch = X_train.shape[0],
 				epochs = epochs,
+				validation_data=self.train_generator(X_test, y_test),
+				validation_steps=X_test.shape[0],
+				#validation_freq=2,
 				callbacks = [checkpoints, plot_acc])
 
 		self.save()
@@ -165,9 +171,7 @@ class policy_net():
 		return pred
 
 	def evaluate(self, X, y):
-		self.X = X
-		self.y = y
-		score = self.model.evaluate_generator(self.train_generator(), steps = X.shape[0])
+		score = self.model.evaluate_generator(self.train_generator(X,y), steps = X.shape[0])
 		return score
 
 	def load(self):
