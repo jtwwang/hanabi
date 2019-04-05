@@ -48,6 +48,7 @@ class state_translator:
             raise ValueError('playerCount is invalid number')
 
         prevIndex = 0
+        self.handSize = handSize
 
         numCardsSeen = (self.playerCount - 1) * handSize
         self.handSpace = stateVector[prevIndex:(prevIndex+numCardsSeen*25)]
