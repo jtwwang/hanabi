@@ -70,7 +70,8 @@ class MCAgent(Agent):
             # update the belief accordingly to the new knowledge
             translated_to_sample.encodeVector()
             re_encoded = translated_to_sample.stateVector
-            self.my_belief = self.belief.encode(re_encoded, self.player_id)
+            self.belief.calculate_prob(self.player_id, re_encoded)
+            self.my_belief = self.belief.belief
 
         # take the original vector, and change the observations
         translated = state_translator(vectorized, self.config['players'])
@@ -205,6 +206,7 @@ class MCAgent(Agent):
                 state_index = history[len(history) - 1 - i]
                 self.stats[state_index]['value'] += score
 
+        
         values = []
         vectorized = env.observation_encoder.encode(
             self.root.observation(self.player_id))
