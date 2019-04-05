@@ -80,16 +80,17 @@ class Runner(object):
         else:
             agents = [self.agent_class(self.agent_config)
                       for _ in range(self.flags['players'])]
-            if self.flags['agent_class'] == 'MCAgent':
-                for agent in range(len(agents) - 1):
-                    agents[agent].player_id = agent
-                    agent.verbose = flags['verbose']
+            
+        # set the name
+        for agent in agents:
+            agent.name = self.flags['agent_class']
 
         # configure the last agent to be the Monte Carlo Agent
         self.agent_class = MCAgent
         agents[-1] = self.agent_class(self.agent_config)
         agents[-1].player_id = len(agents) - 1
         agents[-1].verbose = flags['verbose']
+        agents[-1].name = 'MonteCarloAgent'
         avg_steps = 0
 
         for eps in range(flags['num_episodes']):
@@ -113,7 +114,7 @@ class Runner(object):
 
                     move = self.moves_lookup(action, ob)
                     n_steps += 1
-                    print("Agent %s made move %s" % (str(agent), action))
+                    print("Agent %s made move %s" % (agent.name, action))
 
                     # for debugging purpose
                     if flags['debug']:
