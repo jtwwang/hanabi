@@ -6,6 +6,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
+from math import sqrt, log
 from state_translate import state_translator
 from rl_env import Agent
 import numpy as np
@@ -125,6 +126,50 @@ class MCAgent(Agent):
             # if already visited this exact state, use the predicted move
             return self.pred_moves[nn_state]
 
+    def UCT(self, one_stat, N):
+        """
+        Calculate the Upper-Confidence bound for trees.
+        Uses the formula retrieved at https://en.wikipedia.org/wiki/Monte_Carlo_tree_search
+        under the section "Exploration and exploitation"
+        Args:
+            one_stat (dict): a dictionary with keys 'value' and 'visits'
+            N (int): the number of visits of the parent node
+        Returns:
+            the UCT value (double)
+        """
+        v = one_stat['value']
+        n = one_stat['visits']
+        return (v / n) + 1.41 * sqrt(log(N) / n)
+
+    def choose_move(self, vectorized, game_state, previous_state):
+        """
+        Chooses the best legal move accordingly to the UCT value of the node
+        Args:
+            vectorized (list): the list of observations in vectorized form
+            game_state (HanabiState): the current state of the game
+            previous_state (string): the key to the parent state
+        Returns:
+            move (HanabiMove): the best move
+        """
+        N = self.stats[previous_state]['visits']
+        max_uct = -1
+        best_move = -1
+        for move in game_state.legal_moves():
+            state = self.encode(vectorized, move)
+            if state in self.stats.keys():
+                # calculate the uct
+                uct_value = self.UCT(self.stats[state], N)
+                if max_uct < uct_value:
+                    max_uct = uct_value
+                    best_move = move
+            else:
+                # the state has not been explored so choose that
+                return move
+        if best_move == -1:
+            raise ValueError("invalid best_move")
+        else:
+            return best_move
+        
     def act(self, obs, env):
 
         self.pred_moves = {} # reset memory
@@ -141,14 +186,16 @@ class MCAgent(Agent):
             game_state = self.root.copy()          # reset the state of the rollout
             vectorized = env.observation_encoder.encode(
                 game_state.observation(self.player_id))
+            state = "root"
+            self.update_visits(state)
 
             while depth < self.max_depth:
                 if game_state.is_terminal():
                     break
 
                 # choose random action
-                move = random.choice(game_state.legal_moves())
-
+                move = self.choose_move(vectorized, game_state, state)
+                
                 state = self.encode(vectorized, move)   # make it hashable
                 self.update_visits(state)               # increment visits
                 # append the state to the history of the rollout
