@@ -213,6 +213,9 @@ class MCAgent(Agent):
                 # set my belief
                 self.my_belief = self.belief.encode(vectorized, self.player_id)
 
+                # hint of the other players
+                hint = True
+
                 # other players' moves
                 for p in range(self.config['players'] - 1):
 
@@ -246,6 +249,9 @@ class MCAgent(Agent):
                     if hint:
                         break
 
+                if hint:
+                    break
+
                 # increase the depth by 1
                 depth += 1
 
@@ -263,6 +269,7 @@ class MCAgent(Agent):
                 self.stats[state_index]['value'] += score
 
         values = []
+        n = []
         vectorized = env.observation_encoder.encode(
             self.root.observation(self.player_id))
         legal_moves = self.root.copy().legal_moves()
@@ -271,11 +278,12 @@ class MCAgent(Agent):
             value = float(self.stats[state]['value'])
             visits = float(self.stats[state]['visits'])
             values.append(value/visits)
+            n.append(visits)
 
         best = values.index(max(values))
 
         if self.verbose:
             for i in range(len(values)):
-                print("%s: %.2f" % (legal_moves[i], values[i]))
+                print("%s: %.2f, visits %d" % (legal_moves[i], values[i], n[i]))
 
         return obs['legal_moves'][best]
