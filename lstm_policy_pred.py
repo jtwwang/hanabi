@@ -17,6 +17,31 @@ from sklearn.model_selection import KFold
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
+class PlotAcc(keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.i = 0
+        self.x = []
+        self.acc = []
+        self.val_acc = []
+        
+        self.fig = plt.figure()
+        
+        self.logs = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        
+        self.logs.append(logs)
+        self.x.append(self.i)
+        self.acc.append(logs.get('acc'))
+        self.val_acc.append(logs.get('val_acc'))
+        self.i += 1
+        
+        clear_output(wait=True)
+        plt.plot(self.x, self.acc, label="acc")
+        plt.plot(self.x, self.val_acc, label="val_acc")
+        plt.legend()
+        plt.show();
 
 class policy_net():
 
@@ -70,15 +95,15 @@ class policy_net():
 
 
 
-	def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
+	def fit(self, X_train, y_train, X_fit, y_fit, epochs=100, batch_size=32, learning_rate=0.001):
 		"""
 		args:
 				X (int arr): vectorized features
 				y (int arr): one-hot encoding with dimensions(sample_size,action_space)
 		"""
 		
-		self.X = np.asarray(X)
-		self.y = np.asarray(y)
+		self.X_train = np.asarray(X_train)
+		self.y_train = np.asarray(y_train)
 		#print(type(self.X))
 		#print(X[0])
 
@@ -100,16 +125,16 @@ class policy_net():
 			except OSError:
 				print("Creation of the directory %s failed" % self.checkpoint_path)
 
-		
 		checkpoints = keras.callbacks.ModelCheckpoint(
 									os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
                                     save_weights_only=True, period=50)
-		
+		plot_acc = PlotAcc()
+
 		self.model.fit_generator(
 				self.train_generator(),
-				steps_per_epoch = self.X.shape[0],
+				steps_per_epoch = self.X_train.shape[0],
 				epochs = epochs,
-				callbacks = [checkpoints])
+				callbacks = [checkpoints, plot_acc])
 
 		self.save()
 
@@ -199,6 +224,7 @@ def cross_validation(k):
 		pp = policy_net(input_dim, output_dim, flags['agent_class'])
 
 		pp.fit(X_train, y_train,
+               X_test, y_test,
 			   epochs=flags['epochs'],
 			   batch_size=flags['batch_size'],
 			   learning_rate=flags['lr'])
