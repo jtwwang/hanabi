@@ -13,6 +13,7 @@ import sys
 import os
 import math
 from sklearn.model_selection import KFold
+from matplotlib import pyplot as plt
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
