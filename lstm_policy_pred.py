@@ -22,29 +22,29 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
 class PlotAcc(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.i = 0
-        self.x = []
-        self.acc = []
-        self.val_acc = []
-        
-        self.fig = plt.figure()
-        
-        self.logs = []
+	def on_train_begin(self, logs={}):
+		self.i = 0
+		self.x = []
+		self.acc = []
+		self.val_acc = []
+		
+		self.fig = plt.figure()
+		
+		self.logs = []
 
-    def on_epoch_end(self, epoch, logs={}):
-        
-        self.logs.append(logs)
-        self.x.append(self.i)
-        self.acc.append(logs.get('acc'))
-        self.val_acc.append(logs.get('val_acc'))
-        self.i += 1
-        
-        clear_output(wait=True)
-        plt.plot(self.x, self.acc, label="acc")
-        plt.plot(self.x, self.val_acc, label="val_acc")
-        plt.legend()
-        plt.show(block=False);
+	def on_epoch_end(self, epoch, logs={}):
+		
+		self.logs.append(logs)
+		self.x.append(self.i)
+		self.acc.append(logs.get('acc'))
+		self.val_acc.append(logs.get('val_acc'))
+		self.i += 1
+		
+		clear_output(wait=True)
+		plt.plot(self.x, self.acc, label="acc")
+		plt.plot(self.x, self.val_acc, label="val_acc")
+		plt.legend()
+		plt.show(block=False);
 
 class policy_net():
 
@@ -59,7 +59,7 @@ class policy_net():
 
 	def create_lstm(self):
 		x = Sequential()
-		x.add(LSTM(32, input_shape=(None,self.input_dim), return_sequences=True,
+		x.add(LSTM(64, input_shape=(None,self.input_dim), return_sequences=True,
 			  recurrent_regularizer=regularizers.l2(0.001),
 			  kernel_regularizer=regularizers.l2(0.001)))
 		x.add(Dropout(rate=0.1))
@@ -98,7 +98,7 @@ class policy_net():
 
 
 
-	def fit(self, X_train, y_train, X_test, y_test, epochs=100, batch_size=32, learning_rate=0.001):
+	def fit(self, X_train, y_train, X_test=None, y_test=None, epochs=100, batch_size=32, learning_rate=0.001):
 		"""
 		args:
 				X (int arr): vectorized features
@@ -132,18 +132,25 @@ class policy_net():
 
 		checkpoints = keras.callbacks.ModelCheckpoint(
 									os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
-                                    save_weights_only=True, period=50)
+									save_weights_only=True, period=50)
 		#plot_acc = PlotAcc()
 		tensorboard = keras.callbacks.TensorBoard(log_dir="./logs")
-
-		self.model.fit_generator(
+		
+		if X_test == None:
+			self.model.fit_generator(
 				self.train_generator(X_train, y_train),
 				steps_per_epoch = X_train.shape[0],
 				epochs = epochs,
-				validation_data=self.train_generator(X_test, y_test),
-				validation_steps=X_test.shape[0],
-				#validation_freq=2,
-				callbacks = [checkpoints, tensorboard])
+				callbacks = [checkpoints])
+		else:
+			self.model.fit_generator(
+					self.train_generator(X_train, y_train),
+					steps_per_epoch = X_train.shape[0],
+					epochs = epochs,
+					validation_data=self.train_generator(X_test, y_test),
+					validation_steps=X_test.shape[0],
+					#validation_freq=2,
+					callbacks = [checkpoints, tensorboard])
 
 		self.save()
 
@@ -231,7 +238,7 @@ def cross_validation(k):
 		pp = policy_net(input_dim, output_dim, flags['agent_class'])
 
 		pp.fit(X_train, y_train,
-               X_test, y_test,
+			   X_test, y_test,
 			   epochs=flags['epochs'],
 			   batch_size=flags['batch_size'],
 			   learning_rate=flags['lr'])
