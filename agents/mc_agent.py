@@ -26,7 +26,7 @@ class MCAgent(Agent):
     def __init__(self, config, *args, **kwargs):
         """Initialize the agent"""
         self.config = config
-        self.max_depth = 2
+        self.max_depth = 4
         self.belief = baysian_belief.Belief(config['players'])
 
         # load the predictor
@@ -36,7 +36,8 @@ class MCAgent(Agent):
             config['observation_size'], config['num_moves'], agent_class)
         self.pp.load()
 
-        self.stats = {}  # create empty dictionary to save stats of all nodes
+        self.stats = {}         # stats of all states
+        self.pred_moves = {}    # all predicted_moves
 
     def sample(self, card):
         """ sample a card from distribution"""
@@ -59,13 +60,12 @@ class MCAgent(Agent):
         v_sample = []
         translated_to_sample = state_translator(
             vectorized, self.config['players'])
-        handSize = translated_to_sample.handSize
         for i in range(self.my_belief.shape[0]):
             v = self.sample(self.my_belief[i]).tolist()
             v_sample = v_sample + v
 
             # update the card knowledge accordingly to the sample
-            translated_to_sample.cardKnowledge[i*35 + (self.player_id * 35 * handSize):i*35 + 25 + (self.player_id * 35 * handSize)] = v
+            translated_to_sample.cardKnowledge[i*35:i*35 + 25] = v
 
             # update the belief accordingly to the new knowledge
             translated_to_sample.encodeVector()
@@ -102,25 +102,34 @@ class MCAgent(Agent):
             obs_input (list): the vectorized observations
             state     (HanabiState): the state of the game
         """
-        prediction = self.pp.predict(obs_input)
-        # convert move to correct type
-        best_value = 0
-        best_move = -1
-        for action in range(prediction.shape[1]):
-            move = self.env.game.get_move(action)
-            for i in range(len(state.legal_moves())):
-                if str(state.legal_moves()[i]) == str(move):
-                    if prediction[0, action] > best_value:
-                        best_value = prediction[0, action]
-                        best_move = move
-                    break
-        if best_move == -1:
-            raise ValueError("best_action has invalid value")
+        nn_state = str(obs_input)
+        if nn_state not in self.pred_moves.keys():
+            prediction = self.pp.predict(obs_input)
+            # convert move to correct type
+            best_value = 0
+            best_move = -1
+            for action in range(prediction.shape[1]):
+                move = self.env.game.get_move(action)
+                for i in range(len(state.legal_moves())):
+                    if str(state.legal_moves()[i]) == str(move):
+                        if prediction[0, action] > best_value:
+                            best_value = prediction[0, action]
+                            best_move = move
+                        break
+            if best_move == -1:
+                raise ValueError("best_action has invalid value")
+            else:
+                self.pred_moves[nn_state] = best_move
+                return best_move
         else:
-            return best_move
+            # if already visited this exact state, use the predicted move
+            return self.pred_moves[nn_state]
 
     def act(self, obs, env):
-        
+
+        self.pred_moves = {} # reset memory
+        self.stats = {}      # reset memory
+
         self.env = env
         self.root = env.state        # set the root from the state of the game
 
@@ -206,7 +215,6 @@ class MCAgent(Agent):
                 state_index = history[len(history) - 1 - i]
                 self.stats[state_index]['value'] += score
 
-        
         values = []
         vectorized = env.observation_encoder.encode(
             self.root.observation(self.player_id))
@@ -221,6 +229,6 @@ class MCAgent(Agent):
 
         if self.verbose:
             for i in range(len(values)):
-                print("%s: %.2f" % (legal_moves[i],values[i]))
+                print("%s: %.2f" % (legal_moves[i], values[i]))
 
         return obs['legal_moves'][best]
