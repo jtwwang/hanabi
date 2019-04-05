@@ -5,14 +5,11 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
-from state_translate import state_translator
+
 from agents.mc_agent import MCAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
-import pyhanabi
-import numpy as np
-import experience as exp
 import rl_env
 import getopt
 """A script to collect episodes from simple agent"""
@@ -80,7 +77,7 @@ class Runner(object):
         else:
             agents = [self.agent_class(self.agent_config)
                       for _ in range(self.flags['players'])]
-            
+
         # set the name
         for agent in agents:
             agent.name = self.flags['agent_class']
@@ -112,7 +109,6 @@ class Runner(object):
                         # otherwise, pass the observations only
                         action = agent.act(ob)
 
-                    move = self.moves_lookup(action, ob)
                     n_steps += 1
                     print("Agent %s made move %s" % (agent.name, action))
 

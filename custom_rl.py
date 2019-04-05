@@ -5,31 +5,28 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
-"""A script to collect episodes from simple agent"""
-
-from __future__ import print_function
+from agents.second_agent import SecondAgent
+from agents.mc_agent import MCAgent
+from agents.rainbow_agent_rl import RainbowAgent
+from agents.simple_agent import SimpleAgent
+from agents.random_agent import RandomAgent
+import experience as exp
+import rl_env
+import getopt
 
 import os
 import sys
-sys.path.insert(0, os.path.join(os.getcwd(), 'agents')) # To find local modules
+# To find local modules
+sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 
-import getopt
-import rl_env
-import experience as exp
-import numpy as np
-import pyhanabi
-from agents.random_agent import RandomAgent
-from agents.simple_agent import SimpleAgent
-from agents.rainbow_agent_rl import RainbowAgent
-from agents.mc_agent import MCAgent
-from agents.second_agent import SecondAgent
 
 AGENT_CLASSES = {
-        'SimpleAgent':  SimpleAgent,
-        'SecondAgent': SecondAgent,
-        'RandomAgent':  RandomAgent,
-        'RainbowAgent': RainbowAgent,
-        'MCAgent': MCAgent}
+    'SimpleAgent':  SimpleAgent,
+    'SecondAgent': SecondAgent,
+    'RandomAgent':  RandomAgent,
+    'RainbowAgent': RainbowAgent,
+    'MCAgent': MCAgent}
+
 
 class Runner(object):
     """Runner class."""
@@ -39,16 +36,16 @@ class Runner(object):
         self.flags = flags
         self.env = rl_env.make('Hanabi-Full', num_players=flags['players'])
         self.agent_config = {
-                'players': flags['players'],
-                'num_moves' : self.env.num_moves(),
-                'observation_size': self.env.vectorized_observation_shape()[0]}
+            'players': flags['players'],
+            'num_moves': self.env.num_moves(),
+            'observation_size': self.env.vectorized_observation_shape()[0]}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
-    def moves_lookup(self,move, ob):
+    def moves_lookup(self, move, ob):
         """returns the int given the dictionary form"""
 
         int_obs = ob['legal_moves_as_int']
-        
+
         for i in int_obs:
             isEqual = True
             dict_move = self.env.game.get_move(i).to_dict()
@@ -60,10 +57,10 @@ class Runner(object):
                 elif not move[d] == dict_move[d]:
                     isEqual = False
                     break
-            
+
             if isEqual:
                 return i
-        
+
         print("ERROR")
         return -1
 
@@ -72,7 +69,7 @@ class Runner(object):
         global replay
 
         rewards = []
-        
+
         if self.flags['agent_class'] == 'RainbowAgent':
             # put 2-5 copies of the same agent in a list, because loading
             # the same tensorflow checkpoint more than once in a session fails
@@ -80,11 +77,11 @@ class Runner(object):
             agents = [agent for _ in range(self.flags['players'])]
         else:
             agents = [self.agent_class(self.agent_config)
-                    for _ in range(self.flags['players'])]
+                      for _ in range(self.flags['players'])]
             if self.flags['agent_class'] == 'MCAgent':
                 for agent in range(len(agents)):
                     agents[agent].player_id = agent
-        
+
         avg_steps = 0
 
         for eps in range(flags['num_episodes']):
@@ -124,28 +121,29 @@ class Runner(object):
         print('Average Reward: %.3f' % (sum(rewards)/n_eps))
         print('Average steps: %.2f' % (avg_steps/n_eps))
 
+
 if __name__ == "__main__":
-    
+
     flags = {'players': 2,
-            'num_episodes': 1000,
-            'agent_class': 'SimpleAgent',
-            'debug': False}
+             'num_episodes': 1000,
+             'agent_class': 'SimpleAgent',
+             'debug': False}
     options, arguments = getopt.getopt(sys.argv[1:], '',
-                                     ['players=',
-                                      'num_episodes=',
-                                      'agent_class=',
-                                      'debug='])
+                                       ['players=',
+                                        'num_episodes=',
+                                        'agent_class=',
+                                        'debug='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
-             '--players       number of players in the game.\n'
-             '--num_episodes  number of game episodes to run.\n'
-             '--agent_class   {}'.format(' or '.join(AGENT_CLASSES.keys())))
+                 '--players       number of players in the game.\n'
+                 '--num_episodes  number of game episodes to run.\n'
+                 '--agent_class   {}'.format(' or '.join(AGENT_CLASSES.keys())))
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
     # initialize the replay memory
-    replay = exp.Experience(flags['agent_class'], numAgents = flags['players'])
+    replay = exp.Experience(flags['agent_class'], numAgents=flags['players'])
 
     # run the episodes
     runner = Runner(flags)
