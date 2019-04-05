@@ -36,6 +36,8 @@ class MCAgent(Agent):
             config['observation_size'], config['num_moves'], agent_class)
         self.pp.load()
 
+        self.stats = {}  # create empty dictionary to save stats of all nodes
+
     def sample(self, card):
         """ sample a card from distribution"""
         rand = random.random()
@@ -57,12 +59,13 @@ class MCAgent(Agent):
         v_sample = []
         translated_to_sample = state_translator(
             vectorized, self.config['players'])
+        handSize = translated_to_sample.handSize
         for i in range(self.my_belief.shape[0]):
             v = self.sample(self.my_belief[i]).tolist()
             v_sample = v_sample + v
 
             # update the card knowledge accordingly to the sample
-            translated_to_sample.cardKnowledge[i*35:i*35 + 25] = v
+            translated_to_sample.cardKnowledge[i*35 + (self.player_id * 35 * handSize):i*35 + 25 + (self.player_id * 35 * handSize)] = v
 
             # update the belief accordingly to the new knowledge
             translated_to_sample.encodeVector()
@@ -92,6 +95,12 @@ class MCAgent(Agent):
             self.stats[state]['visits'] += 1
 
     def select_from_prediction(self, obs_input, state):
+        """
+        select the action of the agents given the observations
+        Args:
+            obs_input (list): the vectorized observations
+            state     (HanabiState): the state of the game
+        """
         prediction = self.pp.predict(obs_input)
         # convert move to correct type
         best_value = 0
@@ -100,8 +109,8 @@ class MCAgent(Agent):
             move = self.env.game.get_move(action)
             for i in range(len(state.legal_moves())):
                 if str(state.legal_moves()[i]) == str(move):
-                    if prediction[0,action] > best_value:
-                        best_value = prediction[0,action]
+                    if prediction[0, action] > best_value:
+                        best_value = prediction[0, action]
                         best_move = move
                     break
         if best_move == -1:
@@ -109,13 +118,11 @@ class MCAgent(Agent):
         else:
             return best_move
 
-
     def act(self, obs, env):
-        self.stats = {}  # create empty dictionary to save stats of all nodes
-
+        
         self.env = env
         self.root = env.state        # set the root from the state of the game
-               
+
         # random rollouts
         rollouts = 1000
         for r in range(rollouts):
@@ -130,8 +137,7 @@ class MCAgent(Agent):
                     break
 
                 # choose random action
-                legal_moves = game_state.legal_moves()
-                move = random.choice(legal_moves)
+                move = random.choice(game_state.legal_moves())
 
                 state = self.encode(vectorized, move)   # make it hashable
                 self.update_visits(state)               # increment visits
@@ -146,7 +152,7 @@ class MCAgent(Agent):
 
                 vectorized = env.observation_encoder.encode(
                     game_state.observation(self.player_id))
-                
+
                 # set my belief
                 self.my_belief = self.belief.encode(vectorized, self.player_id)
 
@@ -166,10 +172,10 @@ class MCAgent(Agent):
 
                     state = self.encode(vectorized, move)   # make it hashable
                     self.update_visits(state)               # increment visits
-                    # append the state to the history of the rollout
+                    # append the state to the history of the rollouts
                     history.append(state)
 
-                    game_state.apply_move(move) # make move
+                    game_state.apply_move(move)  # make move
 
                     hint = True
                     if game_state.cur_player() == pyhanabi.CHANCE_PLAYER_ID:
@@ -177,8 +183,8 @@ class MCAgent(Agent):
                         hint = False
 
                     vectorized = env.observation_encoder.encode(
-                            game_state.observation(self.player_id))
-                    
+                        game_state.observation(self.player_id))
+
                     # if move is hint, calculate the score and terminate
                     if hint:
                         break
@@ -188,15 +194,17 @@ class MCAgent(Agent):
 
             # after the rollout has ended
             if not game_state.is_terminal():
-                translated = state_translator(vectorized, self.config['players'])
+                translated = state_translator(
+                    vectorized, self.config['players'])
                 score = sum(translated.boardSpace)
             else:
-                score = 0
+                # if the game is terminal
+                score = game_state.score()
 
             for i in range(len(history)):
                 state_index = history[len(history) - 1 - i]
                 self.stats[state_index]['value'] += score
-        
+
         values = []
         vectorized = env.observation_encoder.encode(
             self.root.observation(self.player_id))
@@ -209,10 +217,8 @@ class MCAgent(Agent):
 
         best = values.index(max(values))
 
-        verbose = True
-        if verbose:
-            for v in values:
-                print("%.2f" %v)
-            print("best action %s" % legal_moves[best])
+        if self.verbose:
+            for i in range(len(values)):
+                print("%s: %.2f" % (legal_moves[i],values[i]))
 
         return obs['legal_moves'][best]
