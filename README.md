@@ -9,6 +9,7 @@ sudo apt-get install cmake       # if you don't already have CMake
 sudo apt-get install python-pip  # if you don't already have pip
 pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
+pip install tensorflow           # if you don't already have tensorflow
 cmake .
 make
 python custom_rl.py              # Runs RL episodes
@@ -51,3 +52,17 @@ There are two flags that you can currently use:
 
 If not doing cross validation, the trainging uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
 
+### Monte Carlo Player
+We implemented an agent that uses Monte Carlo Tree search with UCT in combination with the policy predictor to play with other agents. The algorithm samples from a probability distribution every time that encounters an undertermined state. It uses 1000 simulations with finite depth to search the best move to do.
+
+To run the script
+```
+ptyhon MonteCarlo_game.py
+```
+Similarly to `custom_rl.py` you can use flags to set some of the parameters of the game
+```
+--agent_class <RainbowAgent, RandomAgent, SimpleAgent, SecondAgent>
+--num_episodes <int>
+--players <int 2 to 5>
+--verbose True/False
+```
