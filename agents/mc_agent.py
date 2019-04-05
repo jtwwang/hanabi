@@ -13,9 +13,9 @@ import numpy as np
 import baysian_belief
 import random
 import pyhanabi
-from copy import copy, deepcopy
 from policy_predictor import policy_net
 from datetime import datetime
+import time
 random.seed(datetime.now())
 
 
@@ -43,7 +43,7 @@ class MCAgent(Agent):
     def sample(self, card):
         """ sample a card from distribution"""
         rand = random.random()
-        v = np.zeros(25)
+        v = np.zeros(25, dtype=np.uint8)
         for r in range(card.shape[0]):
             for c in range(card.shape[1]):
                 if (rand - card[r, c] <= 0):
@@ -53,7 +53,7 @@ class MCAgent(Agent):
                     rand -= card[r][c]
 
     def sampled_vector(self, vectorized):
-        """ 
+        """
         returns a sample of observations from belief and observations
         Args:
             vectorized (list): the observations in a vectorized form
@@ -69,22 +69,19 @@ class MCAgent(Agent):
             translated_to_sample.cardKnowledge[i*35:i*35 + 25] = v
 
             # update the belief accordingly to the new knowledge
-            translated_to_sample.encodeVector()
-            re_encoded = translated_to_sample.stateVector
-            self.belief.calculate_prob(self.player_id, re_encoded)
+            self.belief.calculate_prob(
+                self.player_id, translated_to_sample.cardKnowledge)
             self.my_belief = self.belief.belief
 
         # take the original vector, and change the observations
         translated = state_translator(vectorized, self.config['players'])
         translated.handSpace = v_sample
         translated.encodeVector()
-
         return translated.stateVector
 
     def encode(self, vectorized, move):
         """returns an hashable state from the observation"""
-        encoded = str(vectorized) + str(move)
-        return encoded
+        return str(vectorized).join(str(move))
 
     def update_visits(self, state):
         """
@@ -111,8 +108,8 @@ class MCAgent(Agent):
             best_move = -1
             for action in range(prediction.shape[1]):
                 move = self.env.game.get_move(action)
-                for i in range(len(state.legal_moves())):
-                    if str(state.legal_moves()[i]) == str(move):
+                for l_move in state.legal_moves():
+                    if str(l_move) == str(move):
                         if prediction[0, action] > best_value:
                             best_value = prediction[0, action]
                             best_move = move
@@ -169,10 +166,11 @@ class MCAgent(Agent):
             raise ValueError("invalid best_move")
         else:
             return best_move
-        
+
     def act(self, obs, env):
 
-        self.pred_moves = {} # reset memory
+        start = time.time()
+        self.pred_moves = {}  # reset memory
         self.stats = {}      # reset memory
 
         self.env = env
@@ -195,7 +193,7 @@ class MCAgent(Agent):
 
                 # choose random action
                 move = self.choose_move(vectorized, game_state, state)
-                
+
                 state = self.encode(vectorized, move)   # make it hashable
                 self.update_visits(state)               # increment visits
                 # append the state to the history of the rollout
@@ -282,8 +280,11 @@ class MCAgent(Agent):
 
         best = values.index(max(values))
 
+        end = time.time()
         if self.verbose:
+            print("time of execution: %.3f" % (end-start))
             for i in range(len(values)):
-                print("%s: %.2f, visits %d" % (legal_moves[i], values[i], n[i]))
+                print("%s: %.2f, visits %d" %
+                      (legal_moves[i], values[i], n[i]))
 
         return obs['legal_moves'][best]
