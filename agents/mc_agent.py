@@ -44,13 +44,12 @@ class MCAgent(Agent):
         """ sample a card from distribution"""
         rand = random.random()
         v = np.zeros(25, dtype=np.uint8)
-        for r in range(card.shape[0]):
-            for c in range(card.shape[1]):
-                if (rand - card[r, c] <= 0):
-                    v[r * 5 + c] = 1
-                    return v
-                else:
-                    rand -= card[r][c]
+        for (r, c), value in np.ndenumerate(card):
+            if (rand - value <= 0):
+                v[r * 5 + c] = 1
+                return v
+            else:
+                rand -= value
 
     def sampled_vector(self, vectorized):
         """
@@ -61,7 +60,7 @@ class MCAgent(Agent):
         v_sample = []
         translated_to_sample = state_translator(
             vectorized, self.config['players'])
-        for i in range(self.my_belief.shape[0]):
+        for i in range(translated_to_sample.handSize):
             v = self.sample(self.my_belief[i]).tolist()
             v_sample = v_sample + v
 
@@ -74,10 +73,8 @@ class MCAgent(Agent):
             self.my_belief = self.belief.belief
 
         # take the original vector, and change the observations
-        translated = state_translator(vectorized, self.config['players'])
-        translated.handSpace = v_sample
-        translated.encodeVector()
-        return translated.stateVector
+        vectorized[:len(v_sample)] = v_sample
+        return vectorized
 
     def encode(self, vectorized, move):
         """returns an hashable state from the observation"""
@@ -102,16 +99,16 @@ class MCAgent(Agent):
         """
         nn_state = str(obs_input)
         if nn_state not in self.pred_moves.keys():
-            prediction = self.pp.predict(obs_input)
+            prediction = self.pp.predict(obs_input)[0]
             # convert move to correct type
             best_value = 0
             best_move = -1
-            for action in range(prediction.shape[1]):
+            for action in range(prediction.shape[0]):
                 move = self.env.game.get_move(action)
                 for l_move in state.legal_moves():
                     if str(l_move) == str(move):
-                        if prediction[0, action] > best_value:
-                            best_value = prediction[0, action]
+                        if prediction[action] > best_value:
+                            best_value = prediction[action]
                             best_move = move
                         break
             if best_move == -1:
@@ -262,9 +259,8 @@ class MCAgent(Agent):
                 # if the game is terminal
                 score = game_state.score()
 
-            for i in range(len(history)):
-                state_index = history[len(history) - 1 - i]
-                self.stats[state_index]['value'] += score
+            for s in history:
+                self.stats[s]['value'] += score
 
         values = []
         n = []
