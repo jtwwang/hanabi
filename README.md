@@ -10,6 +10,7 @@ sudo apt-get install python-pip  # if you don't already have pip
 pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
 pip install tensorflow           # if you don't already have tensorflow
+pip install keras                # if you don't already have keras
 cmake .
 make
 python custom_rl.py              # Runs RL episodes
