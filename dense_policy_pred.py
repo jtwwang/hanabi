@@ -1,7 +1,7 @@
 from __future__ import print_function
 from experience import Experience
 import tensorflow.keras as keras
-from keras.layers import Dense, ReLU, Dropout, LSTM
+from keras.layers import Dense, ReLU, Dropout
 from keras.losses import categorical_crossentropy, mean_squared_error
 from keras.models import Sequential
 from keras import regularizers
@@ -12,52 +12,19 @@ import getopt
 import sys
 import os
 import math
-from sklearn.model_selection import KFold
-from matplotlib import pyplot as plt
-from IPython.display import clear_output
-from time import time
-
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-# https://gist.github.com/stared/dfb4dfaf6d9a8501cd1cc8b8cb806d2e
-class PlotAcc(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.i = 0
-        self.x = []
-        self.acc = []
-        self.val_acc = []
-        
-        self.fig = plt.figure()
-        
-        self.logs = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        
-        self.logs.append(logs)
-        self.x.append(self.i)
-        self.acc.append(logs.get('acc'))
-        self.val_acc.append(logs.get('val_acc'))
-        self.i += 1
-        
-        clear_output(wait=True)
-        plt.plot(self.x, self.acc, label="acc")
-        plt.plot(self.x, self.val_acc, label="val_acc")
-        plt.legend()
-        plt.show(block=False);
 
 class policy_net():
 
     def __init__(self, input_dim, action_space, agent_class):
-
         self.input_dim = input_dim
         self.action_space = action_space
-        self.model = self.create_lstm()
+        self.model = self.create_dense()
         self.path = os.path.join("model", agent_class)
-        self.checkpoint_path = os.path.join(self.path,'checkpoints')
-        #self.moves = 0 # total number of moves across all games
 
-    def create_lstm(self):
+    def create_dense(self):
         x = Sequential()
         x.add(Dense(128, input_dim=self.input_dim))
         x.add(Dropout(0.1))
@@ -68,23 +35,12 @@ class policy_net():
         x.add(Dense(self.action_space))
         return x
 
-
-
-    def fit(self, X_train, y_train, X_test, y_test, epochs=100, batch_size=5, learning_rate=0.001):
+    def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
         """
         args:
                 X (int arr): vectorized features
                 y (int arr): one-hot encoding with dimensions(sample_size,action_space)
         """
-        
-        X_train = np.asarray(X_train)
-        y_train = np.asarray(y_train)
-        X_test = np.asarray(X_test)
-        y_test = np.asarray(y_test)
-        #print(type(self.X))
-        #print(X[0])
-
-
         adam = optimizers.Adam(
             lr=learning_rate,
             beta_1=0.9,
@@ -95,29 +51,15 @@ class policy_net():
         self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
 
-        # Create checkpoint directory
-        if not os.path.exists(self.checkpoint_path):
-            try:
-                os.makedirs(self.checkpoint_path)
-            except OSError:
-                print("Creation of the directory %s failed" % self.checkpoint_path)
-
-        checkpoints = keras.callbacks.ModelCheckpoint(
-                                    os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'), 
-                                    save_weights_only=True, period=50)
-        #plot_acc = PlotAcc()
         tensorboard = keras.callbacks.TensorBoard(log_dir="./dense_logs")
-        print(X_train.shape)
-        print(y_train.shape)
         self.model.fit(
-                x=X_train, y=y_train,
-                steps_per_epoch = X_train.shape[0]/batch_size,
-                epochs = epochs,
-                validation_data=(X_test, y_test),
-                validation_steps=X_test.shape[0]/batch_size,
-                #validation_freq=2,
-                callbacks = [checkpoints, tensorboard])
-
+            X,
+            y,
+            epochs=epochs,
+            batch_size=batch_size,
+            callbacks = [tensorboard],
+            validation_split=0.7
+            )
         self.save()
 
     def save(self):
@@ -145,10 +87,6 @@ class policy_net():
         pred = self.model.predict(X)
         return pred
 
-    def evaluate(self, X, y):
-        score = self.model.evaluate_generator(self.train_generator(X,y), steps = X.shape[0])
-        return score
-
     def load(self):
         """
         function to load the saved model
@@ -169,56 +107,52 @@ def extract_data(agent_class):
     replay = Experience(agent_class, load=True)
     replay.load()
     X = replay._obs()
-    y = replay._one_hot_moves()
+    Y = replay._one_hot_moves()
     eps = replay.eps
-    assert X.shape[0] == y.shape[0]
-    print(X.shape)
+    assert X.shape[0] == Y.shape[0]
 
     print("LOADED")
-    return X, y, eps
+    return X, Y, eps
 
 
-def cross_validation(k):
+def cross_validation(k, max_ep):
     global flags
     mean = 0
 
     X,Y,eps = extract_data(flags['agent_class'])
-    kf = KFold(n_splits=k)
-    i = 0
-    for training_indices, testing_indices in kf.split(eps):
-        print("\n==========\nSplit {}\n==========\n".format(i))
-        i += 1
+    max_ep = min(max_ep, math.floor(len(eps)/k))
 
+    for i in range(k):
         # split the data
-        X_train, X_test = np.asarray(X)[training_indices], np.asarray(X)[testing_indices]
-        y_train, y_test = np.asarray(Y)[training_indices], np.asarray(Y)[testing_indices]
+        train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
+        test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
+        X_train, X_test = X[train_id], X[test_id]
+        y_train, y_test = Y[train_id], Y[test_id]
+
         # initialize the predictor (again)
-        input_dim = X[0].shape[1]
-        output_dim = Y[0].shape[1]
-        pp = policy_net(input_dim, output_dim, flags['agent_class'])
+        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
 
         pp.fit(X_train, y_train,
-               X_test, y_test,
                epochs=flags['epochs'],
                batch_size=flags['batch_size'],
                learning_rate=flags['lr'])
 
         # calculate accuracy and add it to the mean
-        score = pp.evaluate(X_test, y_test)
+        score = pp.model.evaluate(X_test, y_test, verbose=0)
         mean += score[1]
 
-    # calculate the mean score
+    # calculate the mean
     mean = mean/k
     return mean
 
 
 if __name__ == '__main__':
 
-    flags = {'epochs': 100,
+    flags = {'epochs': 400,
              'batch_size': 32,
-             'lr': 0.01,
+             'lr': 0.001,
              'agent_class': 'SimpleAgent',
-             'cv': 2}
+             'cv': False}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['epochs=',
@@ -232,17 +166,18 @@ if __name__ == '__main__':
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
    
-    if (flags['cv'] > 0):
+    if (flags['cv']):
         # do cross validation
-        mean = cross_validation(flags['cv'])
-        print('Average score: ', end='')
+        k = 5
+        max_episodes = 100
+        mean = cross_validation(k, max_episodes)
+        print('Average: ', end='')
         print(mean)
     else:
         # data
         X, Y, _ = extract_data(flags['agent_class'])
-        input_dim = X[0].shape[1]
-        output_dim = Y[0].shape[1]
-        pp = policy_net(input_dim, output_dim, flags['agent_class'])
+
+        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
         pp.load()
         pp.fit(X, Y,
                epochs=flags['epochs'],
