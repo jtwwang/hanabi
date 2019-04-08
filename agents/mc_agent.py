@@ -99,7 +99,7 @@ class MCAgent(Agent):
         if nn_state not in self.pred_moves.keys():
             prediction = self.pp.predict(obs_input)[0]
             # convert move to correct type
-            best_value = 0
+            best_value = -1
             best_move = -1
             for action in range(prediction.shape[0]):
                 move = self.env.game.get_move(action)
