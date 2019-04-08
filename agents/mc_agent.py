@@ -27,14 +27,13 @@ class MCAgent(Agent):
     def __init__(self, config, *args, **kwargs):
         """Initialize the agent"""
         self.config = config
-        self.max_depth = 4
+        self.max_depth = 3
         self.belief = baysian_belief.Belief(config['players'])
 
         # load the predictor
-        agent_class = 'SimpleAgent'  # FIXME: temporary
 
         self.pp = policy_net(
-            config['observation_size'], config['num_moves'], agent_class)
+            config['observation_size'], config['num_moves'], config['predictor'])
         self.pp.load()
 
         self.stats = {}         # stats of all states
@@ -61,7 +60,7 @@ class MCAgent(Agent):
         translated_to_sample = state_translator(
             vectorized, self.config['players'])
         for i in range(translated_to_sample.handSize):
-            v = self.sample(self.my_belief[i]).tolist()
+            v = self.sample(self.belief.my_belief[i]).tolist()
             v_sample = v_sample + v
 
             # update the card knowledge accordingly to the sample
@@ -70,7 +69,6 @@ class MCAgent(Agent):
             # update the belief accordingly to the new knowledge
             self.belief.calculate_prob(
                 self.player_id, translated_to_sample.cardKnowledge)
-            self.my_belief = self.belief.belief
 
         # take the original vector, and change the observations
         vectorized[:len(v_sample)] = v_sample
@@ -105,12 +103,10 @@ class MCAgent(Agent):
             best_move = -1
             for action in range(prediction.shape[0]):
                 move = self.env.game.get_move(action)
-                for l_move in state.legal_moves():
-                    if str(l_move) == str(move):
-                        if prediction[action] > best_value:
-                            best_value = prediction[action]
-                            best_move = move
-                        break
+                if state.move_is_legal(move):
+                    if prediction[action] > best_value:
+                        best_value = prediction[action]
+                        best_move = move
             if best_move == -1:
                 raise ValueError("best_action has invalid value")
             else:
@@ -206,7 +202,7 @@ class MCAgent(Agent):
                     game_state.observation(self.player_id))
 
                 # set my belief
-                self.my_belief = self.belief.encode(vectorized, self.player_id)
+                self.belief.encode(vectorized, self.player_id)
 
                 # hint of the other players
                 hint = True

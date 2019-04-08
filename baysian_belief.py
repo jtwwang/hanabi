@@ -24,14 +24,14 @@ class Belief():
             self.n_cards = 4
         self.players = players
 
-        self.belief = np.zeros((players * self.n_cards + 1, 5, 5))
+        self.my_belief = np.zeros((players * self.n_cards + 1, 5, 5))
         self.discard_belief = np.zeros((5, 10))
 
     def reset(self):
         """
         this function sets all the matrices back to 0
         """
-        self.belief[:, :, :] = 0
+        self.my_belief[:, :, :] = 0
         self.discard_belief[:, :] = 0
 
     def calculate_prob(self, player_id, my_known):
@@ -43,12 +43,12 @@ class Belief():
             my_known (list): the knowledge of my cards
 
         """
-        full_known = np.sum(self.belief, axis=0)
+        full_known = np.sum(self.my_belief, axis=0)
         index = player_id * self.n_cards
 
         # count the full availability of cards
         for rank in range(5):
-            self.belief[:self.n_cards, :,
+            self.my_belief[:self.n_cards, :,
                         rank] = self.availability[rank] - full_known[:, rank]
 
         # filter by hint
@@ -56,11 +56,11 @@ class Belief():
         for i in range(self.n_cards):
             mask[i] = np.reshape(my_known[i*35: i*35 + 25], (5, 5))
 
-        self.belief[index: index + self.n_cards] = np.multiply(
-            self.belief[index:index + self.n_cards], mask)
+        self.my_belief[index: index + self.n_cards] = np.multiply(
+            self.my_belief[index:index + self.n_cards], mask)
 
         # divide by total
-        for card in self.belief[:self.n_cards]:
+        for card in self.my_belief[:self.n_cards]:
             card /= card.sum()
 
     def encode(self, vectorized, player_id):
@@ -83,7 +83,7 @@ class Belief():
         fireworks = np.asarray(translated.boardSpace)
         fireworks = np.reshape(fireworks, (5, 5))
         index = self.n_cards * self.players
-        self.belief[index] = fireworks
+        self.my_belief[index] = fireworks
 
         # update the discard knowledge
         discard = np.asarray(translated.discardSpace)
@@ -93,7 +93,7 @@ class Belief():
         # update the observed hand knowledge
         from_vec = vectorized[:25*self.n_cards*(self.players - 1)]
         for i in range(self.n_cards * (self.players - 1)):
-            self.belief[i +
+            self.my_belief[i +
                         self.n_cards] = np.reshape(from_vec[i*25:(i+1)*25], (5, 5))
 
         # my knowledge
@@ -102,5 +102,3 @@ class Belief():
         my_known = vectorized[ix:ix + 35 * self.n_cards]
 
         self.calculate_prob(player_id, my_known)
-
-        return self.belief[:self.n_cards]

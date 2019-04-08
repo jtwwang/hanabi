@@ -10,6 +10,7 @@ from agents.mc_agent import MCAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
+from agents.second_agent import SecondAgent
 import rl_env
 import getopt
 """A script to collect episodes from simple agent"""
@@ -24,7 +25,7 @@ AGENT_CLASSES = {
     'SimpleAgent':  SimpleAgent,
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent}
+    'SecondAgent': SecondAgent}
 
 
 class Runner(object):
@@ -37,7 +38,8 @@ class Runner(object):
         self.agent_config = {
             'players': flags['players'],
             'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0]}
+            'observation_size': self.env.vectorized_observation_shape()[0],
+            'predictor': flags['agent_class']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
     def moves_lookup(self, move, ob):
