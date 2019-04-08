@@ -51,16 +51,17 @@ class policy_net():
         x.add(MaxPooling1D(pool_size=2,strides=2))
         
 
-        x.add(Conv1D(filters=64, kernel_size=1, strides=1, padding='same', activation=activation))
+        x.add(Conv1D(filters=64, kernel_size=3, strides=2, padding='same', activation=activation))
         x.add(BatchNormalization())
         x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
-
+        """
         x.add(Conv1D(filters=64, kernel_size=1, strides=1, padding='same', activation=activation))
+        #cosine (feature space, label), dense, crossentropy+softmax. loss=Sum(cosine,crossentropy)
         x.add(BatchNormalization())
         x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
-        
+        """
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
@@ -72,6 +73,7 @@ class policy_net():
         x.add(Dense(32, activation='relu'))
         x.add(Dropout(0.2))
         """
+
         x.add(Dense(self.action_space))
         print(x.summary())
         return x
@@ -105,7 +107,8 @@ class policy_net():
             epochs=epochs,
             batch_size=batch_size,
             callbacks = [tensorboard],
-            validation_split=0.3
+            validation_split=0.3,
+            shuffle=True
             )
         
 
