@@ -65,7 +65,7 @@ class policy_net():
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
-        x.add(Dropout(0.3))
+        x.add(Dropout(0.2))
         """
         
         x.add(Dense(64, activation='relu'))
@@ -78,7 +78,7 @@ class policy_net():
         print(x.summary())
         return x
 
-    def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.01):
+    def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.01):
         """
         args:
                 X (int arr): vectorized features
