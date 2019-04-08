@@ -139,7 +139,7 @@ class policy_net():
 		if X_test == None:
 			self.model.fit_generator(
 				self.train_generator(X_train, y_train),
-				steps_per_epoch = X_train.shape[0],
+				steps_per_epoch = X_train.shape[0]/batch_size,
 				epochs = epochs,
 				callbacks = [checkpoints])
 		else:
