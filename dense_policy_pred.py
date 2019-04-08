@@ -30,27 +30,41 @@ class policy_net():
 
 
     def create_dense(self):
-        print(self.input_dim)
+        activation=None
         x = Sequential()
-        x.add(Conv1D(filters=16, kernel_size=5, strides=2, input_shape=(self.input_dim,1), padding='same', activation='relu'))
+        x.add(Conv1D(filters=16, kernel_size=5, strides=2, 
+            input_shape=(self.input_dim,1), padding='same', activation=activation))
+        x.add(BatchNormalization())
+        x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=3,strides=2))
         
 
-        x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation='relu'))
+        x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation=activation))
+        x.add(BatchNormalization())
+        x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
         
 
-        x.add(Conv1D(filters=64,kernel_size=3,strides=2,padding="same",activation='relu'))
+        x.add(Conv1D(filters=64,kernel_size=3,strides=2,padding="same",activation=activation))
+        x.add(BatchNormalization())
+        x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
         
 
-        x.add(Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu'))
+        x.add(Conv1D(filters=64, kernel_size=1, strides=1, padding='same', activation=activation))
+        x.add(BatchNormalization())
+        x.add(Activation("relu"))
+        x.add(MaxPooling1D(pool_size=2,strides=2))
+
+        x.add(Conv1D(filters=64, kernel_size=1, strides=1, padding='same', activation=activation))
+        x.add(BatchNormalization())
+        x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
         
 
         x.add(Flatten())
-        x.add(Dense(128, activation='relu'))
-        x.add(Dropout(0.2))
+        x.add(Dense(64, activation='relu'))
+        x.add(Dropout(0.3))
         """
         
         x.add(Dense(64, activation='relu'))
@@ -62,7 +76,7 @@ class policy_net():
         print(x.summary())
         return x
 
-    def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.1):
+    def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.01):
         """
         args:
                 X (int arr): vectorized features
