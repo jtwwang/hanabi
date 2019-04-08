@@ -1,7 +1,8 @@
 from __future__ import print_function
 from experience import Experience
 import tensorflow.keras as keras
-from keras.layers import Dense, ReLU, Dropout
+from keras.layers import Dense, ReLU, Dropout, LSTM, Conv1D, Flatten, MaxPooling1D, AveragePooling1D, BatchNormalization
+from keras.layers import Activation
 from keras.losses import categorical_crossentropy, mean_squared_error
 from keras.models import Sequential
 from keras import regularizers
@@ -18,24 +19,50 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class policy_net():
 
-    def __init__(self, input_dim, action_space, agent_class):
+    def __init__(self, input_dim, action_space, agent_class, modelname=None):
         self.input_dim = input_dim
         self.action_space = action_space
         self.model = self.create_dense()
         self.path = os.path.join("model", agent_class)
+        if modelname != None:
+            self.path = os.path.join(self.path, modelname)
+            print("Writing to", self.path)
+
 
     def create_dense(self):
+        print(self.input_dim)
         x = Sequential()
-        x.add(Dense(128, input_dim=self.input_dim))
-        x.add(Dropout(0.1))
+        x.add(Conv1D(filters=16, kernel_size=5, strides=2, input_shape=(self.input_dim,1), padding='same', activation='relu'))
+        x.add(MaxPooling1D(pool_size=3,strides=2))
+        
+
+        x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation='relu'))
+        x.add(MaxPooling1D(pool_size=2,strides=2))
+        
+
+        x.add(Conv1D(filters=64,kernel_size=3,strides=2,padding="same",activation='relu'))
+        x.add(MaxPooling1D(pool_size=2,strides=2))
+        
+
+        x.add(Conv1D(filters=128, kernel_size=3, strides=2, padding='same', activation='relu'))
+        x.add(MaxPooling1D(pool_size=2,strides=2))
+        
+
+        x.add(Flatten())
+        x.add(Dense(128, activation='relu'))
+        x.add(Dropout(0.2))
+        """
+        
         x.add(Dense(64, activation='relu'))
-        x.add(Dropout(0.1))
+        x.add(Dropout(0.2))
         x.add(Dense(32, activation='relu'))
-        x.add(Dropout(0.1))
+        x.add(Dropout(0.2))
+        """
         x.add(Dense(self.action_space))
+        print(x.summary())
         return x
 
-    def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.001):
+    def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.1):
         """
         args:
                 X (int arr): vectorized features
@@ -48,19 +75,25 @@ class policy_net():
             epsilon=None,
             decay=0.0,
             amsgrad=False)
+
         self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
 
-        tensorboard = keras.callbacks.TensorBoard(log_dir="./dense_logs")
+        tensorboard = keras.callbacks.TensorBoard(log_dir=self.path)
+        
+        # IF CONV
+        print(X.shape)
+        X = np.reshape(X,(X.shape[0],X.shape[1],1))
+
         self.model.fit(
             X,
             y,
             epochs=epochs,
             batch_size=batch_size,
             callbacks = [tensorboard],
-            validation_split=0.7
+            validation_split=0.3
             )
-        self.save()
+        
 
     def save(self):
 
@@ -107,43 +140,13 @@ def extract_data(agent_class):
     replay = Experience(agent_class, load=True)
     replay.load()
     X = replay._obs()
-    Y = replay._one_hot_moves()
+    y = replay._one_hot_moves()
     eps = replay.eps
-    assert X.shape[0] == Y.shape[0]
+    assert X.shape[0] == y.shape[0]
+
 
     print("LOADED")
-    return X, Y, eps
-
-
-def cross_validation(k, max_ep):
-    global flags
-    mean = 0
-
-    X,Y,eps = extract_data(flags['agent_class'])
-    max_ep = min(max_ep, math.floor(len(eps)/k))
-
-    for i in range(k):
-        # split the data
-        train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
-        test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
-        X_train, X_test = X[train_id], X[test_id]
-        y_train, y_test = Y[train_id], Y[test_id]
-
-        # initialize the predictor (again)
-        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
-
-        pp.fit(X_train, y_train,
-               epochs=flags['epochs'],
-               batch_size=flags['batch_size'],
-               learning_rate=flags['lr'])
-
-        # calculate accuracy and add it to the mean
-        score = pp.model.evaluate(X_test, y_test, verbose=0)
-        mean += score[1]
-
-    # calculate the mean
-    mean = mean/k
-    return mean
+    return X, y, eps
 
 
 if __name__ == '__main__':
@@ -152,34 +155,35 @@ if __name__ == '__main__':
              'batch_size': 32,
              'lr': 0.001,
              'agent_class': 'SimpleAgent',
-             'cv': False}
+             'cv': False,
+             'load': False,
+             'modelname': None}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['epochs=',
                                         'batch_size=',
                                         'lr=',
                                         'agent_class=',
-                                        'cv='])
+                                        'cv=',
+                                        'load=',
+                                        'modelname='])
     if arguments:
         sys.exit()
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
-        flags[flag] = type(flags[flag])(value)
-   
-    if (flags['cv']):
-        # do cross validation
-        k = 5
-        max_episodes = 100
-        mean = cross_validation(k, max_episodes)
-        print('Average: ', end='')
-        print(mean)
-    else:
-        # data
-        X, Y, _ = extract_data(flags['agent_class'])
+        if flags[flag] != None:
+            flags[flag] = type(flags[flag])(value)
 
-        pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
+   
+   
+       
+    X, Y, _ = extract_data(flags['agent_class'])
+
+    pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'], flags['modelname'])
+    if flags['load']:
         pp.load()
-        pp.fit(X, Y,
-               epochs=flags['epochs'],
-               batch_size=flags['batch_size'],
-               learning_rate=flags['lr'])
+    pp.fit(X, Y,
+           epochs=flags['epochs'],
+           batch_size=flags['batch_size'],
+           learning_rate=flags['lr'])
+    pp.save()
