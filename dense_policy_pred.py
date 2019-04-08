@@ -36,7 +36,7 @@ class policy_net():
             input_shape=(self.input_dim,1), padding='same', activation=activation))
         x.add(BatchNormalization())
         x.add(Activation("relu"))
-        x.add(MaxPooling1D(pool_size=3,strides=2))
+        x.add(MaxPooling1D(pool_size=2,strides=2))
         
 
         x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation=activation))
@@ -78,7 +78,7 @@ class policy_net():
         print(x.summary())
         return x
 
-    def fit(self, X, y, epochs=100, batch_size=32, learning_rate=0.01):
+    def fit(self, X, y, epochs=100, batch_size=16, learning_rate=0.01):
         """
         args:
                 X (int arr): vectorized features
