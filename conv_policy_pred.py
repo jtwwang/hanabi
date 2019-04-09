@@ -65,7 +65,7 @@ class policy_net():
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
-        x.add(Dropout(0.2))
+        #x.add(Dropout(0.2))
         """
         
         x.add(Dense(64, activation='relu'))
