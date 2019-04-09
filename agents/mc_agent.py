@@ -13,7 +13,7 @@ import numpy as np
 import baysian_belief
 import random
 import pyhanabi
-from policy_predictor import policy_net
+from dense_policy_pred import policy_net
 from datetime import datetime
 import time
 random.seed(datetime.now())
@@ -97,7 +97,7 @@ class MCAgent(Agent):
         """
         nn_state = str(obs_input)
         if nn_state not in self.pred_moves.keys():
-            prediction = self.pp.predict(obs_input)[0]
+            prediction = self.pp.predict(np.reshape(obs_input,(1,-1,1)))[0]
             # convert move to correct type
             best_value = -1
             best_move = -1
