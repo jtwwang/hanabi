@@ -13,6 +13,8 @@ import getopt
 import sys
 import os
 import math
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 # shut up info and warnings
