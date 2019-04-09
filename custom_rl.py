@@ -117,9 +117,9 @@ class Runner(object):
             rewards.append(eps_reward)
             avg_steps += n_steps
 
-        n_eps = int(flags['num_episodes'])
+        n_eps = float(flags['num_episodes'])
         print('Average Reward: %.3f' % (sum(rewards)/n_eps))
-        print('Average steps: %.2f' % (avg_steps/n_eps))
+        print('Average steps: %.2f' % (avg_steps/float(n_eps)))
 
 
 if __name__ == "__main__":
