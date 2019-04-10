@@ -50,33 +50,36 @@ class MCAgent(Agent):
             else:
                 rand -= value
 
-    def sampled_vector(self, vectorized):
+    def sampled_vector(self, vec, player):
         """
         returns a sample of observations from belief and observations
         Args:
-            vectorized (list): the observations in a vectorized form
+            vec (list): the observations in a vectorized form
+            player(int): the current player
         """
         v_sample = []
-        translated_to_sample = state_translator(
-            vectorized, self.config['players'])
-        for i in range(translated_to_sample.handSize):
+        vec2sample = state_translator(
+            vec, self.config['players'])
+        ix = ((self.player_id - player) % self.config['players'])*35*vec2sample.handSize
+
+        for i in range(vec2sample.handSize):
             v = self.sample(self.belief.my_belief[i]).tolist()
             v_sample = v_sample + v
 
             # update the card knowledge accordingly to the sample
-            translated_to_sample.cardKnowledge[i*35:i*35 + 25] = v
+            vec2sample.cardKnowledge[ix + i*35: ix + i*35 + 25] = v
 
             # update the belief accordingly to the new knowledge
             self.belief.calculate_prob(
-                self.player_id, translated_to_sample.cardKnowledge)
+                self.player_id, vec2sample.cardKnowledge)
 
         # take the original vector, and change the observations
-        vectorized[:len(v_sample)] = v_sample
-        return vectorized
+        vec[:len(v_sample)] = v_sample
+        return vec
 
-    def encode(self, vectorized, move):
+    def encode(self, vec, move):
         """returns an hashable state from the observation"""
-        return str(vectorized).join(str(move))
+        return str(vec).join(str(move))
 
     def update_visits(self, state):
         """
@@ -131,11 +134,11 @@ class MCAgent(Agent):
         n = one_stat['visits']
         return (v / n) + 1.41 * sqrt(log(N) / n)
 
-    def choose_move(self, vectorized, game_state, previous_state):
+    def choose_move(self, vec, game_state, previous_state):
         """
         Chooses the best legal move accordingly to the UCT value of the node
         Args:
-            vectorized (list): the list of observations in vectorized form
+            vec (list): the list of observations in vectorized form
             game_state (HanabiState): the current state of the game
             previous_state (string): the key to the parent state
         Returns:
@@ -145,7 +148,7 @@ class MCAgent(Agent):
         max_uct = -1
         best_move = -1
         for move in game_state.legal_moves():
-            state = self.encode(vectorized, move)
+            state = self.encode(vec, move)
             if state in self.stats.keys():
                 # calculate the uct
                 uct_value = self.UCT(self.stats[state], N)
@@ -175,7 +178,7 @@ class MCAgent(Agent):
             depth = 0                       # reset the depth
             history = []                    # reset the history of the rollout
             game_state = self.root.copy()          # reset the state of the rollout
-            vectorized = env.observation_encoder.encode(
+            vec = env.observation_encoder.encode(
                 game_state.observation(self.player_id))
             state = "root"
             self.update_visits(state)
@@ -185,9 +188,9 @@ class MCAgent(Agent):
                     break
 
                 # choose random action
-                move = self.choose_move(vectorized, game_state, state)
+                move = self.choose_move(vec, game_state, state)
 
-                state = self.encode(vectorized, move)   # make it hashable
+                state = self.encode(vec, move)   # make it hashable
                 self.update_visits(state)               # increment visits
                 # append the state to the history of the rollout
                 history.append(state)
@@ -198,11 +201,14 @@ class MCAgent(Agent):
                 if game_state.cur_player() == pyhanabi.CHANCE_PLAYER_ID:
                     game_state.deal_random_card()
 
-                vectorized = env.observation_encoder.encode(
+                vec = env.observation_encoder.encode(
                     game_state.observation(self.player_id))
+                # observation of next player
+                other_vec = env.observation_encoder.encode(
+                    game_state.observation(game_state.cur_player()))
 
                 # set my belief
-                self.belief.encode(vectorized, self.player_id)
+                self.belief.encode(vec, self.player_id)
 
                 # hint of the other players
                 hint = True
@@ -214,14 +220,14 @@ class MCAgent(Agent):
                         break
 
                     # choose random sample
-                    vectorized = self.sampled_vector(vectorized)
+                    vec = self.sampled_vector(other_vec, game_state.cur_player())
                     obs_input = np.asarray(
-                        vectorized, dtype=np.float32).reshape((1, -1))
+                        vec, dtype=np.float32).reshape((1, -1))
 
                     # predict the move
                     move = self.select_from_prediction(obs_input, game_state)
 
-                    state = self.encode(vectorized, move)   # make it hashable
+                    state = self.encode(vec, move)   # make it hashable
                     self.update_visits(state)               # increment visits
                     # append the state to the history of the rollouts
                     history.append(state)
@@ -233,7 +239,7 @@ class MCAgent(Agent):
                         game_state.deal_random_card()
                         hint = False
 
-                    vectorized = env.observation_encoder.encode(
+                    vec = env.observation_encoder.encode(
                         game_state.observation(self.player_id))
 
                     # if move is hint, calculate the score and terminate
@@ -249,7 +255,7 @@ class MCAgent(Agent):
             # after the rollout has ended
             if not game_state.is_terminal():
                 translated = state_translator(
-                    vectorized, self.config['players'])
+                    vec, self.config['players'])
                 score = sum(translated.boardSpace)
             else:
                 # if the game is terminal
@@ -260,11 +266,11 @@ class MCAgent(Agent):
 
         values = []
         n = []
-        vectorized = env.observation_encoder.encode(
+        vec = env.observation_encoder.encode(
             self.root.observation(self.player_id))
         legal_moves = self.root.copy().legal_moves()
         for move in legal_moves:
-            state = self.encode(vectorized, move)     # make it hashable
+            state = self.encode(vec, move)     # make it hashable
             value = float(self.stats[state]['value'])
             visits = float(self.stats[state]['visits'])
             values.append(value/visits)
