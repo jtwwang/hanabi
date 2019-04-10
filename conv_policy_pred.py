@@ -16,6 +16,33 @@ import math
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+class PlotAcc(keras.callbacks.Callback):
+    def on_train_begin(self, logs={}):
+        self.i = 0
+        self.x = []
+        self.acc = []
+        self.val_acc = []
+        
+        self.fig = plt.figure()
+        
+        self.logs = []
+
+    def on_epoch_end(self, epoch, logs={}):
+        
+        self.logs.append(logs)
+        self.x.append(self.i)
+        self.acc.append(logs.get('acc'))
+        self.val_acc.append(logs.get('val_acc'))
+        self.i += 1
+        
+        clear_output(wait=True)
+        plt.plot(self.x, self.acc, label="acc")
+        plt.plot(self.x, self.val_acc, label="val_acc")
+        plt.legend()
+        plt.show(block=False);
+
+    #def on_train_end(self, logs={}):
+
 
 class policy_net():
 
@@ -65,7 +92,7 @@ class policy_net():
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
-        #x.add(Dropout(0.2))
+        x.add(Dropout(0.15))
         """
         
         x.add(Dense(64, activation='relu'))
