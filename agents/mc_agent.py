@@ -10,7 +10,7 @@ from math import sqrt, log
 from state_translate import state_translator
 from rl_env import Agent
 import numpy as np
-import baysian_belief
+import bayes
 import random
 import pyhanabi
 from dense_policy_pred import policy_net
@@ -28,7 +28,7 @@ class MCAgent(Agent):
         """Initialize the agent"""
         self.config = config
         self.max_depth = 3
-        self.belief = baysian_belief.Belief(config['players'])
+        self.belief = bayes.Belief(config['players'])
 
         # load the predictor
 
@@ -43,9 +43,9 @@ class MCAgent(Agent):
         """ sample a card from distribution"""
         rand = random.random()
         v = np.zeros(25, dtype=np.uint8)
-        for (r, c), value in np.ndenumerate(card):
+        for x, value in np.ndenumerate(card):
             if (rand - value <= 0):
-                v[r * 5 + c] = 1
+                v[x] = 1
                 return v
             else:
                 rand -= value
@@ -57,24 +57,23 @@ class MCAgent(Agent):
             vec (list): the observations in a vectorized form
             player(int): the current player
         """
-        v_sample = []
-        vec2sample = state_translator(
-            vec, self.config['players'])
+        
+        hand = []
+        vec2sample = state_translator(vec, self.config['players'])
         ix = ((self.player_id - player) % self.config['players'])*35*vec2sample.handSize
 
         for i in range(vec2sample.handSize):
-            v = self.sample(self.belief.my_belief[i]).tolist()
-            v_sample = v_sample + v
+            # calculate the probability distribution
+            my_belief = self.belief.prob(vec2sample.cardKnowledge[ix + i*35: ix + i*35 + 25])
 
-            # update the card knowledge accordingly to the sample
-            vec2sample.cardKnowledge[ix + i*35: ix + i*35 + 25] = v
+            # sample a single card
+            card = self.sample(my_belief)
 
-            # update the belief accordingly to the new knowledge
-            self.belief.calculate_prob(
-                self.player_id, vec2sample.cardKnowledge)
+            self.belief.add_known(card) # add the knowledge of the card
+            hand += card.tolist() # add the sampled card to the final vector
 
         # take the original vector, and change the observations
-        vec[:len(v_sample)] = v_sample
+        vec[:len(hand)] = hand
         return vec
 
     def encode(self, vec, move):
@@ -91,13 +90,16 @@ class MCAgent(Agent):
         else:
             self.stats[state]['visits'] += 1
 
-    def select_from_prediction(self, obs_input, state):
+    def select_from_prediction(self, vec, state):
         """
         select the action of the agents given the observations
         Args:
             obs_input (list): the vectorized observations
             state     (HanabiState): the state of the game
         """
+        obs_input = np.asarray(
+                        vec, dtype=np.float32).reshape((1, -1))
+
         nn_state = str(obs_input)
         if nn_state not in self.pred_moves.keys():
             prediction = self.pp.predict(np.reshape(obs_input,(1,-1,1)))[0]
@@ -208,7 +210,7 @@ class MCAgent(Agent):
                     game_state.observation(game_state.cur_player()))
 
                 # set my belief
-                self.belief.encode(vec, self.player_id)
+                self.belief.encode(vec)
 
                 # hint of the other players
                 hint = True
@@ -219,13 +221,11 @@ class MCAgent(Agent):
                     if game_state.is_terminal():
                         break
 
-                    # choose random sample
+                    # sample from random distribution
                     vec = self.sampled_vector(other_vec, game_state.cur_player())
-                    obs_input = np.asarray(
-                        vec, dtype=np.float32).reshape((1, -1))
-
+                    
                     # predict the move
-                    move = self.select_from_prediction(obs_input, game_state)
+                    move = self.select_from_prediction(vec, game_state)
 
                     state = self.encode(vec, move)   # make it hashable
                     self.update_visits(state)               # increment visits
