@@ -39,11 +39,18 @@ class MCAgent(Agent):
         self.stats = {}         # stats of all states
         self.pred_moves = {}    # all predicted_moves
 
-    def sample(self, card):
-        """ sample a card from distribution"""
+    def sample(self, belief):
+        """
+        Ranodmly samples a card from distribution
+        Args:
+            belief (np.array, type np.float32): a probability distribution
+                of size 25 with sum 1
+        returns:
+            v: (np.array, type np.uint8): a one-hot encoded card
+        """
         rand = random.random()
         v = np.zeros(25, dtype=np.uint8)
-        for x, value in np.ndenumerate(card):
+        for x, value in np.ndenumerate(belief):
             if (rand - value <= 0):
                 v[x] = 1
                 return v
@@ -57,20 +64,22 @@ class MCAgent(Agent):
             vec (list): the observations in a vectorized form
             player(int): the current player
         """
-        
+
         hand = []
         vec2sample = state_translator(vec, self.config['players'])
-        ix = ((self.player_id - player) % self.config['players'])*35*vec2sample.handSize
+        ix = ((self.player_id - player) %
+              self.config['players']) * 35 * vec2sample.handSize
 
         for i in range(vec2sample.handSize):
             # calculate the probability distribution
-            my_belief = self.belief.prob(vec2sample.cardKnowledge[ix + i*35: ix + i*35 + 25])
+            my_belief = self.belief.prob(
+                vec2sample.cardKnowledge[ix + i * 35: ix + i * 35 + 25])
 
             # sample a single card
             card = self.sample(my_belief)
 
-            self.belief.add_known(card) # add the knowledge of the card
-            hand += card.tolist() # add the sampled card to the final vector
+            self.belief.add_known(card)  # add the knowledge of the card
+            hand += card.tolist()  # add the sampled card to the final vector
 
         # take the original vector, and change the observations
         vec[:len(hand)] = hand
@@ -98,11 +107,11 @@ class MCAgent(Agent):
             state     (HanabiState): the state of the game
         """
         obs_input = np.asarray(
-                        vec, dtype=np.float32).reshape((1, -1))
+            vec, dtype=np.float32).reshape((1, -1))
 
         nn_state = str(obs_input)
         if nn_state not in self.pred_moves.keys():
-            prediction = self.pp.predict(np.reshape(obs_input,(1,-1,1)))[0]
+            prediction = self.pp.predict(np.reshape(obs_input, (1, -1, 1)))[0]
             # convert move to correct type
             best_value = -1
             best_move = -1
@@ -222,8 +231,9 @@ class MCAgent(Agent):
                         break
 
                     # sample from random distribution
-                    vec = self.sampled_vector(other_vec, game_state.cur_player())
-                    
+                    vec = self.sampled_vector(
+                        other_vec, game_state.cur_player())
+
                     # predict the move
                     move = self.select_from_prediction(vec, game_state)
 
@@ -273,14 +283,14 @@ class MCAgent(Agent):
             state = self.encode(vec, move)     # make it hashable
             value = float(self.stats[state]['value'])
             visits = float(self.stats[state]['visits'])
-            values.append(value/visits)
+            values.append(value / visits)
             n.append(visits)
 
         best = values.index(max(values))
 
         end = time.time()
         if self.verbose:
-            print("time of execution: %.3f" % (end-start))
+            print("time of execution: %.3f" % (end - start))
             for i in range(len(values)):
                 print("%s: %.2f, visits %d" %
                       (legal_moves[i], values[i], n[i]))
