@@ -37,7 +37,7 @@ class Belief():
         Args:
             card (list): information of a one-hot encoded card
         """
-        self.full_know += card
+        self.full_know -= card
 
     def prob(self, my_hints):
         """
@@ -49,11 +49,10 @@ class Belief():
 
         """
 
-        # count the full availability of cards
-        known = self.available - self.full_know
-
         # filter by hint
-        my_belief = np.multiply(known, my_hints, dtype = np.float32)
+        my_belief = np.multiply(self.full_know, my_hints, dtype = np.float32)
+        
+        # divide by the number of remaining cards
         my_belief /= my_belief.sum()
         
         return my_belief
@@ -66,23 +65,23 @@ class Belief():
         """
 
         # since an action may have been performed, we delete all the previous belief we had
-        self.full_know[:] = 0
+        self.full_know[:] = self.available
 
         tr = state_translator(vectorized, self.players)
 
         # update the fireworks knowledge
-        self.full_know += np.asarray(tr.boardSpace, dtype = np.uint8)
+        self.full_know -= np.asarray(tr.boardSpace, dtype = np.uint8)
 
         # update the discard knowledge
         discard = np.asarray(tr.discardSpace)
         for c in range(5):
             color = discard[c * 10: (c + 1) * 10]
-            self.full_know[c*5: (c+1)*5][0] += color[0] + color[1] + color[2]
-            self.full_know[c*5: (c+1)*5][1] += color[3] + color[4]
-            self.full_know[c*5: (c+1)*5][2] += color[5] + color[6]
-            self.full_know[c*5: (c+1)*5][3] += color[7] + color[8]
-            self.full_know[c*5: (c+1)*5][4] += color[9]
+            self.full_know[c*5: (c+1)*5][0] -= color[0] + color[1] + color[2]
+            self.full_know[c*5: (c+1)*5][1] -= color[3] + color[4]
+            self.full_know[c*5: (c+1)*5][2] -= color[5] + color[6]
+            self.full_know[c*5: (c+1)*5][3] -= color[7] + color[8]
+            self.full_know[c*5: (c+1)*5][4] -= color[9]
 
         # update the observed hand knowledge
         for i in range(self.n_cards * (self.players - 1)):
-            self.full_know += np.asarray(tr.handSpace[i*25:(i+1)*25], dtype = np.uint8)
+            self.full_know -= np.asarray(tr.handSpace[i*25:(i+1)*25], dtype = np.uint8)
