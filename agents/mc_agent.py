@@ -37,7 +37,6 @@ class MCAgent(Agent):
         self.pp.load()
 
         self.stats = {}         # stats of all states
-        self.pred_moves = {}    # all predicted_moves
 
     def sample(self, belief):
         """
@@ -109,26 +108,21 @@ class MCAgent(Agent):
         obs_input = np.asarray(
             vec, dtype=np.float32).reshape((1, -1))
 
-        nn_state = str(obs_input)
-        if nn_state not in self.pred_moves.keys():
-            prediction = self.pp.predict(np.reshape(obs_input, (1, -1, 1)))[0]
-            # convert move to correct type
-            best_value = -1
-            best_move = -1
-            for action in range(prediction.shape[0]):
-                move = self.env.game.get_move(action)
-                if state.move_is_legal(move):
-                    if prediction[action] > best_value:
-                        best_value = prediction[action]
-                        best_move = move
-            if best_move == -1:
-                raise ValueError("best_action has invalid value")
-            else:
-                self.pred_moves[nn_state] = best_move
-                return best_move
+        # reshapre prediction to appropiate size
+        prediction = self.pp.predict(np.reshape(obs_input, (1, -1, 1)))[0]
+        
+        best_value = -1
+        best_move = -1
+        for action in range(prediction.shape[0]):
+            move = self.env.game.get_move(action)
+            if state.move_is_legal(move):
+                if prediction[action] > best_value:
+                    best_value = prediction[action]
+                    best_move = move
+        if best_move == -1:
+            raise ValueError("best_action has invalid value")
         else:
-            # if already visited this exact state, use the predicted move
-            return self.pred_moves[nn_state]
+            return best_move
 
     def UCT(self, one_stat, N):
         """
@@ -177,7 +171,6 @@ class MCAgent(Agent):
     def act(self, obs, env):
 
         start = time.time()
-        self.pred_moves = {}  # reset memory
         self.stats = {}      # reset memory
 
         self.env = env
