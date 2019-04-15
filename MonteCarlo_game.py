@@ -125,6 +125,7 @@ class Runner(object):
                     if done:
                         break
             rewards.append(eps_reward)
+            print(n_steps)
             avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])

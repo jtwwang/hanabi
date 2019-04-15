@@ -10,7 +10,7 @@ from math import sqrt, log
 from state_translate import state_translator
 from rl_env import Agent
 import numpy as np
-import baysian_belief
+import bayes
 import random
 import pyhanabi
 from dense_policy_pred import policy_net
@@ -28,7 +28,7 @@ class MCAgent(Agent):
         """Initialize the agent"""
         self.config = config
         self.max_depth = 3
-        self.belief = baysian_belief.Belief(config['players'])
+        self.belief = bayes.Belief(config['players'])
 
         # load the predictor
 
@@ -37,15 +37,21 @@ class MCAgent(Agent):
         self.pp.load()
 
         self.stats = {}         # stats of all states
-        self.pred_moves = {}    # all predicted_moves
 
-    def sample(self, card):
-        """ sample a card from distribution"""
+    def sample(self, belief):
+        """
+        Ranodmly samples a card from distribution
+        Args:
+            belief (np.array, type np.float32): a probability distribution
+                of size 25 with sum 1
+        returns:
+            v: (np.array, type np.uint8): a one-hot encoded card
+        """
         rand = random.random()
         v = np.zeros(25, dtype=np.uint8)
-        for (r, c), value in np.ndenumerate(card):
+        for x, value in np.ndenumerate(belief):
             if (rand - value <= 0):
-                v[r * 5 + c] = 1
+                v[x] = 1
                 return v
             else:
                 rand -= value
@@ -57,24 +63,25 @@ class MCAgent(Agent):
             vec (list): the observations in a vectorized form
             player(int): the current player
         """
-        v_sample = []
-        vec2sample = state_translator(
-            vec, self.config['players'])
-        ix = ((self.player_id - player) % self.config['players'])*35*vec2sample.handSize
+
+        hand = []
+        vec2sample = state_translator(vec, self.config['players'])
+        ix = ((self.player_id - player) %
+              self.config['players']) * 35 * vec2sample.handSize
 
         for i in range(vec2sample.handSize):
-            v = self.sample(self.belief.my_belief[i]).tolist()
-            v_sample = v_sample + v
+            # calculate the probability distribution
+            my_belief = self.belief.prob(
+                vec2sample.cardKnowledge[ix + i * 35: ix + i * 35 + 25])
 
-            # update the card knowledge accordingly to the sample
-            vec2sample.cardKnowledge[ix + i*35: ix + i*35 + 25] = v
+            # sample a single card
+            card = self.sample(my_belief)
 
-            # update the belief accordingly to the new knowledge
-            self.belief.calculate_prob(
-                self.player_id, vec2sample.cardKnowledge)
+            self.belief.add_known(card)  # add the knowledge of the card
+            hand += card.tolist()  # add the sampled card to the final vector
 
         # take the original vector, and change the observations
-        vec[:len(v_sample)] = v_sample
+        vec[:len(hand)] = hand
         return vec
 
     def encode(self, vec, move):
@@ -91,33 +98,31 @@ class MCAgent(Agent):
         else:
             self.stats[state]['visits'] += 1
 
-    def select_from_prediction(self, obs_input, state):
+    def select_from_prediction(self, vec, state):
         """
         select the action of the agents given the observations
         Args:
             obs_input (list): the vectorized observations
             state     (HanabiState): the state of the game
         """
-        nn_state = str(obs_input)
-        if nn_state not in self.pred_moves.keys():
-            prediction = self.pp.predict(np.reshape(obs_input,(1,-1,1)))[0]
-            # convert move to correct type
-            best_value = -1
-            best_move = -1
-            for action in range(prediction.shape[0]):
-                move = self.env.game.get_move(action)
-                if state.move_is_legal(move):
-                    if prediction[action] > best_value:
-                        best_value = prediction[action]
-                        best_move = move
-            if best_move == -1:
-                raise ValueError("best_action has invalid value")
-            else:
-                self.pred_moves[nn_state] = best_move
-                return best_move
+        obs_input = np.asarray(
+            vec, dtype=np.float32).reshape((1, -1))
+
+        # reshapre prediction to appropiate size
+        prediction = self.pp.predict(np.reshape(obs_input, (1, -1, 1)))[0]
+        
+        best_value = -1
+        best_move = -1
+        for action in range(prediction.shape[0]):
+            move = self.env.game.get_move(action)
+            if state.move_is_legal(move):
+                if prediction[action] > best_value:
+                    best_value = prediction[action]
+                    best_move = move
+        if best_move == -1:
+            raise ValueError("best_action has invalid value")
         else:
-            # if already visited this exact state, use the predicted move
-            return self.pred_moves[nn_state]
+            return best_move
 
     def UCT(self, one_stat, N):
         """
@@ -166,7 +171,6 @@ class MCAgent(Agent):
     def act(self, obs, env):
 
         start = time.time()
-        self.pred_moves = {}  # reset memory
         self.stats = {}      # reset memory
 
         self.env = env
@@ -208,7 +212,7 @@ class MCAgent(Agent):
                     game_state.observation(game_state.cur_player()))
 
                 # set my belief
-                self.belief.encode(vec, self.player_id)
+                self.belief.encode(vec)
 
                 # hint of the other players
                 hint = True
@@ -219,13 +223,12 @@ class MCAgent(Agent):
                     if game_state.is_terminal():
                         break
 
-                    # choose random sample
-                    vec = self.sampled_vector(other_vec, game_state.cur_player())
-                    obs_input = np.asarray(
-                        vec, dtype=np.float32).reshape((1, -1))
+                    # sample from random distribution
+                    vec = self.sampled_vector(
+                        other_vec, game_state.cur_player())
 
                     # predict the move
-                    move = self.select_from_prediction(obs_input, game_state)
+                    move = self.select_from_prediction(vec, game_state)
 
                     state = self.encode(vec, move)   # make it hashable
                     self.update_visits(state)               # increment visits
@@ -273,14 +276,14 @@ class MCAgent(Agent):
             state = self.encode(vec, move)     # make it hashable
             value = float(self.stats[state]['value'])
             visits = float(self.stats[state]['visits'])
-            values.append(value/visits)
+            values.append(value / visits)
             n.append(visits)
 
         best = values.index(max(values))
 
         end = time.time()
         if self.verbose:
-            print("time of execution: %.3f" % (end-start))
+            print("time of execution: %.3f" % (end - start))
             for i in range(len(values)):
                 print("%s: %.2f, visits %d" %
                       (legal_moves[i], values[i], n[i]))
