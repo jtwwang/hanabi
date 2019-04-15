@@ -8,12 +8,18 @@ class Experience():
 
     path = "experience_replay"
 
-    def __init__(self, agent_class, numAgents=-1, load=False, size=1000000):
+    def __init__(self, agent_class, numAgents=-1, load=False, size=100000):
         """
-        args:
-            numAgents (int)
-            agent_class (string): the class of the agent ('RainbowAgent', 'SimpleAgent')
-            size (int) (optional)
+        Args:
+            agent_class (string): the class of the agent, which can be one of:
+                - 'SimpleAgent'
+                - 'RainbowAgent'
+                - 'RandomAgent'
+            numAgents (int, optional): the number of agents
+            load (boolean, optional): whether we have to load possible
+                existent data of the given class of agents.
+            size (int, optional): how many steps are going to be saved,
+                default is 100K. This size is used to allocate memory at the beginning
         """
 
         self.size = size
@@ -54,7 +60,7 @@ class Experience():
 
             # initialize last episode
             self.last_ep = -1
-        except:
+        except BaseException:
             # if the environment can't be create, we still can load
             if numAgents == 2 or numAgents == 3:
                 self.n_cards = 5
@@ -66,9 +72,8 @@ class Experience():
 
             self.n_moves = numAgents * 10 + self.n_cards * 2
 
-            print("WARNING: the environment could not be created, some \
-                    functionality may be compromised. You CAN still load \
-                    data.")
+            print("WARNING: the environment could not be created.")
+            print("Some functionality may be compromised. You CAN still load data.")
 
     def update_ep(self, eps):
         if eps != self.last_ep:
@@ -137,8 +142,7 @@ class Experience():
     def load(self):
         """
         load all the data from numpy files previously saved
-
-        returns [moves, rs, obs]
+        returns [moves, rs, obs eps]
             numpy matrices with data
         """
 
@@ -162,7 +166,7 @@ class Experience():
 
     def _obs(self):
         """
-        returns the observations
+        Returns the observations in a numpy matrix
         """
 
         if self.full:
@@ -174,9 +178,8 @@ class Experience():
 
     def _one_hot_moves(self):
         """
-        returns a one-hot encoded vector with the moves in the experience replay
-
-        a: numpy matrix (size, n_moves)
+        Returns a one-hot encoded vector with the moves in the experience
+        replay. The output is in a 1-D numpy vector of type uint8
         """
 
         if self.full:

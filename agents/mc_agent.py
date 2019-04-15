@@ -85,25 +85,36 @@ class MCAgent(Agent):
         return vec
 
     def encode(self, vec, move):
-        """returns an hashable state from the observation"""
+        """
+        Returns a hashable string of the state-action pair
+        Args:
+            vec (list): a vector that contains the observation of
+                the game state before taking a move
+            move (HanabiMove): the taken legal move
+        Returns:
+            a string which is hashable and represents the state-action
+            pair, thus uniquely representing the general future state
+            without explicitely defining it.
+        """
         return str(vec).join(str(move))
 
     def update_visits(self, state):
         """
         This function updates the visits statics for a certain state
-        Args: state (string) the encoded representation of a string
+        Args:
+            state (string) the encoded representation of a string
         """
         if state not in self.stats.keys():       # update_node
             self.stats[state] = {'visits': 1, 'value': 0}
         else:
             self.stats[state]['visits'] += 1
 
-    def select_from_prediction(self, vec, state):
+    def select_from_prediction(self, vec, game_state):
         """
         select the action of the agents given the observations
         Args:
-            obs_input (list): the vectorized observations
-            state     (HanabiState): the state of the game
+            obs_input       (list): the vectorized observations
+            game_state      (HanabiState): the state of the game
         """
         obs_input = np.asarray(
             vec, dtype=np.float32).reshape((1, -1))
@@ -115,7 +126,7 @@ class MCAgent(Agent):
         best_move = -1
         for action in range(prediction.shape[0]):
             move = self.env.game.get_move(action)
-            if state.move_is_legal(move):
+            if game_state.move_is_legal(move):
                 if prediction[action] > best_value:
                     best_value = prediction[action]
                     best_move = move
@@ -170,11 +181,11 @@ class MCAgent(Agent):
 
     def act(self, obs, env):
 
-        start = time.time()
-        self.stats = {}      # reset memory
+        start = time.time()     # start the timer
+        self.stats = {}         # reset memory
 
-        self.env = env
-        self.root = env.state        # set the root from the state of the game
+        self.env = env              # define the environment as object variable
+        self.root = env.state       # set the root from the state of the game
 
         # random rollouts
         rollouts = 1000
@@ -217,7 +228,13 @@ class MCAgent(Agent):
                 # hint of the other players
                 hint = True
 
-                # other players' moves
+                """ **** OTHER PLAYERS ****
+                Here we sample a state from a distribution of possible states,
+                and we predict what action the other players will take from said
+                state. We simulate the action of the other players and we obtain
+                another state which can be used to explore the next move our
+                agent can take.
+                """
                 for p in range(self.config['players'] - 1):
 
                     if game_state.is_terminal():
@@ -267,11 +284,24 @@ class MCAgent(Agent):
             for s in history:
                 self.stats[s]['value'] += score
 
-        values = []
-        n = []
+        """ **** STATISTICS ACTIONS ****
+        Here we are computing which child of the root node has
+        the best average value, and we will return the action
+        that correspond to said node.
+
+        If the 'verbose' option is selected, we will print the
+        statistics of number of visits and average value for
+        each of the child of the root node.
+        """
+        # initialize matrices for statistics of child nodes
+        values, n = [],[]
+
+        # recalculate the vector from root node
         vec = env.observation_encoder.encode(
             self.root.observation(self.player_id))
         legal_moves = self.root.copy().legal_moves()
+
+        # calculate the average for each child node of the root
         for move in legal_moves:
             state = self.encode(vec, move)     # make it hashable
             value = float(self.stats[state]['value'])
@@ -279,6 +309,7 @@ class MCAgent(Agent):
             values.append(value / visits)
             n.append(visits)
 
+        # index of the best node
         best = values.index(max(values))
 
         end = time.time()

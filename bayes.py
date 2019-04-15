@@ -15,6 +15,7 @@ class Belief():
             self.n_cards = 4
         self.players = players
 
+        # initialize matrix for known cards
         self.full_know = np.zeros(25, dtype=np.uint8)
 
         # set the matrix of available cards
