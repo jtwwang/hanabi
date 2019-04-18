@@ -5,14 +5,15 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
-from agents.second_agent import SecondAgent
+
 from agents.mc_agent import MCAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
-import experience as exp
+from agents.second_agent import SecondAgent
 import rl_env
 import getopt
+"""A script to collect episodes from simple agent"""
 
 import os
 import sys
@@ -22,10 +23,9 @@ sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 
 AGENT_CLASSES = {
     'SimpleAgent':  SimpleAgent,
-    'SecondAgent': SecondAgent,
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent}
+    'SecondAgent': SecondAgent}
 
 
 class Runner(object):
@@ -38,7 +38,8 @@ class Runner(object):
         self.agent_config = {
             'players': flags['players'],
             'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0]}
+            'observation_size': self.env.vectorized_observation_shape()[0],
+            'predictor': flags['agent_class']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
     def moves_lookup(self, move, ob):
@@ -74,14 +75,21 @@ class Runner(object):
             # put 2-5 copies of the same agent in a list, because loading
             # the same tensorflow checkpoint more than once in a session fails
             agent = self.agent_class(self.agent_config)
-            agents = [agent for _ in range(self.flags['players'])]
+            agents = [agent for _ in range(self.flags['players'] - 1)]
         else:
             agents = [self.agent_class(self.agent_config)
                       for _ in range(self.flags['players'])]
-            if self.flags['agent_class'] == 'MCAgent':
-                for agent in range(len(agents)):
-                    agents[agent].player_id = agent
 
+        # set the name
+        for agent in agents:
+            agent.name = self.flags['agent_class']
+
+        # configure the last agent to be the Monte Carlo Agent
+        self.agent_class = MCAgent
+        agents[-1] = self.agent_class(self.agent_config)
+        agents[-1].player_id = len(agents) - 1
+        agents[-1].verbose = flags['verbose']
+        agents[-1].name = 'MonteCarloAgent'
         avg_steps = 0
 
         for eps in range(flags['num_episodes']):
@@ -95,10 +103,16 @@ class Runner(object):
             while not done:
                 for agent_id, agent in enumerate(agents):
                     ob = obs['player_observations'][agent_id]
-                    action = agent.act(ob)
 
-                    move = self.moves_lookup(action, ob)
+                    if agent_id == len(agents) - 1:
+                        # if is Monte Carlo Tree search, pass also the env
+                        action = agent.act(ob, self.env)
+                    else:
+                        # otherwise, pass the observations only
+                        action = agent.act(ob)
+
                     n_steps += 1
+                    print("Agent %s made move %s" % (agent.name, action))
 
                     # for debugging purpose
                     if flags['debug']:
@@ -106,20 +120,17 @@ class Runner(object):
                             obs['current_player'], action))
 
                     obs, reward, done, _ = self.env.step(action)
-
-                    # add the move to the memory
-                    replay.add(ob, reward, move, eps)
-
                     eps_reward += reward
 
                     if done:
                         break
             rewards.append(eps_reward)
+            print(n_steps)
             avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])
-        print('Average Reward: %.3f' % (sum(rewards)/n_eps))
-        print('Average steps: %.2f' % (avg_steps/float(n_eps)))
+        print('Average Reward: %.3f' % (float(sum(rewards))/n_eps))
+        print('Average steps: %.3f' % (float(avg_steps)/n_eps))
 
 
 if __name__ == "__main__":
@@ -127,12 +138,14 @@ if __name__ == "__main__":
     flags = {'players': 2,
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
-             'debug': False}
+             'debug': False,
+             'verbose': False}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
-                                        'debug='])
+                                        'debug=',
+                                        'verbose='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
@@ -142,12 +155,6 @@ if __name__ == "__main__":
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
-    # initialize the replay memory
-    replay = exp.Experience(flags['agent_class'], numAgents=flags['players'])
-
     # run the episodes
     runner = Runner(flags)
     runner.run()
-
-    # save the memory to file
-    replay.save()

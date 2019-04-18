@@ -21,51 +21,52 @@ from rainbow_models.run_experiment import format_legal_moves
 from rainbow_models.third_party.dopamine import checkpointer
 
 
-
-
 checkpoint_dir = 'agents/rainbow_models/rainbow-model-1'
 checkpint_dit = os.path.join(os.getcwd(), checkpoint_dir)
 
+
 class RainbowAgent(Agent):
-  """Agent that loads and applies a pretrained rainbow model."""
+    """Agent that loads and applies a pretrained rainbow model."""
 
-  def __init__(self, config, *args, **kwargs):
-    """Initialize the agent."""
-    self.config = config
-    self.agent = _RainbowAgent(
-        observation_size=self.config['observation_size'],
-        num_actions=self.config['num_moves'],
-        num_players=self.config['players'])
-    self.agent.eval_mode = True
-    self.exp_checkpointer = checkpointer.Checkpointer(checkpoint_dir, 'ckpt')
-    checkpoint_version = checkpointer.get_latest_checkpoint_number(checkpoint_dir)
-    if checkpoint_version >= 0:
-      dqn_dictionary = self.exp_checkpointer.load_checkpoint(checkpoint_version)
-      assert self.agent.unbundle(checkpoint_dir, checkpoint_version, dqn_dictionary),\
-              'agent was unable to unbundle'
-      assert 'logs' in dqn_dictionary # FIXME: necessary?
-      assert 'current_iteration' in dqn_dictionary # FIXME: necessary?
-        
+    def __init__(self, config, *args, **kwargs):
+        """Initialize the agent."""
+        self.config = config
+        self.agent = _RainbowAgent(
+            observation_size=self.config['observation_size'],
+            num_actions=self.config['num_moves'],
+            num_players=self.config['players'])
+        self.agent.eval_mode = True
+        self.exp_checkpointer = checkpointer.Checkpointer(
+            checkpoint_dir, 'ckpt')
+        checkpoint_version = checkpointer.get_latest_checkpoint_number(
+            checkpoint_dir)
+        if checkpoint_version >= 0:
+            dqn_dictionary = self.exp_checkpointer.load_checkpoint(
+                checkpoint_version)
+            assert self.agent.unbundle(checkpoint_dir, checkpoint_version, dqn_dictionary),\
+                'agent was unable to unbundle'
+            assert 'logs' in dqn_dictionary  # FIXME: necessary?
+            assert 'current_iteration' in dqn_dictionary  # FIXME: necessary?
 
-  def _parse_observation(self, current_player_observation):
-    legal_moves = current_player_observation['legal_moves_as_int']
-    legal_moves = format_legal_moves(legal_moves, self.config['num_moves'])
-    observation_vector = np.array(current_player_observation['vectorized']) #FIXME: this may need to be cast as np.float64
+    def _parse_observation(self, current_player_observation):
+        legal_moves = current_player_observation['legal_moves_as_int']
+        legal_moves = format_legal_moves(legal_moves, self.config['num_moves'])
+        # FIXME: this may need to be cast as np.float64
+        observation_vector = np.array(current_player_observation['vectorized'])
 
-    return legal_moves, observation_vector
-    
-  def act(self, observation):
-    """Act based on the observation of the current player."""
-    #import pdb; pdb.set_trace()
-    
-    # Make sure that this player is the current player
-    if observation['current_player_offset'] != 0:
-      return None
-    
-    legal_moves, observation_vector = self._parse_observation(observation)
-    action = self.agent._select_action(observation_vector, legal_moves)
-    action = observation['legal_moves'][observation['legal_moves_as_int'].index(action)]
-    
-    return action
+        return legal_moves, observation_vector
 
-    
+    def act(self, observation):
+        """Act based on the observation of the current player."""
+        #import pdb; pdb.set_trace()
+
+        # Make sure that this player is the current player
+        if observation['current_player_offset'] != 0:
+            return None
+
+        legal_moves, observation_vector = self._parse_observation(observation)
+        action = self.agent._select_action(observation_vector, legal_moves)
+        action = observation['legal_moves'][observation['legal_moves_as_int'].index(
+            action)]
+
+        return action
