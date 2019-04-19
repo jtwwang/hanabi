@@ -72,6 +72,14 @@ class Belief():
         tr = state_translator(vectorized, self.players)
 
         # update the fireworks knowledge
+        for c in range(5):
+            n = 0
+            for r in range(4,-1,-1):
+                if tr.boardSpace[c * 5 + r] == 1:
+                    n = 1
+                else:
+                    tr.boardSpace[c * 5 + r] = n
+
         self.full_know -= np.asarray(tr.boardSpace, dtype=np.uint8)
 
         # update the discard knowledge
