@@ -13,37 +13,12 @@ import getopt
 import sys
 import os
 import math
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-class PlotAcc(keras.callbacks.Callback):
-    def on_train_begin(self, logs={}):
-        self.i = 0
-        self.x = []
-        self.acc = []
-        self.val_acc = []
-        
-        self.fig = plt.figure()
-        
-        self.logs = []
-
-    def on_epoch_end(self, epoch, logs={}):
-        
-        self.logs.append(logs)
-        self.x.append(self.i)
-        self.acc.append(logs.get('acc'))
-        self.val_acc.append(logs.get('val_acc'))
-        self.i += 1
-        
-        clear_output(wait=True)
-        plt.plot(self.x, self.acc, label="acc")
-        plt.plot(self.x, self.val_acc, label="val_acc")
-        plt.legend()
-        plt.show(block=False);
-
-    #def on_train_end(self, logs={}):
 
 
 class policy_net():
@@ -64,7 +39,7 @@ class policy_net():
             input_shape=(self.input_dim,1), padding='same', activation=activation))
         x.add(BatchNormalization())
         x.add(Activation("relu"))
-        x.add(MaxPooling1D(pool_size=2,strides=2))
+        x.add(MaxPooling1D(pool_size=3,strides=2))
 
 
         x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation=activation))
@@ -93,7 +68,7 @@ class policy_net():
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
-        x.add(Dropout(0.15))
+        x.add(Dropout(0.2))
         """
 
         x.add(Dense(64, activation='relu'))
@@ -106,7 +81,7 @@ class policy_net():
         print(x.summary())
         return x
 
-    def fit(self, X, y, epochs=100, batch_size=16, learning_rate=0.01):
+    def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.01):
         """
         args:
                 X (int arr): vectorized features
@@ -200,8 +175,7 @@ def plot_hist(action_distribution, agent_class):
     plt.bar(y_pos, action_distribution, align="center")
     plt.xlabel('Actions')
     plt.ylabel('Frequency')
-    plt.xticks([0,2,4,6,8,10,12,14,16,18,20],[0,2,4,6,8,10,12,14,16,18,20])
-    plt.title('Heuristic-based agent' + ' action distribution')
+    plt.title(str(agent_class) + ' action distribution')
 
     plt.savefig(str(agent_class) + '_hist.png')
 
@@ -234,7 +208,7 @@ if __name__ == '__main__':
 
 
     X, Y, _ = extract_data(flags['agent_class'])
-"""
+
     pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'], flags['modelname'])
     if flags['load']:
         pp.load()
@@ -243,4 +217,3 @@ if __name__ == '__main__':
            batch_size=flags['batch_size'],
            learning_rate=flags['lr'])
     pp.save()
-"""
