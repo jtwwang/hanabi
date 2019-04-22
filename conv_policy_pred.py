@@ -200,7 +200,8 @@ def plot_hist(action_distribution, agent_class):
     plt.bar(y_pos, action_distribution, align="center")
     plt.xlabel('Actions')
     plt.ylabel('Frequency')
-    plt.title(str(agent_class) + ' action distribution')
+    plt.xticks([0,2,4,6,8,10,12,14,16,18,20],[0,2,4,6,8,10,12,14,16,18,20])
+    plt.title('Heuristic-based agent' + ' action distribution')
 
     plt.savefig(str(agent_class) + '_hist.png')
 

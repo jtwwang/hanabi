@@ -50,12 +50,13 @@ class policy_net():
             amsgrad=False)
         self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
-        print()
+
         self.model.fit(
             X,
             y,
             epochs=epochs,
-            batch_size=batch_size)
+            batch_size=batch_size,
+            )
         self.save()
 
     def save(self):
