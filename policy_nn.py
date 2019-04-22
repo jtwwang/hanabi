@@ -25,15 +25,27 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 
 class policy_nn():
-	def __init__(self, input_dim, action_space, agent_class, model_type="dense", model_name=None):
+	def __init__(self, input_dim, action_space, agent_class, model_name=None):
 		self.input_dim = input_dim
 		self.action_space = action_space
-		self.model = self.create_dense()
+		self.model = self.create_model()
 		self.path = os.path.join("model", agent_class)
-		self.model_type = model_type
+		self.model_type = None
 		if model_name != None:
 			self.path = os.path.join(self.path, model_name)
+			self.make_dir(self.path)
 			print("Writing to", self.path)
+		else:
+			print(self.path, "already exists. Writing to it.")
+
+	def make_dir(self, path):
+		if not os.path.exists(path):
+			try:
+				os.makedirs(path)
+			except OSError:
+				print("Creation of the directory %s failed" % self.path)
+			else:
+				print("Successfully created the directory %s" % self.path)
 
 	def create_model(self):
 		# Override
@@ -73,13 +85,96 @@ class policy_nn():
 			shuffle=True
 			)
 
+	def save(self):
+
+		self.make_dir(self.path)
+		model_path = os.path.join(self.path, "predictor.h5")
+
+		try:
+			self.model.save(model_path)
+		except:
+			print("Unable to write model to", model_path)
+
+	def predict(self, X):
+		"""
+		args:
+			X (input)
+		return
+			prediction given the model and the input X
+		"""
+		pred = self.model.predict(X)
+		return pred
+
+	def load(self):
+		"""
+		function to load the saved model
+		"""
+		try:
+			self.model = load_model(os.path.join(self.path, "predictor.h5"))
+		except:
+			print("Create new model")
+
+
+	def extract_data(agent_class):
+		"""
+		args:
+			agent_class (string)
+			num_player (int)
+		"""
+		print("Loading Data...", end='')
+		replay = Experience(agent_class, load=True)
+		replay.load()
+		X = replay._obs()
+		Y = replay._one_hot_moves()
+		eps = replay.eps
+		assert X.shape[0] == Y.shape[0]
+
+		print("LOADED")
+		return X, Y, eps
+
+
+	def cross_validation(k, max_ep):
+		global flags
+		mean = 0
+
+		X,Y,eps = extract_data(flags['agent_class'])
+		max_ep = min(max_ep, math.floor(len(eps)/k))
+
+		for i in range(k):
+			# split the data
+			train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
+			test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
+			X_train, X_test = X[train_id], X[test_id]
+			y_train, y_test = Y[train_id], Y[test_id]
+
+			# initialize the predictor (again)
+			pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
+
+			pp.fit(X_train, y_train,
+				   epochs=flags['epochs'],
+				   batch_size=flags['batch_size'],
+				   learning_rate=flags['lr'])
+
+			# calculate accuracy and add it to the mean
+			score = pp.model.evaluate(X_test, y_test, verbose=0)
+			mean += score[1]
+
+		# calculate the mean
+		mean = mean/k
+		return mean
 
 
 
-class conv(policy_nn):
-	pass
+class dense_nn(policy_nn):
+	def __init__(self):
 
-class dense(policy_nn):
+		self.model_type = "dense"
+
+class conv_nn(policy_nn):
+	def __init__(self, input_dim, action_space, agent_class, model_name=None):
+		super().__init__(input_dim, action_space, agent_class, model_name)
+		self.model_type = "conv"
+
 	def create_model(self):
 		activation=None
 		x = Sequential()
@@ -115,6 +210,10 @@ class dense(policy_nn):
 		print(x.summary())
 		return x
 
-class lstm(policy_nn):
-	pass
+class lstm_nn(policy_nn):
+	def __init__(self):
+		self.model_type = "lstm"
+
+if __name__ == "__main__":
+	nn = conv_nn(10000,5,"SimpoleAgent",model_name="dense1")
 
