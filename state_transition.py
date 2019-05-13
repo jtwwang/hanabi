@@ -8,6 +8,17 @@ def state_tr(obs, move, players):
     tr = state_translator(obs, players)
     belief = Belief(players)
 
+    # for all actions (play, discard, reveal color/rank)
+    # lastActivePlayer changes in this way
+    if 1 not in tr.lastActivePlayer:
+        # if it's the first move of the game
+        tr.lastActivePlayer[0] = 1
+    else:
+        # otherwise, cycles through players
+        first = tr.lastActivePlayer[0]
+        tr.lastActivePlayer = tr.lastActivePlayer[1:] + [first]
+
+
     if move['action_type'] == 'PLAY':
         # index of the card played
         ix = move['card_index']
@@ -78,10 +89,6 @@ def state_tr(obs, move, players):
 
         # discardSpace NOT CHANGE
         
-        # lastActivePlayer DONE
-        first = tr.lastActivePlayer[0]
-        tr.lastActivePlayer = tr.lastActivePlayer[1:] + [first]
-
         # lastMoveType DONE
         tr.lastMoveType = [1,0,0,0]
 
@@ -113,6 +120,7 @@ def state_tr(obs, move, players):
 
         # cardKnowledge
         no_hint_card = belief.prob(np.ones(25))
+        # TODO are all cards with no hints full of 1s? or if the card is on the table there is a 0?
         tr.cardKnowledge[ix*35: ix*35 + 25] = no_hint_card
 
         return obs
@@ -128,6 +136,52 @@ def state_tr(obs, move, players):
     else:
         # reveal rank
         print("rank")
+        target_offset = move['target_offset']
+        
+        # handSpace NOT CHANGE
+        # currentDeck NOT CHANGE
+        # boardSpace NOT CHANGE
+
+        # infoTokens DONE
+        tr.infoTokens = tr.infoTokens[1:] + [0]
+        
+        # lifeTokens NOT CHANGE
+        # discardSpace NOT CHANGE
+
+        # lastMoveType
+        tr.lastMoveType = [0,0,0,1]
+
+        # lastMoveTarget
+        # the target is the last active player + target offset
+        
+        tr.lastMoveTarget = [0 for i in tr.lastMoveTarget] # reset the list
+        moveTarget = (tr.lastActivePlayer.index(1) + target_offset) % players
+        tr.lastMoveTarget[moveTarget] = 1 # one-hot encoded
+
+        # colorRevealed
+        # reset all color revealed - no color has been revealed this turn
+        tr.colorRevealed = [0 for c in tr.colorRevealed]
+
+        # rankRevealed
+        # select the correct rank to reveal from the move dict
+        tr.rankRevealed = [0 for r in tr.rankRevealed]
+        tr.rankRevealed[move['rank']] = 1
+
+        # positionPlayed
+        # reset all position played - we are not playing but giving a hint
+        tr.positionPlayed = [0 for p in tr.positionPlayed]
+
+        # cardPlayed
+        # reset all cards played - we are giving a hint not playing
+        tr.cardPlayed = [0 for c in tr.cardPlayed]
+
+        # prevPlay
+        # no action is played, so there is no statistic for prevPlay
+        tr.prevPlay = [0,0]
+
+        # cardKnoweldge TODO        
+        print(tr.cardKnowledge)
+
         return obs
 
     return new_obs
