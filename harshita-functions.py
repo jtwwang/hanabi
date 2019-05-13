@@ -12,27 +12,27 @@ def discard_move(obs, move, players):
     simDiscard = translate.discardSpace  #simulated discard space
     print(simDiscard)
     
-    return obs 
 
 def reveal_color(obs, move, players):
     return obs #FIXME: return the new observation
 
 
-def discard_move(obs, move, players):
 
-    discardSpace = translate.discardSpace
-    # need to see what the new hand is 
-    ix = move['card_index']
-    belief.encode(obs)
+# def discard_move(obs, move, players):
 
-    cardKnowledge = translate.cardKnowledge
-    hints = [ix*35 : ix*35+25]
+#     discardSpace = translate.discardSpace
+#     # need to see what the new hand is 
+#     ix = move['card_index']
+#     belief.encode(obs)
+
+#     cardKnowledge = translate.cardKnowledge
+#     hints = [ix*35 : ix*35+25]
    
 
-    return obs #FIXME: return the new observation
+#     return obs #FIXME: return the new observation
 
-def reveal_color(obs, move, players):
-    translate = state_translator(obs, players)
-    # rank hint of last move, if last move was a rank hint
-    recColHint = translate.colorRevealed 
-    print(recColHint)
+# def reveal_color(obs, move, players):
+#     translate = state_translator(obs, players)
+#     # rank hint of last move, if last move was a rank hint
+#     recColHint = translate.colorRevealed 
+#     print(recColHint)
