@@ -4,35 +4,24 @@ from bayes import Belief
 #from state_transition.py import state_tr
 
 def discard_move(obs, move, players):
+    print("discard")
     translate = state_translator(obs, players)
     #using Bayes to generate the "belief" about the cards 
     belief = Belief(players)  # Belief is the percentage/probabilities 
-    print("belief:")
-    print(belief)
+    #print("belief:")
+    #print(belief)
     simDiscard = translate.discardSpace  #simulated discard space
-    print(simDiscard)
-    
+    #print(simDiscard)
+    # this is essentially to make sure that we encode the right vector for the specific move
+    # that we're looking at
+
+    translate.lastMoveType = [0,1,0,0]
+    print(translate.lastMoveType)
+
+
     return obs 
 
 def reveal_color(obs, move, players):
     return obs #FIXME: return the new observation
 
 
-def discard_move(obs, move, players):
-
-    discardSpace = translate.discardSpace
-    # need to see what the new hand is 
-    ix = move['card_index']
-    belief.encode(obs)
-
-    cardKnowledge = translate.cardKnowledge
-    hints = [ix*35 : ix*35+25]
-   
-
-    return obs #FIXME: return the new observation
-
-def reveal_color(obs, move, players):
-    translate = state_translator(obs, players)
-    # rank hint of last move, if last move was a rank hint
-    recColHint = translate.colorRevealed 
-    print(recColHint)
