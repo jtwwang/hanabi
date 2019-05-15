@@ -14,6 +14,7 @@ import experience as exp
 import rl_env
 import getopt
 from state_transition import state_tr
+from state_translate import state_translator
 
 import os
 import sys
@@ -103,8 +104,7 @@ class Runner(object):
                     move = self.moves_lookup(action, ob)
                     n_steps += 1
 
-                    new_obs = state_tr(vec, action, self.flags['players'])
-                    print(new_obs)
+                    new_obs = state_tr(vec, action, self.flags['players']) #state transition
 
                     # for debugging purpose
                     if flags['debug']:
@@ -112,6 +112,10 @@ class Runner(object):
                             obs['current_player'], action))
 
                     obs, reward, done, _ = self.env.step(action)
+
+                    tr = state_translator(obs['player_observations'][0]['vectorized'], self.flags['players'])
+                    print("test")
+                    print(tr.lastMoveType)
 
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
