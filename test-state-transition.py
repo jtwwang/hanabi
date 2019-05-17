@@ -29,6 +29,92 @@ AGENT_CLASSES = {
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent}
 
+def isWithinProb(prob, exp):
+    ix = exp.index(1)
+    if prob[ix] == 0:
+        return False
+    else:
+        return True
+
+"""
+Function to compare two vectors to find out whether the prediciton is correct
+"""
+def compareVectors(pred, expected, players):
+    transPred = state_translator(pred, players)
+    transExp =  state_translator(expected, players)
+
+    if transPred.lifeTokens != transExp.lifeTokens:
+        failed = False
+        for i in range(3):
+            if transExp.lifeTokens[i] == 1 and transPred.lifeTokens[i] < 0.0001:
+                failed = True
+                break
+        if failed:
+            print("failed lifeTokens")
+            print(transPred.lifeTokens)
+            print(transExp.lifeTokens)
+    if transPred.infoTokens != transExp.infoTokens:
+        print("failed infoTokens")
+        print(transPred.infoTokens)
+        print(transExp.infoTokens)
+    if transPred.lastActivePlayer != transExp.lastActivePlayer:
+        print("failed lastActivePlayer")
+        print(transPred.lastActivePlayer)
+        print(transExp.lastActivePlayer)
+    if transPred.lastMoveType != transExp.lastMoveType:
+        print("failed lastMoveType")
+        print(transPred.lastMoveType)
+        print(transExp.lastMoveType)
+    if transPred.lastMoveType != transExp.lastMoveType:
+        print("failed lastMoveType")
+        print(transPred.lastMoveType)
+        print(transExp.lastMoveType)
+    if transPred.lastMoveTarget != transExp.lastMoveTarget:
+        print("failed lastMoveTarget")
+        print(transPred.lastMoveTarget)
+        print(transExp.lastMoveTarget)
+    if transPred.colorRevealed != transExp.colorRevealed:
+        print("failed colorRevealed")
+        print(transPred.colorRevealed)
+        print(transExp.colorRevealed)
+    if transPred.rankRevealed != transExp.rankRevealed:
+        print("failed rankRevealed")
+        print(transPred.rankRevealed)
+        print(transExp.rankRevealed)
+    if transPred.cardRevealed != transExp.cardRevealed:
+        print("failed cardRevealed")
+        print(transPred.cardRevealed)
+        print(transExp.cardRevealed)
+    if transPred.positionPlayed != transExp.positionPlayed:
+        print("failed positionPlayed")
+        print(transPred.positionPlayed)
+        print(transExp.positionPlayed)
+    if transPred.cardPlayed != transExp.cardPlayed:
+        failed = False
+        if sum(transPred.cardPlayed) < 0.9999:
+            print("cardPlayed FAILED - wrong sum of probabilities")
+            failed = True
+        elif not isWithinProb(transPred.cardPlayed, transExp.cardPlayed):
+            print("cardPlayed FAILED - probability not contained")
+            failed = True
+        
+        if failed:
+            print(transPred.cardPlayed)
+            print(transExp.cardPlayed)
+    if transPred.prevPlay != transExp.prevPlay:
+
+        failed = False
+        if transExp.prevPlay[0] == 1 and transExp.prevPlay[0] == 0:
+            failed = True
+        elif transExp.prevPlay[1] == 1 and transExp.prevPlay[1] == 0:
+            failed = True
+
+        if failed:
+            print("prevPlay")
+            print(transPred.prevPlay)
+            print(transExp.prevPlay)
+
+
 
 class Runner(object):
     """Runner class."""
@@ -113,17 +199,12 @@ class Runner(object):
 
                     obs, reward, done, _ = self.env.step(action)
 
-                    tr = state_translator(obs['player_observations'][0]['vectorized'], self.flags['players'])
-                    
-                    #print("test last move type: ", (tr.lastMoveType))
-                  
-                    
-                    
-                    print("move: ", (move))
+                    # test all attributes and print if it's wrong
+                    vec = obs['player_observations'][0]['vectorized']
+                    compareVectors(new_obs, vec, self.flags['players'])
 
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
-                    
                     
                     eps_reward += reward
 
