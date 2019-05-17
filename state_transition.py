@@ -157,13 +157,24 @@ def state_tr(obs, move, players):
         #print("belief:")
         #print(belief)
 
-        # positionPlayed
-        tr.positionPlayed = [0 for _ in tr.positionPlayed]
-    
+        # handSpace TODO
+
+        # playerMissingCards TODO
+
+        # currentDeck DONE
+        # we take out the last card from the deck
+        tr.currentDeck = tr.currentDeck[1:] + [0]
+
+        # boardSpace TODO
+
         # infoTokens DONE
         # add one token every time
         tr.infoTokens = [1] + tr.infoTokens[:7]
+
+        # lifeTokens NOT CHANGE
         
+        # discardSpace TODO
+
         # simulated discard space
         # this is essentially to make sure that we encode the right vector for the specific move
         # that we're looking at
@@ -253,6 +264,7 @@ def state_tr(obs, move, players):
                     tr.cardRevealed[i] = 1
             # TODO check if rank card knowledge is already in cardKnowledge
             # if it is cardKnowledge, then get rid of that card in cardRevealed
+            # MAYBE ?? NOT SURE IF THIS IS THE PROBLEM
 
         else:
             # else if 'REVEAL_COLOR' (left it implicit)
@@ -274,6 +286,7 @@ def state_tr(obs, move, players):
                 if colorCard == colorNum:
                     tr.cardRevealed[i] = 1
             #print(tr.cardRevealed)
+            # CAN'T UNDERSTAND WHY THIS IS NOT WORKING
 
     tr.encodeVector()
     new_obs = tr.stateVector
