@@ -2,6 +2,28 @@ import numpy as np
 from state_translate import state_translator
 from bayes import Belief
 
+"""
+function to map the letter of the color to a corresponding number
+
+Args:
+    ColorLetter (string): the letter of the color
+        valid letters: 'R', 'Y', 'G', 'W', 'B'
+
+Returns:
+    the correspondent number (int)
+"""
+def Color2Num(ColorLetter):
+    if ColorLetter == 'R':
+        return 0
+    elif ColorLetter == 'Y':
+        return 1
+    elif ColorLetter =='G':
+        return 2
+    elif ColorLetter =='W':
+        return 3
+    else:
+        return 4
+
 def state_tr(obs, move, players):
 
     print(move)
@@ -101,6 +123,9 @@ def state_tr(obs, move, players):
         # rankRevealed DONE
         tr.rankRevealed = [0 for r in tr.rankRevealed]
         
+        # cardRevealed DONE
+        tr.cardRevealed = [0 for _ in tr.cardRevealed]
+
         # positionPlayed DONE
         tr.positionPlayed = [0 for p in tr.positionPlayed]
         tr.positionPlayed[ix] = 1
@@ -125,6 +150,8 @@ def state_tr(obs, move, players):
 
     elif move['action_type'] == 'DISCARD':
 
+        ix = move['card_index']
+
         #using Bayes to generate the "belief" about the cards 
         belief = Belief(players)  # Belief is the percentage/probabilities 
         #print("belief:")
@@ -133,18 +160,33 @@ def state_tr(obs, move, players):
         # positionPlayed
         tr.positionPlayed = [0 for _ in tr.positionPlayed]
     
-        # infoTokens NOT CHANGE
+        # infoTokens DONE
+        # add one token every time
+        tr.infoTokens = [1] + tr.infoTokens[:7]
         
         # simulated discard space
         # this is essentially to make sure that we encode the right vector for the specific move
         # that we're looking at
         tr.lastMoveType = [0,1,0,0]
 
-        # lastMoveTarget TODO
+        # lastMoveTarget DONE
+        tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget]
 
-        # cardPlayed
-        # reset all cards played - we are not playing but discarding
-        tr.cardPlayed = [0 for _ in tr.cardPlayed]
+        # colorRevealed DONE
+        tr.colorRevealed = [0 for _ in tr.colorRevealed]
+
+        # rankRevealed DONE
+        tr.rankRevealed = [0 for _ in tr.rankRevealed]
+
+        # cardRevealed DONE
+        tr.cardRevealed = [0 for _ in tr.cardRevealed]
+
+        # positionPlayed
+        tr.positionPlayed = [0 for _ in tr.positionPlayed]
+        tr.positionPlayed[ix] = 1
+    
+        # cardPlayed TODO
+        # the card played is probabilistic
 
         # prevPlay
         tr.prevPlay = [0, 0]
@@ -185,6 +227,12 @@ def state_tr(obs, move, players):
 
         # cardKnoweldge TODO
 
+        # cardRevealed (1/2)
+        tr.cardRevealed = [0 for _ in tr.cardRevealed]
+        bitHandSize = 25 * tr.handSize
+        start_hand = (target_offset - 1)* bitHandSize
+        selectedHand = tr.handSpace[start_hand: start_hand + bitHandSize]
+
         if move['action_type'] == 'REVEAL_RANK':
             # lastMoveType
             tr.lastMoveType = [0,0,0,1]
@@ -197,25 +245,35 @@ def state_tr(obs, move, players):
             # select the correct rank to reveal from the move dict
             tr.rankRevealed = [0 for r in tr.rankRevealed]
             tr.rankRevealed[move['rank']] = 1
+
+            # cardRevelaed (2/2)
+            for i in range(tr.handSize):
+                rankCard = selectedHand[i*25:(i+1)*25].index(1) % 5
+                if rankCard == move['rank']:
+                    tr.cardRevealed[i] = 1
+            # TODO check if rank card knowledge is already in cardKnowledge
+            # if it is cardKnowledge, then get rid of that card in cardRevealed
+
         else:
             # else if 'REVEAL_COLOR' (left it implicit)
             # lastMoveType
             tr.lastMoveType = [0,0,1,0]
 
             # colorRevealed DONE
-            if move['color'] == 'R':
-                tr.colorRevealed = [1, 0, 0, 0, 0]
-            elif move['color'] == 'Y':
-                tr.colorRevealed = [0, 1, 0, 0, 0]
-            elif move['color'] =='G':
-                tr.colorRevealed = [0, 0, 1, 0, 0]
-            elif move['color'] =='W':
-                tr.colorRevealed = [0, 0, 0, 1, 0]
-            else:
-                tr.colorRevealed = [0, 0, 0, 0, 1]
-
+            tr.colorRevealed = [0 for _ in tr.colorRevealed]
+            colorNum = Color2Num(move['color'])
+            tr.colorRevealed[colorNum] = 1
+            
             # rankRevealed DONE
             tr.rankRevealed = [0 for _ in tr.rankRevealed]
+
+            # cardRevealed (2/2)
+            for i in range(tr.handSize):
+                #print(selectedHand[i*25:(i+1)*25])
+                colorCard = int(selectedHand[i*25:(i + 1)*25].index(1) / 5)
+                if colorCard == colorNum:
+                    tr.cardRevealed[i] = 1
+            #print(tr.cardRevealed)
 
     tr.encodeVector()
     new_obs = tr.stateVector
