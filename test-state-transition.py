@@ -143,14 +143,8 @@ def compareVectors(pred, expected, players):
             print(transPred.prevPlay)
             print(transExp.prevPlay)
     if transPred.cardKnowledge != transExp.cardKnowledge:
-        failed = False
-        if sum(transExp.cardKnowledge) - sum(transPred.cardKnowledge) > 0.00001:
-            print("failed cardKnowledge - wrong sum of probabilities")
-            failed = True
-        elif not isWithinProb(transPred.cardKnowledge, transExp.cardKnowledge):
+        if not isWithinProb(transPred.cardKnowledge, transExp.cardKnowledge):
             print("failed cardKnowledge - probability is not contained")
-            failed = True
-        if failed:
             print(transPred.cardKnowledge)
             print(transExp.cardKnowledge)
 
