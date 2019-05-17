@@ -62,6 +62,11 @@ def compareVectors(pred, expected, players):
         print("failed currentDeck")
         print(transPred.currentDeck)
         print(transExp.currentDeck)
+    if transPred.boardSpace != transExp.boardSpace:
+        if sum(transExp.boardSpace) -sum(transPred.boardSpace) > 0.00001:
+            print("failed boardSpace - sum of probabilities is incorrect")
+            print(transPred.boardSpace)
+            print(transExp.boardSpace)
     if transPred.lifeTokens != transExp.lifeTokens:
         failed = False
         for i in range(3):
@@ -80,10 +85,17 @@ def compareVectors(pred, expected, players):
         print("failed lastActivePlayer")
         print(transPred.lastActivePlayer)
         print(transExp.lastActivePlayer)
-    if transPred.lastMoveType != transExp.lastMoveType:
-        print("failed lastMoveType")
-        print(transPred.lastMoveType)
-        print(transExp.lastMoveType)
+    if transPred.discardSpace != transExp.discardSpace:
+        failed = False
+        if sum(transExp.discardSpace) - sum(transPred.discardSpace) > 0.00001:
+            failed = True
+            print("failed discardSpace - sum of probabilities is incorrect")
+        elif not isWhithinProb(transProb.discardSpace, transExp.discardSpace):
+            failed = True
+            print("failed discardSPace - probability is not contained")
+        if failed:
+            print(transPred.discardSpace)
+            print(transExp.discardSpace)
     if transPred.lastMoveType != transExp.lastMoveType:
         print("failed lastMoveType")
         print(transPred.lastMoveType)
@@ -121,18 +133,26 @@ def compareVectors(pred, expected, players):
             print(transPred.cardPlayed)
             print(transExp.cardPlayed)
     if transPred.prevPlay != transExp.prevPlay:
-
         failed = False
         if transExp.prevPlay[0] == 1 and transExp.prevPlay[0] == 0:
             failed = True
         elif transExp.prevPlay[1] == 1 and transExp.prevPlay[1] == 0:
             failed = True
-
         if failed:
             print("prevPlay")
             print(transPred.prevPlay)
             print(transExp.prevPlay)
-
+    if transPred.cardKnowledge != transExp.cardKnowledge:
+        failed = False
+        if sum(transExp.cardKnowledge) - sum(transPred.cardKnowledge) > 0.00001:
+            print("failed cardKnowledge - wrong sum of probabilities")
+            failed = True
+        elif not isWithinProb(transPred.cardKnowledge, transExp.cardKnowledge):
+            print("failed cardKnowledge - probability is not contained")
+            failed = True
+        if failed:
+            print(transPred.cardKnowledge)
+            print(transExp.cardKnowledge)
 
 
 class Runner(object):
