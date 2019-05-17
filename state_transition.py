@@ -1,9 +1,10 @@
 import numpy as np
 from state_translate import state_translator
 from bayes import Belief
-from harshita_functions import discard_move, reveal_color
 
 def state_tr(obs, move, players):
+
+    print(move)
 
     tr = state_translator(obs, players)
     belief = Belief(players)
@@ -17,7 +18,6 @@ def state_tr(obs, move, players):
         # otherwise, cycles through players
         first = tr.lastActivePlayer[0]
         tr.lastActivePlayer = tr.lastActivePlayer[1:] + [first]
-
 
     if move['action_type'] == 'PLAY':
         # index of the card played
@@ -106,7 +106,7 @@ def state_tr(obs, move, players):
         tr.positionPlayed[ix] = 1
 
         # cardPlayed DONE
-        tr.cardPlayed = card_prob
+        tr.cardPlayed = card_prob.tolist()
 
         # prevPlay DONE
         #1st bit: was successful
@@ -123,19 +123,35 @@ def state_tr(obs, move, players):
         # TODO are all cards with no hints full of 1s? or if the card is on the table there is a 0?
         tr.cardKnowledge[ix*35: ix*35 + 25] = no_hint_card
 
-        return obs
-
     elif move['action_type'] == 'DISCARD':
-        # discard
-        print("discard")
-        return discard_move(obs, move, players)
-    elif move['action_type'] == 'REVEAL_COLOR':
-        # reveal color
-        print("color")
-        return reveal_color(obs, move, players)
+
+        #using Bayes to generate the "belief" about the cards 
+        belief = Belief(players)  # Belief is the percentage/probabilities 
+        #print("belief:")
+        #print(belief)
+
+        # positionPlayed
+        tr.positionPlayed = [0 for _ in tr.positionPlayed]
+    
+        # infoTokens NOT CHANGE
+        
+        # simulated discard space
+        # this is essentially to make sure that we encode the right vector for the specific move
+        # that we're looking at
+        tr.lastMoveType = [0,1,0,0]
+
+        # lastMoveTarget TODO
+
+        # cardPlayed
+        # reset all cards played - we are not playing but discarding
+        tr.cardPlayed = [0 for _ in tr.cardPlayed]
+
+        # prevPlay
+        tr.prevPlay = [0, 0]
+        
     else:
-        # reveal rank
-        print("rank")
+        # if this is a hint move
+
         target_offset = move['target_offset']
         
         # handSpace NOT CHANGE
@@ -148,24 +164,12 @@ def state_tr(obs, move, players):
         # lifeTokens NOT CHANGE
         # discardSpace NOT CHANGE
 
-        # lastMoveType
-        tr.lastMoveType = [0,0,0,1]
-
         # lastMoveTarget
         # the target is the last active player + target offset
         
         tr.lastMoveTarget = [0 for i in tr.lastMoveTarget] # reset the list
         moveTarget = (tr.lastActivePlayer.index(1) + target_offset) % players
         tr.lastMoveTarget[moveTarget] = 1 # one-hot encoded
-
-        # colorRevealed
-        # reset all color revealed - no color has been revealed this turn
-        tr.colorRevealed = [0 for c in tr.colorRevealed]
-
-        # rankRevealed
-        # select the correct rank to reveal from the move dict
-        tr.rankRevealed = [0 for r in tr.rankRevealed]
-        tr.rankRevealed[move['rank']] = 1
 
         # positionPlayed
         # reset all position played - we are not playing but giving a hint
@@ -179,9 +183,41 @@ def state_tr(obs, move, players):
         # no action is played, so there is no statistic for prevPlay
         tr.prevPlay = [0,0]
 
-        # cardKnoweldge TODO        
-        print(tr.cardKnowledge)
+        # cardKnoweldge TODO
 
-        return obs
+        if move['action_type'] == 'REVEAL_RANK':
+            # lastMoveType
+            tr.lastMoveType = [0,0,0,1]
+
+            # colorRevealed
+            # reset all color revealed - no color has been revealed this turn
+            tr.colorRevealed = [0 for c in tr.colorRevealed]
+
+            # rankRevealed
+            # select the correct rank to reveal from the move dict
+            tr.rankRevealed = [0 for r in tr.rankRevealed]
+            tr.rankRevealed[move['rank']] = 1
+        else:
+            # else if 'REVEAL_COLOR' (left it implicit)
+            # lastMoveType
+            tr.lastMoveType = [0,0,1,0]
+
+            # colorRevealed DONE
+            if move['color'] == 'R':
+                tr.colorRevealed = [1, 0, 0, 0, 0]
+            elif move['color'] == 'Y':
+                tr.colorRevealed = [0, 1, 0, 0, 0]
+            elif move['color'] =='G':
+                tr.colorRevealed = [0, 0, 1, 0, 0]
+            elif move['color'] =='W':
+                tr.colorRevealed = [0, 0, 0, 1, 0]
+            else:
+                tr.colorRevealed = [0, 0, 0, 0, 1]
+
+            # rankRevealed DONE
+            tr.rankRevealed = [0 for _ in tr.rankRevealed]
+
+    tr.encodeVector()
+    new_obs = tr.stateVector
 
     return new_obs
