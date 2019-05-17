@@ -43,6 +43,25 @@ def compareVectors(pred, expected, players):
     transPred = state_translator(pred, players)
     transExp =  state_translator(expected, players)
 
+    if transPred.handSpace != transExp.handSpace:
+        failed = False
+        if sum(transExp.handSpace) - sum(transPred.handSpace) > 0.00001:
+            failed = True
+            print("failed HandSpace - sum of probabilities is incorrect")
+        elif not isWithinProb(transPred.handSpace, transExp.handSpace):
+            print("failed HandSpace - probability is not contained")
+            failed = True
+        if failed:
+            print(transPred.handSpace)
+            print(transExp.handSpace)
+    if transPred.playerMissingCards != transExp.playerMissingCards:
+        print("failed playerMissingCards")
+        print(transPred.playerMissingCards)
+        print(transExp.playerMissingCards)
+    if transPred.currentDeck != transExp.currentDeck:
+        print("failed currentDeck")
+        print(transPred.currentDeck)
+        print(transExp.currentDeck)
     if transPred.lifeTokens != transExp.lifeTokens:
         failed = False
         for i in range(3):
