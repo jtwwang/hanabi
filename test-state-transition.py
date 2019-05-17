@@ -114,14 +114,13 @@ class Runner(object):
                     obs, reward, done, _ = self.env.step(action)
 
                     tr = state_translator(obs['player_observations'][0]['vectorized'], self.flags['players'])
-                    print("test last move type: ", (tr.lastMoveType))
-
-                    print("test discard space: ", (tr.discardSpace))
+                    
+                    #print("test last move type: ", (tr.lastMoveType))
+                  
+                    
                     
                     print("move: ", (move))
 
-                    # print("color revealed")
-                    # print(tr.colorRevealed)
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
                     
