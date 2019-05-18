@@ -24,12 +24,41 @@ def Color2Num(ColorLetter):
     else:
         return 4
 
+"""
+Function to convert a 25 bit representation to a 50 bit representation.
+In a 50 bit representation, duplicates are represented
+
+Args:
+    card: a list or numpy array of size 25
+"""
+def convert_25to50(card):
+
+    # emtpy 50 bits card
+    new_card = [0 for _ in range(50)]
+
+    for color in range(5):
+        for bit in new_card[color*10:(color*10) + 3]:
+            bit = card[color*5:color*5 + 1]
+        for bit in new_card[color*10 + 3:(color*10) + 5]:
+            bit = card[color*5 + 1:color*5 + 2]
+        for bit in new_card[color*10 + 5:(color*10) + 7]:
+            bit = card[color*5 + 2:color*5 + 3]
+        for bit in new_card[color*10 + 7:(color*10) + 9]:
+            bit = card[color*5 + 3:color*5 + 4]
+        new_card[color*10 + 9:(color*10) + 10] = card[color*5 + 4:color*5 + 5]
+
+    return new_card
+
+
 def state_tr(obs, move, players):
 
     print(move)
 
     tr = state_translator(obs, players)
+
+    # encode the belief before we do any operation
     belief = Belief(players)
+    belief.encode(obs)
 
     # for all actions (play, discard, reveal color/rank)
     # lastActivePlayer changes in this way
@@ -44,10 +73,7 @@ def state_tr(obs, move, players):
     if move['action_type'] == 'PLAY':
         # index of the card played
         ix = move['card_index']
-
-        # encode the belief before we do any operation
-        belief.encode(obs)
-        
+      
         # handSpace NOT CHANGE
                
         # currentDeck DONE
@@ -109,7 +135,40 @@ def state_tr(obs, move, players):
                 else:
                     tr.lifeTokens[life] = probableLife
 
-        # discardSpace NOT CHANGE
+        # discardSpace TODO: elinate possibilities accordingly to boardSpace
+
+        # step 1: select the spaces where possibly the discard can go
+        dubDiscard = [0 for _ in tr.discardSpace]
+        for color in range(5):
+            oneColor = tr.discardSpace[color*10:(color + 1)*10]
+            dubOneColor = dubDiscard[color * 10:(color + 1)*10]
+            oneApp = 0 #appearance of number 1
+            for i in range(0,3):
+                if oneColor[i] > 0:
+                    oneApp = i + 1
+            if oneApp < 3:
+                dubOneColor[oneApp] = 1
+            # for the three colors that have 2 cards each
+            for z in range(3):
+                twoApp = 3 + 2 * z
+                for i in range(3 + 2 * z,5 + 2 * z):
+                    if oneColor[i] > 0:
+                        twoApp = i + 1
+                if twoApp < 3 + 2 * z:
+                    dubOneColor[twoApp] = 1
+            # for fives
+            if oneColor[9] == 0:
+                dubOneColor[9] = 1
+
+            #update the discard copy
+            dubDiscard[color * 10:(color + 1)*10] = dubOneColor
+
+        # step 2: convert the representation from 25 bits to 50 bits encoding
+        newCardDiscard = convert_25to50(card_prob)
+        
+        # step 3: sum the possibly discarded card to the existent discardSpace
+        selectedDiscard = np.multiply(dubDiscard, newCardDiscard)
+        tr.discardSpace = (selectedDiscard + np.asarray(tr.discardSpace)).tolist()
         
         # lastMoveType DONE
         tr.lastMoveType = [1,0,0,0]
@@ -151,21 +210,23 @@ def state_tr(obs, move, players):
     elif move['action_type'] == 'DISCARD':
 
         ix = move['card_index']
+        cardKnowledge = tr.cardKnowledge
+        hints = cardKnowledge[ix*35 : ix*35+25]
 
-        #using Bayes to generate the "belief" about the cards 
-        belief = Belief(players)  # Belief is the percentage/probabilities 
-        #print("belief:")
-        #print(belief)
+        # calculate the probability
+        card_prob = belief.prob(hints)
 
-        # handSpace TODO
+        # handSpace DOESN'T CHANGE
 
-        # playerMissingCards TODO
-
+        # playerMissingCards DONE
+        if tr.currentDeck[0] == 0:
+             tr.playerMissingCards[0] = 1
+        
         # currentDeck DONE
         # we take out the last card from the deck
         tr.currentDeck = tr.currentDeck[1:] + [0]
 
-        # boardSpace TODO
+        # boardSpace DOESN'T CHANGE
 
         # infoTokens DONE
         # add one token every time
@@ -173,7 +234,46 @@ def state_tr(obs, move, players):
 
         # lifeTokens NOT CHANGE
         
-        # discardSpace TODO
+        # discardSpace DONE
+        # step 1: select the spaces where possibly the discard can go
+        dubDiscard = [0 for _ in tr.discardSpace]
+        for color in range(5):
+            oneColor = tr.discardSpace[color*10:(color + 1)*10]
+            dubOneColor = dubDiscard[color * 10:(color + 1)*10]
+            oneApp = 0 #appearance of number 1
+            for i in range(0,3):
+                if oneColor[i] > 0:
+                    oneApp = i + 1
+            if oneApp < 3:
+                dubOneColor[oneApp] = 1
+            # for the three colors that have 2 cards each
+            for z in range(3):
+                twoApp = 3 + 2 * z
+                for i in range(3 + 2 * z,5 + 2 * z):
+                    if oneColor[i] > 0:
+                        twoApp = i + 1
+                if twoApp < 3 + 2 * z:
+                    dubOneColor[twoApp] = 1
+            # for fives
+            if oneColor[9] == 0:
+                dubOneColor[9] = 1
+
+            #update the discard copy
+            dubDiscard[color * 10:(color + 1)*10] = dubOneColor
+
+        # step 2: convert the representation from 25 bits to 50 bits encoding
+        newCardDiscard = convert_25to50(card_prob)
+        
+        # step 3: sum the possibly discarded card to the existent discardSpace
+        selectedDiscard = np.multiply(dubDiscard, newCardDiscard)
+        tr.discardSpace = (selectedDiscard + np.asarray(tr.discardSpace)).tolist()
+
+        # retrieve the knowledge
+        cardKnowledge = tr.cardKnowledge
+        hints = cardKnowledge[ix*35 : ix*35+25]
+
+        # calculate the probability
+        card_prob = belief.prob(hints)
 
         # simulated discard space
         # this is essentially to make sure that we encode the right vector for the specific move
@@ -196,11 +296,14 @@ def state_tr(obs, move, players):
         tr.positionPlayed = [0 for _ in tr.positionPlayed]
         tr.positionPlayed[ix] = 1
     
-        # cardPlayed TODO
+        # cardPlayed DONE
         # the card played is probabilistic
+        tr.cardPlayed = card_prob.tolist()
 
         # prevPlay
         tr.prevPlay = [0, 0]
+
+        # cardKnowledge TODO
         
     else:
         # if this is a hint move
