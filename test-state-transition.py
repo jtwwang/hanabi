@@ -12,6 +12,7 @@ from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
 import experience as exp
 import rl_env
+import numpy as np
 import getopt
 from state_transition import state_tr
 from state_translate import state_translator
@@ -29,13 +30,26 @@ AGENT_CLASSES = {
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent}
 
+"""
+function to check if the one-hot encoded is contemplated by the probabilistic
+representation of the state
+
+Args:
+    prob: a list with probabilities
+    exp: a one-hot encoded list
+return
+    boolean (True/False): whether the probability can possibly represent
+    the one-hot encoded list
+"""
 def isWithinProb(prob, exp):
-    ix = exp.index(1)
-    if prob[ix] == 0:
-        return False
+    if np.sum(np.multiply(prob, exp)) == 0:
+        if np.sum(exp) == 0:
+            return True
+        else:
+            return False
     else:
         return True
-
+    
 """
 Function to compare two vectors to find out whether the prediciton is correct
 """
@@ -63,8 +77,8 @@ def compareVectors(pred, expected, players):
         print(transPred.currentDeck)
         print(transExp.currentDeck)
     if transPred.boardSpace != transExp.boardSpace:
-        if sum(transExp.boardSpace) -sum(transPred.boardSpace) > 0.00001:
-            print("failed boardSpace - sum of probabilities is incorrect")
+        if not isWithinProb(transPred.boardSpace, transExp.boardSpace):
+            print("failed boardSpace - probability not contained")
             print(transPred.boardSpace)
             print(transExp.boardSpace)
     if transPred.lifeTokens != transExp.lifeTokens:
@@ -86,14 +100,8 @@ def compareVectors(pred, expected, players):
         print(transPred.lastActivePlayer)
         print(transExp.lastActivePlayer)
     if transPred.discardSpace != transExp.discardSpace:
-        failed = False
-        if sum(transExp.discardSpace) - sum(transPred.discardSpace) > 0.00001:
-            failed = True
-            print("failed discardSpace - sum of probabilities is incorrect")
-        elif not isWhithinProb(transProb.discardSpace, transExp.discardSpace):
-            failed = True
-            print("failed discardSPace - probability is not contained")
-        if failed:
+        if not isWithinProb(transPred.discardSpace, transExp.discardSpace):
+            print("failed discardSpace")
             print(transPred.discardSpace)
             print(transExp.discardSpace)
     if transPred.lastMoveType != transExp.lastMoveType:
@@ -233,8 +241,9 @@ class Runner(object):
                     obs, reward, done, _ = self.env.step(action)
 
                     # test all attributes and print if it's wrong
-                    vec = obs['player_observations'][0]['vectorized']
-                    compareVectors(new_obs, vec, self.flags['players'])
+                    if agent_id == 0:
+                        vec = obs['player_observations'][0]['vectorized']
+                        compareVectors(new_obs, vec, self.flags['players'])
 
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
