@@ -38,21 +38,22 @@ The data is saved in a folder automatically created called `/experience_replay`.
 ```
 
 ### Policy prediction
-After you collected episodes you can train a neural network to predict the policy by using
+After you collect the experience, you can train a neural network to predict the policy by using
 ```
-python lstm_policy_pred.py # lstm
-python policy_predictor.py # dense
+python run_pred.py
 ```
 There are two flags that you can currently use:
 ```
---epochs <int>          # to set the number of epochs
---batch_size <int>      # to set the batch size
---lr <float>            # to set the learning rate
---agent_class <string>  # to choose the data for a specific agent class
---cv <int>		# to use cross validation with a specific number of folds
+--model_class <str>		# Network type ["dense", "conv", "lstm"]
+--epochs <int>          # Number of training epochs
+--batch_size <int>      # Batch size
+--lr <float>            # Learning rate
+--agent_class <string>  # Agent type ["SimpleAgent", "RainbowAgent"]
+--val_split <float>		# Proportion of data used to validate
+--cv <int>				# Optional. Run cross-validation @cv number of times.
 ```
 
-If not doing cross validation, the trainging uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
+If not doing cross validation, the training uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
 
 ### Monte Carlo Player
 We implemented an agent that uses Monte Carlo Tree search with UCT in combination with the policy predictor to play with other agents. The algorithm samples from a probability distribution every time that encounters an undertermined state. It uses 1000 simulations with finite depth to search the best move to do.

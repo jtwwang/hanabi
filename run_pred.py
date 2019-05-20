@@ -6,52 +6,35 @@ from experience import Experience
 
 from predictors.conv_pred import conv_pred
 from predictors.dense_pred import dense_pred
-
-
+from predictors.lstm_pred import lstm_pred
 
 #DEBUGGING
 import IPython as ip
 
-#TODO: Put this inside nn class
-def extract_data(agent_class):
-	"""
-	args:
-		agent_class (string)
-		num_player (int)
-	"""
-	print("Loading Data...", end='')
-	replay = Experience(agent_class, load=True)
-	replay.load()
-	r = replay._obs()
-	m = replay._one_hot_moves()
-	eps = replay.eps
-	assert r.shape[0] == m.shape[0]
-
-	# reshape the inputs for the lstm layer
-	X,y = [],[]
-	for e in eps:
-		X.append(r[range(e[0],e[1])])
-		y.append(m[range(e[0],e[1])])
-
-	print("LOADED")
-	return X, y, eps
-
-
-
+model_dict = {
+	"lstm" : lstm_pred,
+	"dense" : dense_pred,
+	"conv" : conv_pred	
+}
 
 if __name__ == "__main__":
-	flags = {'epochs': 40,
-			 'batch_size': 1,
+	flags = {'model_class': "dense",
+			 'epochs': 40,
+			 'batch_size': 16,
 			 'lr': 0.001,
 			 'agent_class': 'SimpleAgent',
+			 'val_split': None,
 			 'cv': -1,
 			 'load': False}
 
 	options, arguments = getopt.getopt(sys.argv[1:], '',
-									   ['epochs=',
+									   ['model_class=',
+									   	'epochs=',
 										'batch_size=',
 										'lr=',
 										'agent_class=',
+										'val_split'=,
+										'cv=',
 										'load='])
 	if arguments:
 		sys.exit()
@@ -59,16 +42,11 @@ if __name__ == "__main__":
 		flag = flag[2:]  # Strip leading --.
 		flags[flag] = type(flags[flag])(value)
 
-	# # X, Y, _ = extract_data(flags['agent_class'])
-	# # X = np.array(X)
-	# # Y= np.array(Y)
-
-	# #TODO: Automate input/output dim generation? Generate based on lstm, cnn, dense... in class.
-	# input_dim = len(X)
-	# output_dim = len(Y)
 	agent_class = flags['agent_class']
+	model_class = model_dict[flags['model_class']]
 
-	pp = conv_pred(agent_class)
+
+	pp = model_class(agent_class)
 	pp.extract_data(agent_class)
 	pp.create_model() # Add Model_name here to create different models
 
@@ -79,4 +57,5 @@ if __name__ == "__main__":
 
 	pp.fit(epochs=flags['epochs'],
 		   batch_size=flags['batch_size'],
-		   learning_rate=flags['lr'])
+		   learning_rate=flags['lr'],
+		   val_split=flags['val_split'])
