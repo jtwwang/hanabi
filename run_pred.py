@@ -2,10 +2,11 @@ import getopt
 import sys
 import numpy as np
 
-
-
-from predictors.dense_pred import dense_pred
 from experience import Experience
+
+from predictors.conv_pred import conv_pred
+from predictors.dense_pred import dense_pred
+
 
 
 #DEBUGGING
@@ -67,11 +68,11 @@ if __name__ == "__main__":
 	# output_dim = len(Y)
 	agent_class = flags['agent_class']
 
-	pp = dense_pred(agent_class)
+	pp = conv_pred(agent_class)
 	pp.extract_data(agent_class)
 	pp.create_model() # Add Model_name here to create different models
 
-	ip.embed()
+	#ip.embed()
 	
 	if flags['load']:
 		pp.load()
