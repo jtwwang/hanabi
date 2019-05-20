@@ -21,6 +21,9 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+# Debugging
+import IPython as ip
+
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -63,15 +66,18 @@ class policy_pred():
 		# TODO: set default dense
 		return None
 
-	def fit(self, epochs=100, batch_size=5, learning_rate=0.01):
+	def create_validation_split(self, val_split):
+		test_idx = np.random.choice(self.X.shape[0], int(self.X.shape[0]*val_split), replace=False)
+		train_idx = np.setdiff1d(range(self.X.shape[0]), test_idx)
+		X_train, X_test = self.X[train_idx], self.X[test_idx]
+		y_train, y_test = self.y[train_idx], self.y[test_idx]
+		return X_train, X_test, y_train, y_test
+
+	def fit(self, epochs=100, batch_size=5, learning_rate=0.01, val_split=None):
 		"""
 		args:
-				X (int arr): vectorized features
-				y (int arr): one-hot encoding with dimensions(sample_size,action_space)
+			val_split(float, between 0 and 1): Fraction of the data to be used as validation data
 		"""
-		X = self.X
-		y = self.y
-
 		adam = optimizers.Adam(
 			lr=learning_rate,
 			beta_1=0.9,
@@ -85,29 +91,29 @@ class policy_pred():
 
 		tensorboard = keras.callbacks.TensorBoard(log_dir=self.path)
 
-		# IF CONV
-		#print(X.shape)
-		#X = np.reshape(X,(X.shape[0],X.shape[1],1))
+		if val_split == None:
+			self.model.fit(
+				self.X,
+				self.y,
+				epochs=epochs,
+				batch_size=batch_size,
+				callbacks = [tensorboard],
+				validation_split=0.3, # Uses 30% of training data as validation
+				shuffle=True
+				)
+		else:
+			X_train, X_test, y_train, y_test = self.create_validation_split(val_split)
+			self.model.fit(
+				X_train,
+				y_train,
+				epochs=epochs,
+				batch_size=batch_size,
+				callbacks = [tensorboard],
+				validation_data = (X_test, y_test),
+				shuffle=True)
+			#ip.embed()
 
-		self.model.fit(
-			X,
-			y,
-			epochs=epochs,
-			batch_size=batch_size,
-			callbacks = [tensorboard],
-			validation_split=0.3,
-			shuffle=True
-			)
 
-	def save(self):
-
-		self.make_dir(self.path)
-		model_path = os.path.join(self.path, "predictor.h5")
-
-		try:
-			self.model.save(model_path)
-		except:
-			print("Unable to write model to", model_path)
 
 	def predict(self, X):
 		"""
@@ -118,6 +124,16 @@ class policy_pred():
 		"""
 		pred = self.model.predict(X)
 		return pred
+
+	def save(self):
+
+		self.make_dir(self.path)
+		model_path = os.path.join(self.path, "predictor.h5")
+
+		try:
+			self.model.save(model_path)
+		except:
+			print("Unable to write model to", model_path)
 
 	def load(self):
 		"""
@@ -148,82 +164,8 @@ class policy_pred():
 
 
 
-	def cross_validation(k, max_ep):
-		global flags
-		mean = 0
-
-		X,Y,eps = extract_data(flags['agent_class'])
-		max_ep = min(max_ep, math.floor(len(eps)/k))
-
-		for i in range(k):
-			# split the data
-			train_id = range(eps[i * max_ep][0], eps[(i + 1)*max_ep - 1][1])
-			test_id = range(0,eps[i * max_ep][0]) + range(eps[(i + 1)*max_ep][0], eps[-1][1])
-			X_train, X_test = X[train_id], X[test_id]
-			y_train, y_test = Y[train_id], Y[test_id]
-
-			# initialize the predictor (again)
-			pp = policy_net(X.shape[1], Y.shape[1], flags['agent_class'])
-
-			pp.fit(X_train, y_train,
-				   epochs=flags['epochs'],
-				   batch_size=flags['batch_size'],
-				   learning_rate=flags['lr'])
-
-			# calculate accuracy and add it to the mean
-			score = pp.model.evaluate(X_test, y_test, verbose=0)
-			mean += score[1]
-
-		# calculate the mean
-		mean = mean/k
-		return mean
 
 
-
-
-
-
-class conv_nn(policy_pred):
-	def __init__(self, input_dim, action_space, agent_class, model_name=None):
-		super().__init__(input_dim, action_space, agent_class, model_name)
-		self.model_type = "conv"
-
-	def create_model(self):
-		activation=None
-		x = Sequential()
-		x.add(Conv1D(filters=16, kernel_size=5, strides=2,
-			input_shape=(self.input_dim,1), padding='same', activation=activation))
-		x.add(BatchNormalization())
-		x.add(Activation("relu"))
-		x.add(MaxPooling1D(pool_size=3,strides=2))
-
-
-		x.add(Conv1D(filters=32,kernel_size=3,strides=2,padding="same",activation=activation))
-		x.add(BatchNormalization())
-		x.add(Activation("relu"))
-		x.add(MaxPooling1D(pool_size=2,strides=2))
-
-
-		x.add(Conv1D(filters=64,kernel_size=3,strides=2,padding="same",activation=activation))
-		x.add(BatchNormalization())
-		x.add(Activation("relu"))
-		x.add(MaxPooling1D(pool_size=2,strides=2))
-
-
-		x.add(Conv1D(filters=64, kernel_size=3, strides=2, padding='same', activation=activation))
-		x.add(BatchNormalization())
-		x.add(Activation("relu"))
-		x.add(MaxPooling1D(pool_size=2,strides=2))
-
-		x.add(Flatten())
-		x.add(Dense(64, activation='relu'))
-		x.add(Dropout(0.2))
-
-		x.add(Dense(self.action_space))
-		print(x.summary())
-		return x
-
-	# TODO: Override extract_data as needed and add new function reshape
 
 class lstm_nn(policy_pred):
 	def __init__(self, input_dim, action_space, agent_class, model_name=None):
