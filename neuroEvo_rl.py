@@ -146,15 +146,16 @@ if __name__ == "__main__":
 
     # Initialize all models
     current_pool = []
-    total_models = 20
+    total_models = 3
     for i in range(total_models):
         # create a new newtwork
-        new_guy = policy_net(658, 20, "neuroEvo", modelname = str(i))
+        new_guy = policy_net(658, 20, "NeuroEvo", modelname = str(i))
+        new_guy.load()
 
         # add the network to the pool
         current_pool.append(new_guy)
 
-    generations = 20
+    generations = 2
     score = np.zeros(total_models)
     for gen in range(generations):
 
@@ -186,4 +187,6 @@ if __name__ == "__main__":
             current_pool[i] = model_crossover(randomA, randomB, str(i))
             model_mutate(i)
 
+    for agent in current_pool:
+        agent.save()
             
