@@ -58,24 +58,10 @@ class policy_net():
         x.add(BatchNormalization())
         x.add(Activation("relu"))
         x.add(MaxPooling1D(pool_size=2,strides=2))
-        """
-        x.add(Conv1D(filters=64, kernel_size=1, strides=1, padding='same', activation=activation))
-        #cosine (feature space, label), dense, crossentropy+softmax. loss=Sum(cosine,crossentropy)
-        x.add(BatchNormalization())
-        x.add(Activation("relu"))
-        x.add(MaxPooling1D(pool_size=2,strides=2))
-        """
 
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
-        x.add(Dropout(0.3))
-        """
-
-        x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.2))
-        x.add(Dense(32, activation='relu'))
-        x.add(Dropout(0.2))
-        """
 
         x.add(Dense(self.action_space))
         print(x.summary())
