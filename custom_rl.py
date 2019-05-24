@@ -10,6 +10,7 @@ from agents.mc_agent import MCAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
+from agents.neuroEvo_agent import NeuroEvoAgent
 import experience as exp
 import rl_env
 import getopt
@@ -25,7 +26,8 @@ AGENT_CLASSES = {
     'SecondAgent': SecondAgent,
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent}
+    'MCAgent': MCAgent,
+    'NeuroEvoAgent': NeuroEvoAgent}
 
 
 class Runner(object):
@@ -73,6 +75,10 @@ class Runner(object):
         if self.flags['agent_class'] == 'RainbowAgent':
             # put 2-5 copies of the same agent in a list, because loading
             # the same tensorflow checkpoint more than once in a session fails
+            agent = self.agent_class(self.agent_config)
+            agents = [agent for _ in range(self.flags['players'])]
+        elif self.flags['agent_class'] == 'NeuroEvoAgent':
+            self.agent_config['model_name'] = str(13) #TODO detect best one dynamically?
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         else:
