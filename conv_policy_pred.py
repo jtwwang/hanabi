@@ -64,7 +64,6 @@ class policy_net():
         x.add(Dropout(0.2))
 
         x.add(Dense(self.action_space))
-        print(x.summary())
         return x
 
     def fit(self, X, y, epochs=100, batch_size=5, learning_rate=0.01):
