@@ -78,7 +78,7 @@ class Runner(object):
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         elif self.flags['agent_class'] == 'NeuroEvoAgent':
-            self.agent_config['model_name'] = str(13) #TODO detect best one dynamically?
+            self.agent_config['model_name'] = self.flags['model_name']
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         else:
@@ -133,12 +133,14 @@ if __name__ == "__main__":
     flags = {'players': 2,
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
-             'debug': False}
+             'debug': False,
+             'model_name': str(1)}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
-                                        'debug='])
+                                        'debug=',
+                                        'model_name='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
