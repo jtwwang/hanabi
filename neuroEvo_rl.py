@@ -146,7 +146,7 @@ if __name__ == "__main__":
 
     # Initialize all models
     current_pool = []
-    total_models = 3
+    total_models = 30
     for i in range(total_models):
         # create a new newtwork
         new_guy = policy_net(658, 20, "NeuroEvo", modelname = str(i))
@@ -155,8 +155,10 @@ if __name__ == "__main__":
         # add the network to the pool
         current_pool.append(new_guy)
 
-    generations = 2
+    generations = 40
     score = np.zeros(total_models)
+    averages = np.zeros(total_models)
+    n_visits = np.zeros(total_models)
     for gen in range(generations):
 
         print("Generation %i " %gen)
@@ -171,12 +173,14 @@ if __name__ == "__main__":
 
             # run the episodes
             runner = Runner(flags, current_pool[i])
-            score[i] = runner.run()
+            n_visits[i] = n_visits[i] + 1 #increase n visits
+            score[i] = (score[i] + runner.run())
+            averages[i] = score[i] /n_visits[i] # average the score
 
         # sort them
-        ranking = np.argsort(score)
-        print("best: %i with score %f" %(ranking[-1], score[ranking[-1]]))
-        print("avg: %f" %(sum(score)/total_models))
+        ranking = np.argsort(averages)
+        print("best: %i with score %f" %(ranking[-1], averages[ranking[-1]]))
+        print("avg: %f" %(sum(averages)/total_models))
 
         worst_bunch = ranking[:int(total_models/2)]
         best_bunch = ranking[int(total_models/2):]
@@ -185,6 +189,8 @@ if __name__ == "__main__":
             randomA = np.random.choice(best_bunch)
             randomB = np.random.choice(best_bunch)
             current_pool[i] = model_crossover(randomA, randomB, str(i))
+            score[i] = 0
+            n_visits[i] = 0
             model_mutate(i)
 
     for agent in current_pool:
