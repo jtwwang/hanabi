@@ -20,6 +20,8 @@ from predictors.dense_pred import dense_pred
 from predictors.lstm_pred import lstm_pred
 import numpy as np
 
+from os import path
+
 model_dict = {
     "conv": conv_pred,
     "dense": dense_pred,
@@ -41,6 +43,9 @@ class NNAgent(Agent):
         else:
             raise ValueError("model type %s not recognized" %
                              config['model_class'])
+        if 'relative_path' in config.keys():
+            self.pp.path = path.join(config['relative_path'], self.pp.path)
+
         self.pp.load()
 
     def act(self, ob):
@@ -63,17 +68,16 @@ class NNAgent(Agent):
 
     def begin_episode(self, current_player, legal_actions, observation):
 
-        print(self.pp)
-
         vec = np.asarray([observation])
-        legal_actions = np.asarray(legal_actions).flatten()
 
         prediction = self.pp.predict(vec).flatten()
-        final = np.multiply(prediction, legal_actions)
+        legal_indices = np.where(legal_actions == 0.0)[0]
 
-        # from prediciton select the best move
-        moves = np.argsort(prediction.flatten())
-        action = moves[-1]
+        best_value = np.amax(prediction[legal_indices])
+        action = np.where(prediction == best_value)[0]
+
+        assert legal_actions[action] == 0.0
+        
         return action
 
     def step(self, reward, current_player, legal_actions, observation):
