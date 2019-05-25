@@ -62,7 +62,7 @@ class policy_pred():
 			else:
 				print("Successfully created the directory %s" % self.path)
 
-	def reshape_data(self, X, y, eps):
+	def reshape_data(self, X):
 		pass
 
 	def create_model(self):
@@ -122,9 +122,10 @@ class policy_pred():
 		"""
 		args:
 			X (input)
-		return
+		returns:
 			prediction given the model and the input X
 		"""
+		X = self.reshape_data(X)
 		pred = self.model.predict(X)
 		return pred
 

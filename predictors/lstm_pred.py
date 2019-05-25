@@ -29,12 +29,18 @@ class lstm_pred(policy_pred):
 		self.model = x
 		return x
 
-	def reshape_data(self, obs, actions, eps):
+	def reshape_data(self, X_raw):
+		X = np.reshape(X_raw, (1,X_raw.shape[0], X_raw.shape[1]))
+		return X
+
+	def seperate_games(self, obs, actions, eps):
 		X, y = [], []
 		for ep in eps:
 			X.append(obs[range(ep[0],ep[1])])
 			y.append(actions[range(ep[0],ep[1])])
 		return (X,y)
+
+	
 
 	def extract_data(self, agent_class):
 		"""
@@ -44,7 +50,7 @@ class lstm_pred(policy_pred):
 		"""
 		obs, actions, eps = super().extract_data(agent_class)
 		# Dimensions: (episodes, moves_per_game, action_space)
-		(X,y) = self.reshape_data(obs, actions, eps)
+		X, y = self.seperate_games(obs, actions, eps)
 		
 		self.X = np.array(X)
 		self.y = np.array(y)
@@ -74,8 +80,10 @@ class lstm_pred(policy_pred):
 			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i]) 
 			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
 				#print("X_sep: {}".format(X_sep.shape))
-				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1],1))
-				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1],1))
+				X_train = self.reshape_data(X_sep)
+				y_train = self.reshape_data(y_sep)
+				# X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1],1))
+				# y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1],1))
 				#ip.embed()
 				yield X_train, y_train
 			i = (i + 1) % len(X)
@@ -91,8 +99,10 @@ class lstm_pred(policy_pred):
 			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i]) 
 			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
 				#print("X_sep: {}".format(X_sep.shape))
-				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
-				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
+				X_train = self.reshape_data(X_sep)
+				y_train = self.reshape_data(y_sep)
+				# X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
+				# y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
 				#ip.embed()
 				yield X_train, y_train
 			i = (i + 1) % len(X)
@@ -140,6 +150,13 @@ class lstm_pred(policy_pred):
 					validation_data=self.generate(X_test, y_test),
 					validation_steps=X_test.shape[0]/batch_size,
 					callbacks = [checkpoints, tensorboard])
+		
+		# Test predict
+		#print(self.predict(self.X[0]))
+
+	# def predict(self,X):
+	# 	X = self.reshape_data(X)
+	# 	self.model.predict()
 
 	# CURRENTLY UNUSED. TODO: REWRITE
 	def perform_lstm_cross_validation(k, max_ep):

@@ -49,10 +49,9 @@ class conv_pred(policy_pred):
 		self.model = x
 		return x
 
-	def reshape_data(self, obs, actions, eps):
-		X = np.reshape(obs,(obs.shape[0],obs.shape[1],1)) # Add an additional dimension for filters
-		y = actions
-		return (X,y)
+	def reshape_data(self, X_raw):
+		X = np.reshape(X_raw,(X_raw.shape[0],X_raw.shape[1],1)) # Add an additional dimension for filters
+		return X
 
 	def extract_data(self, agent_class):
 		"""
@@ -61,7 +60,8 @@ class conv_pred(policy_pred):
 			num_player (int)
 		"""
 		obs, actions, eps = super().extract_data(agent_class)
-		(X, y) = self.reshape_data(obs,actions,eps)
+		X = self.reshape_data(obs,actions)
+		y = actions
 	
 		self.X = X
 		self.y = y
