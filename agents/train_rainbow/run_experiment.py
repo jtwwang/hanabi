@@ -279,7 +279,7 @@ def parse_observations(observations, num_actions, obs_stacker):
     return current_player, legal_moves, observation_vector
 
 
-def run_one_episode(agent, environment, obs_stacker):
+def run_one_episode(agent, environment, obs_stacker, agent2 = None):
     """Runs the agent on a single game of Hanabi in self-play mode.
 
     Args:
@@ -291,11 +291,21 @@ def run_one_episode(agent, environment, obs_stacker):
       step_number: int, number of actions in this episode.
       total_reward: float, undiscounted return for this episode.
     """
+
+    # create the pool of agents
+    if agent2 == None:
+        agent2 = agent # if not specified, do self play
+    agents = []
+    agents.append(agent)
+    for _ in range(environment.players - 1):
+        agents.append(agent2) # all other players are agent2
+
+    # initialize
     obs_stacker.reset_stack()
     observations = environment.reset()
     current_player, legal_moves, observation_vector = (
         parse_observations(observations, environment.num_moves(), obs_stacker))
-    action = agent.begin_episode(
+    action = agents[current_player].begin_episode(
         current_player, legal_moves, observation_vector)
 
     is_done = False
@@ -321,26 +331,26 @@ def run_one_episode(agent, environment, obs_stacker):
         current_player, legal_moves, observation_vector = (
             parse_observations(observations, environment.num_moves(), obs_stacker))
         if current_player in has_played:
-            action = agent.step(reward_since_last_action[current_player],
+            action = agents[current_player].step(reward_since_last_action[current_player],
                                 current_player, legal_moves, observation_vector)
         else:
             # Each player begins the episode on their first turn (which may not be
             # the first move of the game).
-            action = agent.begin_episode(current_player, legal_moves,
+            action = agents[current_player].begin_episode(current_player, legal_moves,
                                          observation_vector)
             has_played.add(current_player)
 
         # Reset this player's reward accumulator.
         reward_since_last_action[current_player] = 0
 
-    agent.end_episode(reward_since_last_action)
+    agents[current_player].end_episode(reward_since_last_action)
 
     tf.logging.info('EPISODE: %d %g', step_number, total_reward)
     return step_number, total_reward
 
 
 def run_one_phase(agent, environment, obs_stacker, min_steps, statistics,
-                  run_mode_str):
+                  run_mode_str, agent2 = None):
     """Runs the agent/environment loop until a desired number of steps.
 
     Args:
@@ -362,7 +372,7 @@ def run_one_phase(agent, environment, obs_stacker, min_steps, statistics,
 
     while step_count < min_steps:
         episode_length, episode_return = run_one_episode(agent, environment,
-                                                         obs_stacker)
+                                                         obs_stacker, agent2)
         statistics.append({
             '{}_episode_lengths'.format(run_mode_str): episode_length,
             '{}_episode_returns'.format(run_mode_str): episode_return
@@ -379,7 +389,9 @@ def run_one_phase(agent, environment, obs_stacker, min_steps, statistics,
 def run_one_iteration(agent, environment, obs_stacker,
                       iteration, training_steps,
                       evaluate_every_n=100,
-                      num_evaluation_games=100):
+                      num_evaluation_games=100,
+                      agent2 = None):
+
     """Runs one iteration of agent/environment interaction.
 
     An iteration involves running several episodes until a certain number of
@@ -405,7 +417,7 @@ def run_one_iteration(agent, environment, obs_stacker,
     agent.eval_mode = False
     number_steps, sum_returns, num_episodes = (
         run_one_phase(agent, environment, obs_stacker, training_steps, statistics,
-                      'train'))
+                      'train', agent2))
     time_delta = time.time() - start_time
     tf.logging.info('Average training steps per second: %.2f',
                     number_steps / time_delta)
@@ -421,7 +433,7 @@ def run_one_iteration(agent, environment, obs_stacker,
         # Collect episode data for all games.
         for _ in range(num_evaluation_games):
             episode_data.append(run_one_episode(
-                agent, environment, obs_stacker))
+                agent, environment, obs_stacker, agent2))
 
         eval_episode_length, eval_episode_return = map(
             np.mean, zip(*episode_data))
@@ -491,7 +503,8 @@ def run_experiment(agent,
                    training_steps=5000,
                    logging_file_prefix='log',
                    log_every_n=1,
-                   checkpoint_every_n=1):
+                   checkpoint_every_n=1,
+                   agent2 = None):
     """Runs a full experiment, spread over multiple iterations."""
     tf.logging.info('Beginning training...')
     if num_iterations <= start_iteration:
@@ -502,7 +515,7 @@ def run_experiment(agent,
     for iteration in range(start_iteration, num_iterations):
         start_time = time.time()
         statistics = run_one_iteration(agent, environment, obs_stacker, iteration,
-                                       training_steps)
+                                       training_steps, agent2 = agent2)
         tf.logging.info('Iteration %d took %d seconds', iteration,
                         time.time() - start_time)
         start_time = time.time()

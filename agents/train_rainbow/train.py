@@ -31,6 +31,15 @@ from third_party.dopamine import logger
 
 import run_experiment
 
+import sys
+from os import path
+
+sys.path.append('../..')
+sys.path.append(path.dirname(path.dirname(path.abspath(__file__))))
+
+from agents.nn_agent import NNAgent
+
+
 FLAGS = flags.FLAGS
 
 flags.DEFINE_multi_string(
@@ -55,53 +64,65 @@ flags.DEFINE_string('logging_dir', '',
                     'no checkpoints will be saved.')
 flags.DEFINE_string('logging_file_prefix', 'log',
                     'Prefix to use for the log files.')
+flags.DEFINE_string('agent2', None, 'Agent to train against')
 
 
 def launch_experiment():
-  """Launches the experiment.
+    """Launches the experiment.
 
-  Specifically:
-  - Load the gin configs and bindings.
-  - Initialize the Logger object.
-  - Initialize the environment.
-  - Initialize the observation stacker.
-  - Initialize the agent.
-  - Reload from the latest checkpoint, if available, and initialize the
-    Checkpointer object.
-  - Run the experiment.
-  """
-  if FLAGS.base_dir == None:
-    raise ValueError('--base_dir is None: please provide a path for '
-                     'logs and checkpoints.')
+    Specifically:
+    - Load the gin configs and bindings.
+    - Initialize the Logger object.
+    - Initialize the environment.
+    - Initialize the observation stacker.
+    - Initialize the agent.
+    - Reload from the latest checkpoint, if available, and initialize the
+      Checkpointer object.
+    - Run the experiment.
+    """
+    if FLAGS.base_dir == None:
+        raise ValueError('--base_dir is None: please provide a path for '
+                         'logs and checkpoints.')
 
-  run_experiment.load_gin_configs(FLAGS.gin_files, FLAGS.gin_bindings)
-  experiment_logger = logger.Logger('{}/logs'.format(FLAGS.base_dir))
+    run_experiment.load_gin_configs(FLAGS.gin_files, FLAGS.gin_bindings)
+    experiment_logger = logger.Logger('{}/logs'.format(FLAGS.base_dir))
 
-  environment = run_experiment.create_environment()
-  obs_stacker = run_experiment.create_obs_stacker(environment)
-  agent = run_experiment.create_agent(environment, obs_stacker)
+    environment = run_experiment.create_environment()
+    obs_stacker = run_experiment.create_obs_stacker(environment)
+    agent = run_experiment.create_agent(environment, obs_stacker)
 
-  checkpoint_dir = '{}/checkpoints'.format(FLAGS.base_dir)
-  start_iteration, experiment_checkpointer = (
-      run_experiment.initialize_checkpointing(agent,
-                                              experiment_logger,
-                                              checkpoint_dir,
-                                              FLAGS.checkpoint_file_prefix))
+    checkpoint_dir = '{}/checkpoints'.format(FLAGS.base_dir)
+    start_iteration, experiment_checkpointer = (
+        run_experiment.initialize_checkpointing(agent,
+                                                experiment_logger,
+                                                checkpoint_dir,
+                                                FLAGS.checkpoint_file_prefix))
 
-  run_experiment.run_experiment(agent, environment, start_iteration,
-                                obs_stacker,
-                                experiment_logger, experiment_checkpointer,
-                                checkpoint_dir,
-                                logging_file_prefix=FLAGS.logging_file_prefix)
+    if FLAGS.agent2 == None:
+        other_agent = None
+    else:
+        config = {
+                'model_class': "conv",
+                'model_name' : None,
+                'agent_predicted': FLAGS.agent2}
+        other_agent = NNAgent(config)
+
+    run_experiment.run_experiment(agent, environment, start_iteration,
+                                  obs_stacker,
+                                  experiment_logger, experiment_checkpointer,
+                                  checkpoint_dir,
+                                  logging_file_prefix=FLAGS.logging_file_prefix,
+                                  agent2 = other_agent)
 
 
 def main(unused_argv):
-  """This main function acts as a wrapper around a gin-configurable experiment.
+    """This main function acts as a wrapper around a gin-configurable experiment.
 
-  Args:
-    unused_argv: Arguments (unused).
-  """
-  launch_experiment()
+    Args:
+      unused_argv: Arguments (unused).
+    """
+    launch_experiment()
+
 
 if __name__ == '__main__':
-  app.run(main)
+    app.run(main)
