@@ -115,6 +115,8 @@ class policy_pred():
 				validation_data = (X_test, y_test),
 				shuffle=True)
 			#ip.embed()
+		# DEBUGGING
+		#self.predict(self.X[0])
 
 
 
