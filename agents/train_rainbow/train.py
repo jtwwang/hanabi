@@ -104,9 +104,10 @@ def launch_experiment():
         config = {
                 'model_class': "conv",
                 'model_name' : None,
-                'agent_predicted': FLAGS.agent2}
+                'agent_predicted': FLAGS.agent2,
+                'relative_path': "../.."}
         other_agent = NNAgent(config)
-
+        
     run_experiment.run_experiment(agent, environment, start_iteration,
                                   obs_stacker,
                                   experiment_logger, experiment_checkpointer,
