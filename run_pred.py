@@ -20,7 +20,7 @@ if __name__ == "__main__":
              'batch_size': 16,
              'lr': 0.001,
              'agent_class': 'SimpleAgent',
-             'val_split': None,
+             'val_split': 0.3,
              'cv': -1,
              'load': False}
 
