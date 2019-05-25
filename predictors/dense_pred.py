@@ -40,7 +40,6 @@ class dense_pred(policy_pred):
 		return X, y, eps
 
 	def reshape_data(self, X):
-		# If just reading in one sample, add a "sample" dimension
-		if X.ndim == 1:
-			X = np.reshape(X, (1,X.shape[0]))
+		if X.shape == (self.action_space,): # Only one sample inputted
+			X = np.reshape(X,(1,X))
 		return X

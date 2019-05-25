@@ -30,6 +30,8 @@ class lstm_pred(policy_pred):
 		return x
 
 	def reshape_data(self, X_raw):
+		if X_raw.shape == (self.action_space,):
+			X_raw = np.reshape(X_raw,(1,X_raw.shape[0]))
 		X = np.reshape(X_raw, (1,X_raw.shape[0], X_raw.shape[1]))
 		return X
 
