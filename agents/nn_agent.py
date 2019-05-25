@@ -48,7 +48,7 @@ class NNAgent(Agent):
         prediction = self.pp.predict(vec)
 
         # from prediciton select the best move
-        moves = np.argsort(prediction)[0]
+        moves = np.argsort(prediction.flatten())
         legal_moves = ob['legal_moves']
         indices_lm = ob['legal_moves_as_int']
         action = -1
