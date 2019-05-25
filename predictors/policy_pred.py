@@ -29,7 +29,7 @@ class EvalAcc(keras.callbacks.Callback):
 		print("acc: {} - val_acc: {} - loss: {} - eval_loss: {}".format(
 			logs.get('acc'), logs.get('val_acc'), logs.get('loss'), logs.get('val_loss')))
 
-class policy_pred():
+class policy_pred(object):
 	def __init__(self, agent_class, model_name=None):
 		self.X = None	# nn input
 		self.y = None	# nn output
