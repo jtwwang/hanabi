@@ -8,12 +8,9 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 import numpy as np
 import os
 
-#debugging
-import IPython as ip
-
 class lstm_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
+		super(lstm_pred, self).__init__(agent_class, model_name)
 		self.model_type = "lstm"
 
 	def create_model(self):
@@ -52,7 +49,7 @@ class lstm_pred(policy_pred):
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
+		obs, actions, eps = super(lstm_pred,self).extract_data(agent_class)
 		# Dimensions: (episodes, moves_per_game, action_space)
 		X, y = self.seperate_games(obs, actions, eps)
 		
@@ -192,3 +189,4 @@ class lstm_pred(policy_pred):
 		# calculate the mean
 		mean = mean/k
 		return mean
+

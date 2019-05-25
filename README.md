@@ -11,6 +11,7 @@ pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
 pip install tensorflow           # if you don't already have tensorflow
 pip install keras                # if you don't already have keras
+pip install matplotlib           # if you don't already have matplotlib
 cmake .
 make
 python custom_rl.py              # Runs RL episodes
@@ -24,17 +25,22 @@ To collect data you can use the script
 ```
 python custom_rl.py --agent_class <nameAgent>
 ```
-currently supports 4 classes:
-- `RandomAgent`
-- `SimpleAgent`
-- `RainbowAgent`
+currently supports 6 classes:
 - `MCAgent`
+- `NNAgent`
+- `RainbowAgent`
+- `RandomAgent`
+- `SecondAgent`
+- `SimpleAgent`
 
 The data is saved in a folder automatically created called `/experience_replay`. Other flags you can use:
 ```
 --num_episodes <int>
 --players <int 2 to 5>
 --debug <true/false>
+--agent_predicted <str>     # necessary if using MCAgent or NNAgent. Use one of the other classes as string
+--model_class <str>         # Network type ["dense", "conv", "lstm"]
+--model_name <str>          # Model name of a pre-trained model
 ```
 
 ### Policy prediction
@@ -44,7 +50,7 @@ python run_pred.py
 ```
 There are two flags that you can currently use:
 ```
---model_class <str>		# Network type ["dense", "conv", "lstm"]
+--model_class <str>		  # Network type ["dense", "conv", "lstm"]
 --epochs <int>          # Number of training epochs
 --batch_size <int>      # Batch size
 --lr <float>            # Learning rate

@@ -1,6 +1,3 @@
-# centralized nn that runs all models
-# Last edited: JW 4-22
-
 from __future__ import print_function
 from experience import Experience
 from tensorflow import keras
@@ -21,9 +18,6 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-# Debugging
-import IPython as ip
-
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
@@ -32,7 +26,7 @@ class EvalAcc(keras.callbacks.Callback):
 		print("acc: {} - val_acc: {} - loss: {} - eval_loss: {}".format(
 			logs.get('acc'), logs.get('val_acc'), logs.get('loss'), logs.get('val_loss')))
 
-class policy_pred():
+class policy_pred(object):
 	def __init__(self, agent_class, model_name=None):
 		self.X = None	# nn input
 		self.y = None	# nn output
@@ -167,6 +161,4 @@ class policy_pred():
 
 		print("Experience Loaded!")
 		return obs, actions, eps
-
-   
 

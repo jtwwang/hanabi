@@ -5,12 +5,10 @@ from keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalizatio
 from keras.layers import Activation, ReLU, Dropout
 
 import numpy as np
-import IPython as ip
-
 
 class conv_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
+		super(conv_pred, self).__init__(agent_class, model_name)
 		self.model_type = "conv"
 
 	def create_model(self):
@@ -63,7 +61,7 @@ class conv_pred(policy_pred):
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
+		obs, actions, eps = super(conv_pred, self).extract_data(agent_class)
 
 		X = self.reshape_data(obs)
 		y = actions
@@ -74,3 +72,4 @@ class conv_pred(policy_pred):
 		self.action_space = y.shape[1]
 
 		return X, y, eps
+
