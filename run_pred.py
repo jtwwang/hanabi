@@ -8,9 +8,6 @@ from predictors.conv_pred import conv_pred
 from predictors.dense_pred import dense_pred
 from predictors.lstm_pred import lstm_pred
 
-#DEBUGGING
-import IPython as ip
-
 model_dict = {
 	"lstm" : lstm_pred,
 	"dense" : dense_pred,
@@ -33,7 +30,7 @@ if __name__ == "__main__":
 										'batch_size=',
 										'lr=',
 										'agent_class=',
-										'val_split'=,
+										'val_split=',
 										'cv=',
 										'load='])
 	if arguments:
