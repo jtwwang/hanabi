@@ -7,8 +7,6 @@ class dense_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
 		super().__init__(agent_class, model_name)
 		self.model_type = "dense"
-		self.input_dim = None
-		self.action_space = None
 
 	def create_model(self):
 		activation=None
