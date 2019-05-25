@@ -115,6 +115,8 @@ class policy_pred():
 				validation_data = (X_test, y_test),
 				shuffle=True)
 			#ip.embed()
+		# DEBUGGING
+		self.predict(self.X[0])
 
 
 
@@ -126,6 +128,7 @@ class policy_pred():
 			prediction given the model and the input X
 		"""
 		X = self.reshape_data(X)
+		ip.embed()
 		pred = self.model.predict(X)
 		return pred
 

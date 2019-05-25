@@ -3,6 +3,8 @@ from .policy_pred import policy_pred
 from keras.models import Sequential
 from keras.layers import Dense
 
+import numpy as np
+
 class dense_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
 		super().__init__(agent_class, model_name)
@@ -36,3 +38,9 @@ class dense_pred(policy_pred):
 		self.action_space = y.shape[1]
 
 		return X, y, eps
+
+	def reshape_data(self, X):
+		# If just reading in one sample, add a "sample" dimension
+		if X.ndim == 1:
+			X = np.reshape(X, (1,X.shape[0]))
+		return X
