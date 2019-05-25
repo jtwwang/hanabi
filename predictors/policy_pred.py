@@ -1,6 +1,3 @@
-# centralized nn that runs all models
-# Last edited: JW 4-22
-
 from __future__ import print_function
 from experience import Experience
 from tensorflow import keras
@@ -112,6 +109,8 @@ class policy_pred(object):
 				validation_data = (X_test, y_test),
 				shuffle=True)
 			#ip.embed()
+		# DEBUGGING
+		#self.predict(self.X[0])
 
 
 
@@ -162,6 +161,4 @@ class policy_pred(object):
 
 		print("Experience Loaded!")
 		return obs, actions, eps
-
-   
 

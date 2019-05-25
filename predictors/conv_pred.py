@@ -6,11 +6,10 @@ from keras.layers import Activation, ReLU, Dropout
 
 import numpy as np
 
-
 class conv_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-            super(conv_pred, self).__init__(agent_class, model_name)
-            self.model_type = "conv"
+		super(conv_pred, self).__init__(agent_class, model_name)
+		self.model_type = "conv"
 
 	def create_model(self):
 		activation=None
@@ -50,6 +49,9 @@ class conv_pred(policy_pred):
 		return x
 
 	def reshape_data(self, X_raw):
+		if X_raw.shape == (self.action_space,): # If only one sample is put in
+			X_raw = np.reshape(X_raw, (1, X_raw.shape[0]))
+
 		X = np.reshape(X_raw,(X_raw.shape[0],X_raw.shape[1],1)) # Add an additional dimension for filters
 		return X
 
@@ -59,7 +61,8 @@ class conv_pred(policy_pred):
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
+		obs, actions, eps = super(conv_pred, self).extract_data(agent_class)
+
 		X = self.reshape_data(obs)
 		y = actions
 	
@@ -69,3 +72,4 @@ class conv_pred(policy_pred):
 		self.action_space = y.shape[1]
 
 		return X, y, eps
+

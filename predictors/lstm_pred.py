@@ -27,6 +27,10 @@ class lstm_pred(policy_pred):
 		return x
 
 	def reshape_data(self, X_raw):
+
+		if X_raw.shape == (self.action_space,):
+			X_raw = np.reshape(X_raw,(1,X_raw.shape[0]))
+
 		X = np.reshape(X_raw, (1,X_raw.shape[0], X_raw.shape[1]))
 		return X
 
@@ -45,7 +49,7 @@ class lstm_pred(policy_pred):
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
+		obs, actions, eps = super(lstm_pred,self).extract_data(agent_class)
 		# Dimensions: (episodes, moves_per_game, action_space)
 		X, y = self.seperate_games(obs, actions, eps)
 		
@@ -185,3 +189,4 @@ class lstm_pred(policy_pred):
 		# calculate the mean
 		mean = mean/k
 		return mean
+
