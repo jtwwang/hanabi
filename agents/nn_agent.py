@@ -60,3 +60,24 @@ class NNAgent(Agent):
             raise ValueError("action is incorrect")
         else:
             return action
+
+    def begin_episode(self, current_player, legal_actions, observation):
+
+        print(self.pp)
+
+        vec = np.asarray([observation])
+        legal_actions = np.asarray(legal_actions).flatten()
+
+        prediction = self.pp.predict(vec).flatten()
+        final = np.multiply(prediction, legal_actions)
+
+        # from prediciton select the best move
+        moves = np.argsort(prediction.flatten())
+        action = moves[-1]
+        return action
+
+    def step(self, reward, current_player, legal_actions, observation):
+        return self.begin_episode(current_player, legal_actions, observation)
+
+    def end_episode(self, final_rewards):
+        pass
