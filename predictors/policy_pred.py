@@ -127,10 +127,7 @@ class policy_pred():
 		returns:
 			prediction given the model and the input X
 		"""
-		# If just reading in one sample, add a "sample" dimension
-		
 		X = self.reshape_data(X)
-		#ip.embed()
 		pred = self.model.predict(X)
 		return pred
 

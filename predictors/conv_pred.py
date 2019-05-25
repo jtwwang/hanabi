@@ -51,9 +51,9 @@ class conv_pred(policy_pred):
 		return x
 
 	def reshape_data(self, X_raw):
-		#ip.embed()
 		if X_raw.shape == (self.action_space,): # If only one sample is put in
 			X_raw = np.reshape(X_raw, (1, X_raw.shape[0]))
+
 		X = np.reshape(X_raw,(X_raw.shape[0],X_raw.shape[1],1)) # Add an additional dimension for filters
 		return X
 
@@ -64,6 +64,7 @@ class conv_pred(policy_pred):
 			num_player (int)
 		"""
 		obs, actions, eps = super().extract_data(agent_class)
+
 		X = self.reshape_data(obs)
 		y = actions
 	
