@@ -10,7 +10,7 @@ import os
 
 class lstm_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
+		super(lstm_pred, self).__init__(agent_class, model_name)
 		self.model_type = "lstm"
 
 	def create_model(self):

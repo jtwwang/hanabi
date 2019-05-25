@@ -5,7 +5,7 @@ from keras.layers import Dense
 
 class dense_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
+		super(dense_pred, self).__init__(agent_class, model_name)
 		self.model_type = "dense"
 
 	def create_model(self):
