@@ -7,6 +7,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 from agents.second_agent import SecondAgent
 from agents.mc_agent import MCAgent
+from agents.nn_agent import NNAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
@@ -25,7 +26,8 @@ AGENT_CLASSES = {
     'SecondAgent': SecondAgent,
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent}
+    'MCAgent': MCAgent,
+    'NNAgent': NNAgent}
 
 
 class Runner(object):
@@ -38,7 +40,10 @@ class Runner(object):
         self.agent_config = {
             'players': flags['players'],
             'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0]}
+            'observation_size': self.env.vectorized_observation_shape()[0],
+            'agent_predicted': flags['agent_predicted'],
+            'model_class': flags['model_class'],
+            'model_name': flags['model_name']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
 
     def moves_lookup(self, move, ob):
@@ -127,12 +132,18 @@ if __name__ == "__main__":
     flags = {'players': 2,
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
-             'debug': False}
+             'debug': False,
+             'agent_predicted': "",
+             'model_class': "",
+             'model_name': None}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
-                                        'debug='])
+                                        'debug=',
+                                        'agent_predicted=',
+                                        'model_class=',
+                                        'model_name='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
