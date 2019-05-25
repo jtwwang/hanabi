@@ -9,7 +9,7 @@ import numpy as np
 
 class conv_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
-            super().__init__(agent_class, model_name)
+            super(conv_pred, self).__init__(agent_class, model_name)
             self.model_type = "conv"
 
 	def create_model(self):
@@ -60,7 +60,7 @@ class conv_pred(policy_pred):
 			num_player (int)
 		"""
 		obs, actions, eps = super().extract_data(agent_class)
-		X = self.reshape_data(obs,actions)
+		X = self.reshape_data(obs)
 		y = actions
 	
 		self.X = X
