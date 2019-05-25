@@ -100,7 +100,10 @@ class Runner(object):
             while not done:
                 for agent_id, agent in enumerate(agents):
                     ob = obs['player_observations'][agent_id]
-                    action = agent.act(ob)
+                    if self.flags['agent_class'] == 'MCAgent':
+                        action = agent.act(ob, self.env)
+                    else:
+                        action = agent.act(ob)
 
                     move = self.moves_lookup(action, ob)
                     n_steps += 1

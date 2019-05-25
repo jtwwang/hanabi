@@ -13,7 +13,7 @@ import numpy as np
 import bayes
 import random
 import pyhanabi
-from dense_policy_pred import policy_net
+from predictors.conv_pred import conv_pred
 from datetime import datetime
 import time
 random.seed(datetime.now())
@@ -32,8 +32,9 @@ class MCAgent(Agent):
 
         # load the predictor
 
-        self.pp = policy_net(
-            config['observation_size'], config['num_moves'], config['predictor'])
+        self.pp = conv_pred(
+            config['agent_predicted'],
+            model_name = config['model_name'])
         self.pp.load()
 
         self.stats = {}         # stats of all states
