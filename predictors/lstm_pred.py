@@ -1,7 +1,7 @@
 from .policy_pred import policy_pred
 
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Embedding, TimeDistributed
+from keras.layers import LSTM, Dense, Conv1D, Embedding, TimeDistributed
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
@@ -19,12 +19,22 @@ class lstm_pred(policy_pred):
 	def create_model(self):
 		activation=None
 		x = Sequential()
+		#x.add(TimeDistributed(Conv1D(filters=16, kernel_size=5, strides=2,
+		#	input_shape=(self.input_dim,1), padding='same', activation=activation)))
 		x.add(LSTM(64, input_shape=(None,self.input_dim), return_sequences=True))
+		x.add(LSTM(64, return_sequences=True))
 		x.add(LSTM(128, return_sequences=True))
 		x.add(TimeDistributed(Dense(self.action_space)))
 		print(x.summary())
 		self.model = x
 		return x
+
+	def reshape_data(self, obs, actions, eps):
+		X, y = [], []
+		for ep in eps:
+			X.append(obs[range(ep[0],ep[1])])
+			y.append(actions[range(ep[0],ep[1])])
+		return (X,y)
 
 	def extract_data(self, agent_class):
 		"""
@@ -33,13 +43,9 @@ class lstm_pred(policy_pred):
 			num_player (int)
 		"""
 		obs, actions, eps = super().extract_data(agent_class)
-
 		# Dimensions: (episodes, moves_per_game, action_space)
-		X, y = [], []
-		for ep in eps:
-			X.append(obs[range(ep[0],ep[1])])
-			y.append(actions[range(ep[0],ep[1])])
-
+		(X,y) = self.reshape_data(obs, actions, eps)
+		
 		self.X = np.array(X)
 		self.y = np.array(y)
 		self.input_dim = obs.shape[1]
@@ -61,6 +67,18 @@ class lstm_pred(policy_pred):
 			y_sep_all.append(np.asarray(y[player::players]))
 			#print("X_sep: {}".format(X_sep_all[player].shape))
 		return X_sep_all, y_sep_all
+
+	def generate_conv1d(self, X, y):
+		i = 0
+		while True:
+			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i]) 
+			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
+				#print("X_sep: {}".format(X_sep.shape))
+				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1],1))
+				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1],1))
+				#ip.embed()
+				yield X_train, y_train
+			i = (i + 1) % len(X)
 
 	def generate(self, X, y):
 		"""
@@ -123,6 +141,7 @@ class lstm_pred(policy_pred):
 					validation_steps=X_test.shape[0]/batch_size,
 					callbacks = [checkpoints, tensorboard])
 
+	# CURRENTLY UNUSED. TODO: REWRITE
 	def perform_lstm_cross_validation(k, max_ep):
 		global flags
 		mean = 0
