@@ -8,9 +8,6 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 import numpy as np
 import os
 
-#debugging
-import IPython as ip
-
 class lstm_pred(policy_pred):
 	def __init__(self, agent_class, model_name=None):
 		super().__init__(agent_class, model_name)
