@@ -22,7 +22,8 @@ if __name__ == "__main__":
              'agent_class': 'SimpleAgent',
              'val_split': 0.3,
              'cv': -1,
-             'load': False}
+             'load': False,
+             'summary':False}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['model_class=',
@@ -32,7 +33,8 @@ if __name__ == "__main__":
                                         'agent_class=',
                                         'val_split=',
                                         'cv=',
-                                        'load='])
+                                        'load=',
+                                        'summary='])
     if arguments:
         sys.exit()
     for flag, value in options:
@@ -46,10 +48,11 @@ if __name__ == "__main__":
     pp.extract_data(agent_class)
     pp.create_model()  # Add Model_name here to create different models
 
-    # ip.embed()
-
     if flags['load']:
         pp.load()
+
+    if flags['summary']:
+        print(pp.model.summary())
 
     pp.fit(epochs=flags['epochs'],
            batch_size=flags['batch_size'],

@@ -43,7 +43,6 @@ class conv_pred(policy_pred):
 		x.add(Dropout(0.2))
 
 		x.add(Dense(self.action_space))
-		print(x.summary())
 
 		self.model = x
 		return x
