@@ -50,7 +50,7 @@ class NNAgent(Agent):
 
     def act(self, ob):
         vec = np.asarray([ob['vectorized']])
-        prediction = self.pp.predict(vec)
+        prediction = - self.pp.predict(vec)
 
         # from prediciton select the best move
         moves = np.argsort(prediction.flatten())
