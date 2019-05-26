@@ -138,7 +138,7 @@ if __name__ == "__main__":
              'debug': False,
              'agent_predicted': "",
              'model_class': "",
-             'model_name': None}
+             'model_name': ""}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
