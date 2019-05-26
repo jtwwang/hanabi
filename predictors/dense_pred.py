@@ -18,7 +18,6 @@ class dense_pred(policy_pred):
 		x.add(Dense(128))
 		x.add(Dense(128))
 		x.add(Dense(self.action_space))
-		print(x.summary())
 		self.model = x
 		return x
 
