@@ -8,7 +8,7 @@ class Experience():
 
     path = "experience_replay"
 
-    def __init__(self, agent_class, numAgents=-1, load=False, size=100000):
+    def __init__(self, agent_class, numAgents=-1, load=False, size=1000000):
         """
         Args:
             agent_class (string): the class of the agent, which can be one of:
