@@ -5,11 +5,13 @@ from keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalizatio
 from keras.layers import Activation, ReLU, Dropout
 
 import numpy as np
+from os import path
 
 class conv_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super(conv_pred, self).__init__(agent_class, model_name)
-		self.model_type = "conv"
+	def __init__(self, agent_class, model_name=""):
+            self.model_type = "conv"
+            model_name = path.join(self.model_type, model_name)
+	    super(conv_pred, self).__init__(agent_class, model_name)
 
 	def create_model(self):
 		activation=None
