@@ -7,11 +7,13 @@ from keras.callbacks import ModelCheckpoint, TensorBoard
 
 import numpy as np
 import os
+from os import path
 
 class lstm_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super(lstm_pred, self).__init__(agent_class, model_name)
-		self.model_type = "lstm"
+	def __init__(self, agent_class, model_name=""):
+            self.model_type = "lstm"
+            model_name = path.join(self.model_type, model_name)
+	    super(lstm_pred, self).__init__(agent_class, model_name)
 
 	def create_model(self):
 		activation=None
@@ -22,7 +24,6 @@ class lstm_pred(policy_pred):
 		x.add(LSTM(64, return_sequences=True))
 		x.add(LSTM(128, return_sequences=True))
 		x.add(TimeDistributed(Dense(self.action_space)))
-		print(x.summary())
 		self.model = x
 		return x
 
