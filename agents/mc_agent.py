@@ -314,7 +314,7 @@ class MCAgent(Agent):
         best = values.index(max(values))
 
         end = time.time()
-        if self.verbose:
+        if self.config['debug']:
             print("time of execution: %.3f" % (end - start))
             for i in range(len(values)):
                 print("%s: %.2f, visits %d" %

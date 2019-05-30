@@ -43,7 +43,8 @@ class Runner(object):
             'observation_size': self.env.vectorized_observation_shape()[0],
             'agent_predicted': flags['agent_predicted'],
             'model_class': flags['model_class'],
-            'model_name': flags['model_name']}
+            'model_name': flags['model_name'],
+            'debug': flags['debug']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
         if flags['agent2'] != "":
             self.agent_2_config = {
@@ -112,7 +113,7 @@ class Runner(object):
             while not done:
                 for agent_id, agent in enumerate(agents):
                     ob = obs['player_observations'][agent_id]
-                    if self.flags['agent_class'] == 'MCAgent':
+                    if type(agent) == MCAgent:
                         action = agent.act(ob, self.env)
                     else:
                         action = agent.act(ob)
