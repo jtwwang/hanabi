@@ -20,7 +20,7 @@ python game_example.py           # Plays a game using the lower level interface
 
 ## Running our scripts
 
-### Data collection
+### Data collection and evaluation agents
 To collect data you can use the script
 ```
 python custom_rl.py --agent_class <nameAgent>
@@ -41,7 +41,10 @@ The data is saved in a folder automatically created called `/experience_replay`.
 --agent_predicted <str>     # necessary if using MCAgent or NNAgent. Use one of the other classes as string
 --model_class <str>         # Network type ["dense", "conv", "lstm"]
 --model_name <str>          # Model name of a pre-trained model
+--agent2 <str>              # to play 'ad hoc' against another agent. 
+                            # The second agent cannot be one of thetwo customs agents ["MCAgent", "NNAgent"]
 ```
+The script will print out to screen an average score and average number of steps taken during the episodes.
 
 ### Policy prediction
 After you collect the experience, you can train a neural network to predict the policy by using
@@ -60,18 +63,3 @@ There are two flags that you can currently use:
 ```
 
 If not doing cross validation, the training uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
-
-### Monte Carlo Player
-We implemented an agent that uses Monte Carlo Tree search with UCT in combination with the policy predictor to play with other agents. The algorithm samples from a probability distribution every time that encounters an undertermined state. It uses 1000 simulations with finite depth to search the best move to do.
-
-To run the script
-```
-ptyhon MonteCarlo_game.py
-```
-Similarly to `custom_rl.py` you can use flags to set some of the parameters of the game
-```
---agent_class <RainbowAgent, RandomAgent, SimpleAgent, SecondAgent>
---num_episodes <int>
---players <int 2 to 5>
---verbose True/False
-```
