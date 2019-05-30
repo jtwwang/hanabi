@@ -23,7 +23,8 @@ if __name__ == "__main__":
              'val_split': 0.3,
              'cv': -1,
              'load': False,
-             'summary':False}
+             'summary':False,
+             'games': -1}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['model_class=',
@@ -34,7 +35,8 @@ if __name__ == "__main__":
                                         'val_split=',
                                         'cv=',
                                         'load=',
-                                        'summary='])
+                                        'summary=',
+                                        'games='])
     if arguments:
         sys.exit()
     for flag, value in options:
@@ -45,7 +47,7 @@ if __name__ == "__main__":
     model_class = model_dict[flags['model_class']]
 
     pp = model_class(agent_class)
-    pp.extract_data(agent_class)
+    pp.extract_data(agent_class, games = flags['games'])
     pp.create_model()  # Add Model_name here to create different models
 
     if flags['load']:

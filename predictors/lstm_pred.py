@@ -44,13 +44,13 @@ class lstm_pred(policy_pred):
 
 	
 
-	def extract_data(self, agent_class):
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super(lstm_pred,self).extract_data(agent_class)
+		obs, actions, eps = super(lstm_pred,self).extract_data(agent_class, games = games)
 		# Dimensions: (episodes, moves_per_game, action_space)
 		X, y = self.seperate_games(obs, actions, eps)
 		

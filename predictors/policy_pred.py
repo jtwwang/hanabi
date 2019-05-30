@@ -145,15 +145,15 @@ class policy_pred(object):
 			print("Create new model")
 
 
-	def extract_data(self, agent_class):
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string): "SimpleAgent", "RainbowAgent"
-			num_player (int)
+			num_games (int): how many games we want to load
 		"""
 		print("Loading Data...", end='')
 		replay = Experience(agent_class, load=True)
-		replay.load()
+		replay.load(games = games)
 		obs = replay._obs()
 		actions = replay._one_hot_moves()
 		eps = replay.eps
