@@ -21,13 +21,13 @@ class dense_pred(policy_pred):
 		self.model = x
 		return x
 
-	def extract_data(self, agent_class):
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super(dense_pred, self).extract_data(agent_class)
+		obs, actions, eps = super(dense_pred, self).extract_data(agent_class, games = games)
 		X = obs
 		y = actions
 
