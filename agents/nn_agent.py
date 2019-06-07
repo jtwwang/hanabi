@@ -38,15 +38,14 @@ class NNAgent(Agent):
 
         if config['model_class'] in model_dict.keys():
             model_class = model_dict[config['model_class']]
-            self.pp = model_class(config['agent_predicted'],
-                                  model_name=config['model_name'])
+            self.pp = model_class(config['agent_predicted'])
         else:
             raise ValueError("model type %s not recognized" %
                              config['model_class'])
         if 'relative_path' in config.keys():
             self.pp.path = path.join(config['relative_path'], self.pp.path)
 
-        self.pp.load()
+        self.pp.load(config['model_name'])
 
     def act(self, ob):
         vec = np.asarray([ob['vectorized']])

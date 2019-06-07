@@ -27,7 +27,7 @@ class EvalAcc(keras.callbacks.Callback):
 			logs.get('acc'), logs.get('val_acc'), logs.get('loss'), logs.get('val_loss')))
 
 class policy_pred(object):
-	def __init__(self, agent_class, model_name=None):
+	def __init__(self, agent_class, model_type= None):
 		self.X = None	# nn input
 		self.y = None	# nn output
 		self.input_dim = None
@@ -37,11 +37,10 @@ class policy_pred(object):
 
 		# Create the directory for this particular model
 		self.path = os.path.join("model", agent_class)
-		self.model_type = None
-		if model_name != None:
-			self.path = os.path.join(self.path, model_name)
+		if model_type != None:
+			self.path = os.path.join(self.path, model_type)
 			self.make_dir(self.path)
-			print("Writing to", self.path)
+                        print("Writing to", self.path)
 		else:
 			print(self.path, "already exists. Writing to it.")
 		self.checkpoint_path = os.path.join(self.path, "checkpoints")
@@ -125,22 +124,22 @@ class policy_pred(object):
 		pred = self.model.predict(X)
 		return pred
 
-	def save(self):
+	def save(self, model_name = "predictor.h5"):
 
 		self.make_dir(self.path)
-		model_path = os.path.join(self.path, "predictor.h5")
+		model_path = os.path.join(self.path, model_name)
 
 		try:
 			self.model.save(model_path)
 		except:
 			print("Unable to write model to", model_path)
 
-	def load(self):
+	def load(self, model_name = "predictor.h5"):
 		"""
 		function to load the saved model
 		"""
-		try:
-			self.model = load_model(os.path.join(self.path, "predictor.h5"))
+		try:      
+			self.model = load_model(os.path.join(self.path, model_name))
 		except:
 			print("Create new model")
 

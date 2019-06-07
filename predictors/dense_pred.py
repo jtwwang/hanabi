@@ -6,9 +6,9 @@ from keras.layers import Dense
 import numpy as np
 
 class dense_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super(dense_pred, self).__init__(agent_class, model_name)
-		self.model_type = "dense"
+	def __init__(self, agent_class):
+                self.model_type = "dense"
+		super(dense_pred, self).__init__(agent_class, self.model_type)
 
 	def create_model(self):
 		activation=None
