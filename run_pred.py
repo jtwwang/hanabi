@@ -15,16 +15,17 @@ model_dict = {
 }
 
 if __name__ == "__main__":
-    flags = {'model_class': "dense",
+    flags = {'model_class': "conv",
              'epochs': 40,
              'batch_size': 16,
              'lr': 0.001,
-             'agent_class': 'SimpleAgent',
+             'agent_class': 'RainbowAgent',
              'val_split': 0.3,
              'cv': -1,
              'load': False,
              'summary':False,
-             'games': -1}
+             'games': -1,
+             'model_name': "predictor.h5"}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['model_class=',
@@ -36,7 +37,8 @@ if __name__ == "__main__":
                                         'cv=',
                                         'load=',
                                         'summary=',
-                                        'games='])
+                                        'games=',
+                                        'model_name='])
     if arguments:
         sys.exit()
     for flag, value in options:
@@ -51,7 +53,7 @@ if __name__ == "__main__":
     pp.create_model()  # Add Model_name here to create different models
 
     if flags['load']:
-        pp.load()
+        pp.load(flags['model_name'])
 
     if flags['summary']:
         print(pp.model.summary())
@@ -60,4 +62,4 @@ if __name__ == "__main__":
            batch_size=flags['batch_size'],
            learning_rate=flags['lr'],
            val_split=flags['val_split'])
-    pp.save()
+    pp.save(flags['model_name'])

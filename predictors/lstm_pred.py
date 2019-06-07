@@ -10,10 +10,9 @@ import os
 from os import path
 
 class lstm_pred(policy_pred):
-	def __init__(self, agent_class, model_name=""):
+	def __init__(self, agent_class):
             self.model_type = "lstm"
-            model_name = path.join(self.model_type, model_name)
-	    super(lstm_pred, self).__init__(agent_class, model_name)
+	    super(lstm_pred, self).__init__(agent_class, self.model_type)
 
 	def create_model(self):
 		activation=None
