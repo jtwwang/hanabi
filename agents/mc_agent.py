@@ -33,9 +33,8 @@ class MCAgent(Agent):
         # load the predictor
 
         self.pp = conv_pred(
-            config['agent_predicted'],
-            model_name = config['model_name'])
-        self.pp.load()
+            config['agent_predicted'])
+        self.pp.load(config['model_name'])
 
         self.stats = {}         # stats of all states
 
