@@ -8,3 +8,4 @@ game_example
 Makefile
 *.pyc
 *.png
+*tfevents*
