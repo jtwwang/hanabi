@@ -47,19 +47,22 @@ The data is saved in a folder automatically created called `/experience_replay`.
 The script will print out to screen an average score and average number of steps taken during the episodes.
 
 ### Policy prediction
-After you collect the experience, you can train a neural network to predict the policy by using
+You can train a neural network to predict the policy by using
 ```
 python run_pred.py
 ```
-There are two flags that you can currently use:
+There are several flags that you can currently use:
 ```
---model_class <str>		  # Network type ["dense", "conv", "lstm"]
---epochs <int>          # Number of training epochs
+--agent_class <str      # Agent type ["SimpleAgent", "RainbowAgent"]
 --batch_size <int>      # Batch size
+--cv <int>				      # Optional. Run cross-validation @cv number of times.
+--epochs <int>          # Number of training epochs
+--games <int>           # The number of games to load
+--load <bool>           # Whether to laod an existing model (if exists)
 --lr <float>            # Learning rate
---agent_class <string>  # Agent type ["SimpleAgent", "RainbowAgent"]
---val_split <float>		# Proportion of data used to validate
---cv <int>				# Optional. Run cross-validation @cv number of times.
+--model_class <str>		  # Network type ["dense", "conv", "lstm"]
+--model_name <str>      # The name to give to the model
+--val_split <float>		  # Proportion of data used to validate
 ```
 
-If not doing cross validation, the training uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
+Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors. For the agents `RainbowAgent` are already available 5K episodes of memory, and there are 20K available for `SimpleAgent`.
