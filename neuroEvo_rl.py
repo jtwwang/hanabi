@@ -20,13 +20,18 @@ sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 def model_crossover(weights1, weights2):
 
     new_weights = []
-
-    for layer in range(len(weights1)):
-        # alternate odd and even layers
-        if layer % 2 == 0:
-            new_weights.append(weights1[layer])
-        else:
-            new_weights.append(weights2[layer])
+    assert len(weights1) == len(weights2)
+    if random.uniform(0,1) > 0.3:
+        print("crossover")
+        for layer in range(len(weights1)):
+            # alternate odd and even layers
+            if layer % 2 == 0:
+                new_weights.append(weights1[layer])
+            else:
+                new_weights.append(weights2[layer])
+    else:
+        print("no crossover")
+        new_weights = weights1
 
     return new_weights
 
@@ -42,11 +47,14 @@ def mutate_weights(weights):
 
 def make_mutation(ix_to_mutate, best_ones):
 
+    p = np.sort(scores)[2:]
+    p = p / np.sum(p)
+
     # select the weights from parents
-    randomA = np.random.choice(best_ones)
-    randomB = np.random.choice(best_ones)
+    randomA = np.random.choice(best_ones, p = p)
+    randomB = np.random.choice(best_ones, p = p)
     while randomB == randomA:
-        randomB = np.random.choice(best_ones)
+        randomB = np.random.choice(best_ones, p = p)
     weights1 = weights[randomA]
     weights2 = weights[randomB]
 
@@ -66,7 +74,7 @@ def run(ix, initialize=False):
         'players': 2,
         'num_moves': env.num_moves(),
         'observation_size': env.vectorized_observation_shape()[0],
-        'model_name': str(i),
+        'model_name': str(ix),
         'initialize': initialize}
 
     agent = NeuroEvoAgent(agent_config)
@@ -103,8 +111,8 @@ def run(ix, initialize=False):
     avg_steps = avg_steps/float(n_eps)
     avg_reward = sum(rewards)/float(n_eps)
 
-    agent.save(model_name=str(i))
-    scores[i] = avg_reward * 100 + avg_steps
+    agent.save(model_name=str(ix))
+    scores[ix] = avg_reward * 100 + avg_steps
 
 
 if __name__ == "__main__":
@@ -117,7 +125,7 @@ if __name__ == "__main__":
 
     # Initialize all models
     current_pool = []
-    total_models = 20
+    total_models = 4
     scores = np.zeros(total_models)
     weights = {}
     generations = 40
@@ -149,8 +157,6 @@ if __name__ == "__main__":
         best_ones=ranking[2:]
         print(scores)
         print(ranking)
-        print(worst_ones)
-        print(best_ones)
 
         ix_to_mutate=worst_ones[to_mutate]
         ix_to_simulate=worst_ones[1 - to_mutate]
@@ -158,7 +164,7 @@ if __name__ == "__main__":
         print(ix_to_simulate)
 
         run(ix_to_simulate)
-        make_mutation,(ix_to_mutate, best_ones)
+        make_mutation(ix_to_mutate, best_ones)
 
         # update weights of mutated agent
         agent.model.set_weights(weights[ix_to_mutate])
