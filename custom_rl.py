@@ -44,13 +44,15 @@ class Runner(object):
             'agent_predicted': flags['agent_predicted'],
             'model_class': flags['model_class'],
             'model_name': flags['model_name'],
-            'debug': flags['debug']}
+            'debug': flags['debug'],
+            'checkpoint_dir': flags['checkpoint_dir']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
         if flags['agent2'] != "":
             self.agent_2_config = {
                 'players': flags['players'],
                 'num_moves': self.env.num_moves(),
-                'observation_size': self.env.vectorized_observation_shape()[0],}
+                'observation_size': self.env.vectorized_observation_shape()[0],
+                'checkpoint_dir': flags['checkpoint_dir2']}
             self.agent_2_class = AGENT_CLASSES[flags['agent2']]
         else:
             self.agent_2_class = AGENT_CLASSES[flags['agent_class']]
@@ -151,8 +153,10 @@ if __name__ == "__main__":
              'debug': False,
              'agent_predicted': "",
              'model_class': "",
-             'model_name': "",
-             'agent2': ""}
+             'model_name': "predictor.h5",
+             'agent2': "",
+             'checkpoint_dir':"",
+             'checkpoint_dir2':""}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
@@ -161,7 +165,9 @@ if __name__ == "__main__":
                                         'agent_predicted=',
                                         'model_class=',
                                         'model_name=',
-                                        'agent2='])
+                                        'agent2=',
+                                        'checkpoint_dir=',
+                                        'checkpoint_dir2='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'

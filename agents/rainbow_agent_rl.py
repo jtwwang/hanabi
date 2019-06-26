@@ -21,10 +21,6 @@ from rainbow_models.run_experiment import format_legal_moves
 from rainbow_models.third_party.dopamine import checkpointer
 
 
-checkpoint_dir = 'agents/rainbow_models/rainbow-model-1'
-checkpint_dit = os.path.join(os.getcwd(), checkpoint_dir)
-
-
 class RainbowAgent(Agent):
     """Agent that loads and applies a pretrained rainbow model."""
 
@@ -36,6 +32,12 @@ class RainbowAgent(Agent):
             num_actions=self.config['num_moves'],
             num_players=self.config['players'])
         self.agent.eval_mode = True
+
+        if config['checkpoint_dir'] != '':
+            checkpoint_dir = config['checkpoint_dir']
+        else:
+            checkpoint_dir = 'agents/rainbow_models/rainbow-model-1'
+
         self.exp_checkpointer = checkpointer.Checkpointer(
             checkpoint_dir, 'ckpt')
         checkpoint_version = checkpointer.get_latest_checkpoint_number(
