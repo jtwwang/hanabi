@@ -29,21 +29,19 @@ class NeuroEvoAgent(Agent):
         self.pp.load()
 
     def act(self, ob):
-        vec = ob['vectorized']
-        vec = np.reshape(vec, (1, 658, 1))
+        vec = np.asarray([ob['vectorized']])
         prediction = self.pp.predict(vec)
 
         # from prediciton select the best move
-        moves = np.argsort(prediction)[0]
+        moves = np.argsort(prediction.flatten())
         legal_moves = ob['legal_moves']
         indeces_lm = ob['legal_moves_as_int']
+        action = -1
         for m in moves:
-            action = -1
-            for ix in range(len(indeces_lm)):
-                if indeces_lm[ix] == m:
-                    action = legal_moves[ix]
-                    break
-            if action != -1:
+            if m in indices_lm:
+                action = legal_moves[indices_lm.index(m)]
                 break
-
-        return action
+        if action == -1:
+            raise ValueError("action is incorrect")
+        else:
+            return action
