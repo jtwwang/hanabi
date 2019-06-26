@@ -14,7 +14,7 @@
 """Random Agent."""
 
 from rl_env import Agent
-from conv_policy_pred import policy_net
+from predictors.conv_pred import conv_pred
 import numpy as np
 
 
@@ -25,8 +25,12 @@ class NeuroEvoAgent(Agent):
         """Initialize the agent."""
         self.config = config
         modelname = config['model_name']
-        self.pp = policy_net(658, 20, 'NeuroEvo', modelname)
-        self.pp.load()
+        self.pp = conv_pred('NeuroEvo_agent')
+
+        self.pp.load(model_name = config['model_name'])
+        if self.pp.model == None or config['initialize']:
+            self.pp.define_model_dim(config['observation_size'], config['num_moves'])
+            self.pp.create_model()
 
     def act(self, ob):
         vec = np.asarray([ob['vectorized']])
@@ -35,7 +39,7 @@ class NeuroEvoAgent(Agent):
         # from prediciton select the best move
         moves = np.argsort(prediction.flatten())
         legal_moves = ob['legal_moves']
-        indeces_lm = ob['legal_moves_as_int']
+        indices_lm = ob['legal_moves_as_int']
         action = -1
         for m in moves:
             if m in indices_lm:
@@ -45,3 +49,6 @@ class NeuroEvoAgent(Agent):
             raise ValueError("action is incorrect")
         else:
             return action
+
+    def save(self, model_name = "predicto.h5r"):
+        self.pp.save(model_name = model_name)
