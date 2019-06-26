@@ -120,6 +120,8 @@ class MCAgent(Agent):
             vec, dtype=np.float32).reshape((1, -1))
 
         # reshapre prediction to appropiate size
+        # prediction is the result of neural network
+        # == to a vector of 20 possible actions, and we take the one with the highest probability
         prediction = self.pp.predict(np.reshape(obs_input, (1, -1, 1)))[0]
         
         best_value = -1
@@ -180,9 +182,12 @@ class MCAgent(Agent):
             return best_move
 
     def act(self, obs, env):
+        """
+        choosing which action we are taking
+        """
 
-        start = time.time()     # start the timer
-        self.stats = {}         # reset memory
+        start = time.time()         # start the timer
+        self.stats.clear()          # reset memory
 
         self.env = env              # define the environment as object variable
         self.root = env.state       # set the root from the state of the game
@@ -194,7 +199,7 @@ class MCAgent(Agent):
             history = []                    # reset the history of the rollout
             game_state = self.root.copy()          # reset the state of the rollout
             vec = env.observation_encoder.encode(
-                game_state.observation(self.player_id))
+                game_state.observation(self.player_id)) # vectorized version of 658; depends on number of players (essentially just observations)
             state = "root"
             self.update_visits(state)
 
@@ -215,14 +220,15 @@ class MCAgent(Agent):
                 # if it's a play or discard move, need to deal the cards
                 if game_state.cur_player() == pyhanabi.CHANCE_PLAYER_ID:
                     game_state.deal_random_card()
-
+                
+                #these are our own observations
                 vec = env.observation_encoder.encode(
                     game_state.observation(self.player_id))
-                # observation of next player
+                # observation of next player; however, we want to eliminate the use of the "other" observations
                 other_vec = env.observation_encoder.encode(
                     game_state.observation(game_state.cur_player()))
 
-                # set my belief
+                # set my belief; creating the probability distribution from the observation that we have (belief encode) 
                 self.belief.encode(vec)
 
                 # hint of the other players
