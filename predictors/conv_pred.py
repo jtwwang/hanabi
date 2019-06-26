@@ -5,12 +5,12 @@ from keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalizatio
 from keras.layers import Activation, ReLU, Dropout
 
 import numpy as np
-
+from os import path
 
 class conv_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
-		self.model_type = "conv"
+	def __init__(self, agent_class):
+            self.model_type = "conv"
+	    super(conv_pred, self).__init__(agent_class, self.model_type)
 
 	def create_model(self):
 		activation=None
@@ -44,24 +44,32 @@ class conv_pred(policy_pred):
 		x.add(Dropout(0.2))
 
 		x.add(Dense(self.action_space))
-		print(x.summary())
 
 		self.model = x
 		return x
 
-	def extract_data(self, agent_class):
+	def reshape_data(self, X_raw):
+		if X_raw.shape == (self.action_space,): # If only one sample is put in
+			X_raw = np.reshape(X_raw, (1, X_raw.shape[0]))
+
+		X = np.reshape(X_raw,(X_raw.shape[0],X_raw.shape[1],1)) # Add an additional dimension for filters
+		return X
+
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
-		X = np.reshape(obs,(obs.shape[0],obs.shape[1],1)) # Add an additional dimension for filters
-		y = actions
+		obs, actions, eps = super(conv_pred, self).extract_data(agent_class, games = games)
 
+		X = self.reshape_data(obs)
+		y = actions
+	
 		self.X = X
 		self.y = y
 		self.input_dim = X.shape[1]
 		self.action_space = y.shape[1]
 
 		return X, y, eps
+

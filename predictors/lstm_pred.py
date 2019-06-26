@@ -1,45 +1,58 @@
 from .policy_pred import policy_pred
 
 from keras.models import Sequential
-from keras.layers import LSTM, Dense, Embedding, TimeDistributed
+from keras.layers import LSTM, Dense, Conv1D, Embedding, TimeDistributed
 from keras import optimizers
 from keras.callbacks import ModelCheckpoint, TensorBoard
 
 import numpy as np
 import os
-
-#debugging
-import IPython as ip
+from os import path
 
 class lstm_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
-		self.model_type = "lstm"
+	def __init__(self, agent_class):
+            self.model_type = "lstm"
+	    super(lstm_pred, self).__init__(agent_class, self.model_type)
 
 	def create_model(self):
 		activation=None
 		x = Sequential()
+		#x.add(TimeDistributed(Conv1D(filters=16, kernel_size=5, strides=2,
+		#	input_shape=(self.input_dim,1), padding='same', activation=activation)))
 		x.add(LSTM(64, input_shape=(None,self.input_dim), return_sequences=True))
+		x.add(LSTM(64, return_sequences=True))
 		x.add(LSTM(128, return_sequences=True))
 		x.add(TimeDistributed(Dense(self.action_space)))
-		print(x.summary())
 		self.model = x
 		return x
 
-	def extract_data(self, agent_class):
+	def reshape_data(self, X_raw):
+
+		if X_raw.shape == (self.action_space,):
+			X_raw = np.reshape(X_raw,(1,X_raw.shape[0]))
+
+		X = np.reshape(X_raw, (1,X_raw.shape[0], X_raw.shape[1]))
+		return X
+
+	def seperate_games(self, obs, actions, eps):
+		X, y = [], []
+		for ep in eps:
+			X.append(obs[range(ep[0],ep[1])])
+			y.append(actions[range(ep[0],ep[1])])
+		return (X,y)
+
+	
+
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
-
+		obs, actions, eps = super(lstm_pred,self).extract_data(agent_class, games = games)
 		# Dimensions: (episodes, moves_per_game, action_space)
-		X, y = [], []
-		for ep in eps:
-			X.append(obs[range(ep[0],ep[1])])
-			y.append(actions[range(ep[0],ep[1])])
-
+		X, y = self.seperate_games(obs, actions, eps)
+		
 		self.X = np.array(X)
 		self.y = np.array(y)
 		self.input_dim = obs.shape[1]
@@ -62,6 +75,20 @@ class lstm_pred(policy_pred):
 			#print("X_sep: {}".format(X_sep_all[player].shape))
 		return X_sep_all, y_sep_all
 
+	def generate_conv1d(self, X, y):
+		i = 0
+		while True:
+			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i]) 
+			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
+				#print("X_sep: {}".format(X_sep.shape))
+				X_train = self.reshape_data(X_sep)
+				y_train = self.reshape_data(y_sep)
+				# X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1],1))
+				# y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1],1))
+				#ip.embed()
+				yield X_train, y_train
+			i = (i + 1) % len(X)
+
 	def generate(self, X, y):
 		"""
 		Generate trainable matrices per game_episode.
@@ -73,8 +100,10 @@ class lstm_pred(policy_pred):
 			X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i]) 
 			for X_sep, y_sep in zip(X_sep_all, y_sep_all):
 				#print("X_sep: {}".format(X_sep.shape))
-				X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
-				y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
+				X_train = self.reshape_data(X_sep)
+				y_train = self.reshape_data(y_sep)
+				# X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
+				# y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
 				#ip.embed()
 				yield X_train, y_train
 			i = (i + 1) % len(X)
@@ -122,7 +151,15 @@ class lstm_pred(policy_pred):
 					validation_data=self.generate(X_test, y_test),
 					validation_steps=X_test.shape[0]/batch_size,
 					callbacks = [checkpoints, tensorboard])
+		
+		# Test predict
+		#print(self.predict(self.X[0]))
 
+	# def predict(self,X):
+	# 	X = self.reshape_data(X)
+	# 	self.model.predict()
+
+	# CURRENTLY UNUSED. TODO: REWRITE
 	def perform_lstm_cross_validation(k, max_ep):
 		global flags
 		mean = 0
@@ -152,3 +189,4 @@ class lstm_pred(policy_pred):
 		# calculate the mean
 		mean = mean/k
 		return mean
+

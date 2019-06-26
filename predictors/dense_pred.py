@@ -3,12 +3,12 @@ from .policy_pred import policy_pred
 from keras.models import Sequential
 from keras.layers import Dense
 
+import numpy as np
+
 class dense_pred(policy_pred):
-	def __init__(self, agent_class, model_name=None):
-		super().__init__(agent_class, model_name)
-		self.model_type = "dense"
-		self.input_dim = None
-		self.action_space = None
+	def __init__(self, agent_class):
+                self.model_type = "dense"
+		super(dense_pred, self).__init__(agent_class, self.model_type)
 
 	def create_model(self):
 		activation=None
@@ -18,17 +18,16 @@ class dense_pred(policy_pred):
 		x.add(Dense(128))
 		x.add(Dense(128))
 		x.add(Dense(self.action_space))
-		print(x.summary())
 		self.model = x
 		return x
 
-	def extract_data(self, agent_class):
+	def extract_data(self, agent_class, games = -1):
 		"""
 		args:
 			agent_class (string)
 			num_player (int)
 		"""
-		obs, actions, eps = super().extract_data(agent_class)
+		obs, actions, eps = super(dense_pred, self).extract_data(agent_class, games = games)
 		X = obs
 		y = actions
 
@@ -38,3 +37,8 @@ class dense_pred(policy_pred):
 		self.action_space = y.shape[1]
 
 		return X, y, eps
+
+	def reshape_data(self, X):
+		if X.shape == (self.action_space,): # Only one sample inputted
+			X = np.reshape(X,(1,X))
+		return X

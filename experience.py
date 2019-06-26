@@ -8,7 +8,7 @@ class Experience():
 
     path = "experience_replay"
 
-    def __init__(self, agent_class, numAgents=-1, load=False, size=100000):
+    def __init__(self, agent_class, numAgents=-1, load=False, size=1000000):
         """
         Args:
             agent_class (string): the class of the agent, which can be one of:
@@ -139,7 +139,7 @@ class Experience():
         pickle.dump(self.config, open(
             os.path.join(self.path, "config.pickle"), "wb"))
 
-    def load(self):
+    def load(self, games = -1):
         """
         load all the data from numpy files previously saved
         returns [moves, rs, obs eps]
@@ -161,6 +161,16 @@ class Experience():
         # restore size observation
         size_obs = self.config["size_obs"]
         self.obs = self.obs[:, :size_obs]
+
+        if games > 0:
+            last = self.eps[games - 1][1]
+            self.moves = self.moves[:last]
+            self.rs = self.rs[:last]
+            self.obs = self.obs[:last]
+            self.eps = self.eps[:games]
+            if last + 1 < self.size:
+                self.ptr = last
+                self.full = False
 
         return [self.moves, self.rs, self.obs, self.eps]
 

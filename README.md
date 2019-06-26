@@ -11,6 +11,7 @@ pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
 pip install tensorflow           # if you don't already have tensorflow
 pip install keras                # if you don't already have keras
+pip install matplotlib           # if you don't already have matplotlib
 cmake .
 make
 python custom_rl.py              # Runs RL episodes
@@ -19,53 +20,49 @@ python game_example.py           # Plays a game using the lower level interface
 
 ## Running our scripts
 
-### Data collection
+### Data collection and evaluation agents
 To collect data you can use the script
 ```
 python custom_rl.py --agent_class <nameAgent>
 ```
-currently supports 4 classes:
-- `RandomAgent`
-- `SimpleAgent`
-- `RainbowAgent`
+currently supports 6 classes:
 - `MCAgent`
+- `NNAgent`
+- `RainbowAgent`
+- `RandomAgent`
+- `SecondAgent`
+- `SimpleAgent`
 
 The data is saved in a folder automatically created called `/experience_replay`. Other flags you can use:
 ```
 --num_episodes <int>
 --players <int 2 to 5>
 --debug <true/false>
+--agent_predicted <str>     # necessary if using MCAgent or NNAgent. Use one of the other classes as string
+--model_class <str>         # Network type ["dense", "conv", "lstm"]
+--model_name <str>          # Model name of a pre-trained model
+--agent2 <str>              # to play 'ad hoc' against another agent. 
+                            # The second agent cannot be one of thetwo customs agents ["MCAgent", "NNAgent"]
 ```
+The script will print out to screen an average score and average number of steps taken during the episodes.
 
 ### Policy prediction
-After you collect the experience, you can train a neural network to predict the policy by using
+You can train a neural network to predict the policy by using
 ```
 python run_pred.py
 ```
-There are two flags that you can currently use:
+There are several flags that you can currently use:
 ```
---model_class <str>		# Network type ["dense", "conv", "lstm"]
---epochs <int>          # Number of training epochs
+--agent_class <str      # Agent type ["SimpleAgent", "RainbowAgent"]
 --batch_size <int>      # Batch size
+--cv <int>				      # Optional. Run cross-validation @cv number of times.
+--epochs <int>          # Number of training epochs
+--games <int>           # The number of games to load
+--load <bool>           # Whether to laod an existing model (if exists)
 --lr <float>            # Learning rate
---agent_class <string>  # Agent type ["SimpleAgent", "RainbowAgent"]
---val_split <float>		# Proportion of data used to validate
---cv <int>				# Optional. Run cross-validation @cv number of times.
+--model_class <str>		  # Network type ["dense", "conv", "lstm"]
+--model_name <str>      # The name to give to the model
+--val_split <float>		  # Proportion of data used to validate
 ```
 
-If not doing cross validation, the training uses all data available. In both cases a model is saved with the name `model/predictor.h5`. *Note*: run this script when you already have data in the folder `/experience_replay/<agent_class>`.
-
-### Monte Carlo Player
-We implemented an agent that uses Monte Carlo Tree search with UCT in combination with the policy predictor to play with other agents. The algorithm samples from a probability distribution every time that encounters an undertermined state. It uses 1000 simulations with finite depth to search the best move to do.
-
-To run the script
-```
-ptyhon MonteCarlo_game.py
-```
-Similarly to `custom_rl.py` you can use flags to set some of the parameters of the game
-```
---agent_class <RainbowAgent, RandomAgent, SimpleAgent, SecondAgent>
---num_episodes <int>
---players <int 2 to 5>
---verbose True/False
-```
+Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors. For the agents `RainbowAgent` are already available 5K episodes of memory, and there are 20K available for `SimpleAgent`.

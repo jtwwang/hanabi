@@ -35,6 +35,13 @@ python -um train \
 The `PYTHONPATH` fix exposes `rl_env.py`, the main entry point to the Hanabi
 Learning Environment. The `--base_dir` argument must be provided.
 
+It is possible to train the DQN not in self-play but against another neural-network
+based agent is existent in the `model` folder. You can select it by using the flag
+
+```
+  --agent 2 <agent_class> 	# agent_class is the class predicted
+```
+
 To get finer-grained information about the training process, you can adjust the
 experiment parameters in `configs/hanabi_rainbow.gin` in particular by reducing
 `Runner.training_steps` and `Runner.evaluation_steps`, which together determine

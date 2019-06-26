@@ -7,6 +7,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 from agents.second_agent import SecondAgent
 from agents.mc_agent import MCAgent
+from agents.nn_agent import NNAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
@@ -27,8 +28,8 @@ AGENT_CLASSES = {
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent,
+    'NNAgent': NNAgent}
     'NeuroEvoAgent': NeuroEvoAgent}
-
 
 class Runner(object):
     """Runner class."""
@@ -40,9 +41,22 @@ class Runner(object):
         self.agent_config = {
             'players': flags['players'],
             'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0]}
+            'observation_size': self.env.vectorized_observation_shape()[0],
+            'agent_predicted': flags['agent_predicted'],
+            'model_class': flags['model_class'],
+            'model_name': flags['model_name'],
+            'debug': flags['debug']}
         self.agent_class = AGENT_CLASSES[flags['agent_class']]
-
+        if flags['agent2'] != "":
+            self.agent_2_config = {
+                'players': flags['players'],
+                'num_moves': self.env.num_moves(),
+                'observation_size': self.env.vectorized_observation_shape()[0],}
+            self.agent_2_class = AGENT_CLASSES[flags['agent2']]
+        else:
+            self.agent_2_class = AGENT_CLASSES[flags['agent_class']]
+            self.agent_2_config = self.agent_config # create copy
+        
     def moves_lookup(self, move, ob):
         """returns the int given the dictionary form"""
 
@@ -72,9 +86,7 @@ class Runner(object):
 
         rewards = []
 
-        if self.flags['agent_class'] == 'RainbowAgent':
-            # put 2-5 copies of the same agent in a list, because loading
-            # the same tensorflow checkpoint more than once in a session fails
+        if self.agent_2_class == self.agent_class:
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         elif self.flags['agent_class'] == 'NeuroEvoAgent':
@@ -82,11 +94,16 @@ class Runner(object):
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         else:
-            agents = [self.agent_class(self.agent_config)
-                      for _ in range(self.flags['players'])]
-            if self.flags['agent_class'] == 'MCAgent':
-                for agent in range(len(agents)):
-                    agents[agent].player_id = agent
+            agent = self.agent_2_class(self.agent_2_config)
+            agents = [agent for _ in range(self.flags['players'] - 1)]
+            agents = [self.agent_class(self.agent_config)] + agents
+
+        # one more thing for the MC agent
+        if self.flags['agent_class'] == 'MCAgent':
+            agents[0].player_id = 0
+        if self.flags['agent2'] == 'MCAgent':
+            for i in range(1, self.len(agents)):
+                agents[i].player_id = i
 
         avg_steps = 0
 
@@ -101,7 +118,10 @@ class Runner(object):
             while not done:
                 for agent_id, agent in enumerate(agents):
                     ob = obs['player_observations'][agent_id]
-                    action = agent.act(ob)
+                    if type(agent) == MCAgent:
+                        action = agent.act(ob, self.env)
+                    else:
+                        action = agent.act(ob)
 
                     move = self.moves_lookup(action, ob)
                     n_steps += 1
@@ -134,13 +154,20 @@ if __name__ == "__main__":
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
              'debug': False,
-             'model_name': str(1)}
+             'agent_predicted': "",
+             'model_class': "",
+             'model_name': "",
+             'agent2': ""}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
                                         'debug=',
-                                        'model_name='])
+                                        'agent_predicted=',
+                                        'model_class=',
+                                        'model_name=',
+                                        'agent2='])
+
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
@@ -151,7 +178,12 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
     # initialize the replay memory
-    replay = exp.Experience(flags['agent_class'], numAgents=flags['players'])
+    if flags['agent2'] == "":
+        nameDir = flags['agent_class']
+    else:
+        nameDir = flags['agent_class'] + flags['agent2']
+
+    replay = exp.Experience(nameDir, numAgents=flags['players'])    
 
     # run the episodes
     runner = Runner(flags)

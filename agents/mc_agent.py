@@ -13,7 +13,7 @@ import numpy as np
 import bayes
 import random
 import pyhanabi
-from dense_policy_pred import policy_net
+from predictors.conv_pred import conv_pred
 from datetime import datetime
 import time
 random.seed(datetime.now())
@@ -32,11 +32,11 @@ class MCAgent(Agent):
 
         # load the predictor
 
-        self.pp = policy_net(
-            config['observation_size'], config['num_moves'], config['predictor'])
-        self.pp.load()
-        
-        self.stats = {}         # stats of all states; nodes have # of times visited & total score
+        self.pp = conv_pred(
+            config['agent_predicted'])
+        self.pp.load(config['model_name'])
+
+        self.stats = {}         # stats of all states
 
     def sample(self, belief):
         """
@@ -319,7 +319,7 @@ class MCAgent(Agent):
         best = values.index(max(values))
 
         end = time.time()
-        if self.verbose:
+        if self.config['debug']:
             print("time of execution: %.3f" % (end - start))
             for i in range(len(values)):
                 print("%s: %.2f, visits %d" %
