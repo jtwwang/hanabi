@@ -11,6 +11,7 @@ from agents.nn_agent import NNAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
+from agents.neuroEvo_agent import NeuroEvoAgent
 import experience as exp
 import rl_env
 import getopt
@@ -28,7 +29,7 @@ AGENT_CLASSES = {
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent,
     'NNAgent': NNAgent}
-
+    'NeuroEvoAgent': NeuroEvoAgent}
 
 class Runner(object):
     """Runner class."""
@@ -86,6 +87,10 @@ class Runner(object):
         rewards = []
 
         if self.agent_2_class == self.agent_class:
+            agent = self.agent_class(self.agent_config)
+            agents = [agent for _ in range(self.flags['players'])]
+        elif self.flags['agent_class'] == 'NeuroEvoAgent':
+            self.agent_config['model_name'] = self.flags['model_name']
             agent = self.agent_class(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         else:
@@ -162,6 +167,7 @@ if __name__ == "__main__":
                                         'model_class=',
                                         'model_name=',
                                         'agent2='])
+
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
