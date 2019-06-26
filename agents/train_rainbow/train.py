@@ -103,7 +103,7 @@ def launch_experiment():
     else:
         config = {
                 'model_class': "conv",
-                'model_name' : None,
+                'model_name' : 'predictor.h5',
                 'agent_predicted': FLAGS.agent2,
                 'relative_path': "../.."}
         other_agent = NNAgent(config)
