@@ -129,10 +129,7 @@ class policy_pred(object):
 		self.make_dir(self.path)
 		model_path = os.path.join(self.path, model_name)
 
-		try:
-			self.model.save(model_path)
-		except:
-			print("Unable to write model to", model_path)
+		self.model.save(model_path)
 
 	def load(self, model_name = "predictor.h5"):
 		"""
@@ -161,3 +158,6 @@ class policy_pred(object):
 		print("Experience Loaded!")
 		return obs, actions, eps
 
+        def define_model_dim(self, input_dim, action_space):
+            self.input_dim = input_dim
+            self.action_space = action_space
