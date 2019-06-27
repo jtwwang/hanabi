@@ -43,6 +43,8 @@ The data is saved in a folder automatically created called `/experience_replay`.
 --model_name <str>          # Model name of a pre-trained model
 --agent2 <str>              # to play 'ad hoc' against another agent. 
                             # The second agent cannot be one of thetwo customs agents ["MCAgent", "NNAgent"]
+--checkpoint_dir <str>      # path to the checkpoints for RainbowAgent
+--checkpoint_dir2 <str>     # path to the checkpoints for RainbowAgent as agent2
 ```
 The script will print out to screen an average score and average number of steps taken during the episodes.
 
@@ -55,14 +57,15 @@ There are several flags that you can currently use:
 ```
 --agent_class <str      # Agent type ["SimpleAgent", "RainbowAgent"]
 --batch_size <int>      # Batch size
---cv <int>				      # Optional. Run cross-validation @cv number of times.
+--cv <int>				# Optional. Run cross-validation @cv number of times.
 --epochs <int>          # Number of training epochs
 --games <int>           # The number of games to load
 --load <bool>           # Whether to laod an existing model (if exists)
 --lr <float>            # Learning rate
---model_class <str>		  # Network type ["dense", "conv", "lstm"]
+--model_class <str>		# Network type ["dense", "conv", "lstm"]
 --model_name <str>      # The name to give to the model
---val_split <float>		  # Proportion of data used to validate
+--summary <bool>        # Whether to print the summary of the model
+--val_split <float>		# Proportion of data used to validate
 ```
 
 Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors. For the agents `RainbowAgent` are already available 5K episodes of memory, and there are 20K available for `SimpleAgent`.

@@ -295,6 +295,9 @@ def run_one_episode(agent, environment, obs_stacker, agent2 = None):
     # create the pool of agents
     if agent2 == None:
         agent2 = agent # if not specified, do self play
+        agent2Mode = 'self-play'
+    else:
+        agent2Mode = 'eval'
     agents = []
     agents.append(agent)
     for _ in range(environment.players - 1):
@@ -338,12 +341,15 @@ def run_one_episode(agent, environment, obs_stacker, agent2 = None):
             # the first move of the game).
             action = agents[current_player].begin_episode(current_player, legal_moves,
                                          observation_vector)
+
             has_played.add(current_player)
 
         # Reset this player's reward accumulator.
         reward_since_last_action[current_player] = 0
 
     agents[current_player].end_episode(reward_since_last_action)
+    if current_player == 1 and agent2Mode == 'eval':
+        agents[0].end_episode(reward_since_last_action)
 
     tf.logging.info('EPISODE: %d %g', step_number, total_reward)
     return step_number, total_reward
