@@ -82,7 +82,7 @@ def run(ix, initialize=False):
     rewards = []
     avg_steps = 0
 
-    for eps in range(2):
+    for eps in range(flags['num_episodes']):
         obs = env.reset()  # Observation of all players
         done = False
         eps_reward = 0
@@ -112,7 +112,7 @@ def run(ix, initialize=False):
     avg_reward = sum(rewards)/float(n_eps)
 
     agent.save(model_name=str(ix))
-    scores[ix] = avg_reward * 100 + avg_steps
+    scores[ix] = avg_reward * 1000 + avg_steps
 
 
 if __name__ == "__main__":
@@ -121,26 +121,25 @@ if __name__ == "__main__":
     flags={'players': 2,
             'num_episodes': 100,
             'debug': False,
-            'initialize': True}
+            'initialize': False}
 
     # Initialize all models
     current_pool = []
-    total_models = 4
+    total_models = 20
     scores = np.zeros(total_models)
     weights = {}
-    generations = 40
+    generations = 100
     to_mutate = 0
 
     # create one agent
     agent = conv_pred("NeuroEvo_agent")
 
-    if flags['initialize']:
-        print("Initialize")
-        # do an initial loop to evaluate all models
-        for i in range(total_models):
-            run(i, flags['initialize'])
-            agent.load(model_name=str(i))
-            weights[i]=agent.model.get_weights()
+    print("Initialize")
+    # do an initial loop to evaluate all models
+    for i in range(total_models):
+        run(i, flags['initialize'])
+        agent.load(model_name=str(i))
+        weights[i]=agent.model.get_weights()
 
     
     for gen in range(generations):
