@@ -27,6 +27,9 @@ class NeuroEvoAgent(Agent):
         modelname = config['model_name']
         self.pp = conv_pred('NeuroEvo_agent')
 
+        if 'initialize' not in config.keys():
+            config['initialize'] = False
+
         self.pp.load(model_name = config['model_name'])
         if self.pp.model == None or config['initialize']:
             self.pp.define_model_dim(config['observation_size'], config['num_moves'])
