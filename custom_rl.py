@@ -28,7 +28,7 @@ AGENT_CLASSES = {
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent,
-    'NNAgent': NNAgent}
+    'NNAgent': NNAgent,
     'NeuroEvoAgent': NeuroEvoAgent}
 
 class Runner(object):
