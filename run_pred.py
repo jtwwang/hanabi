@@ -2,8 +2,6 @@ import getopt
 import sys
 import numpy as np
 
-from experience import Experience
-
 from predictors.conv_pred import conv_pred
 from predictors.dense_pred import dense_pred
 from predictors.lstm_pred import lstm_pred

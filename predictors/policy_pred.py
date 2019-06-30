@@ -1,5 +1,5 @@
 from __future__ import print_function
-from experience import Experience
+from data_pipeline.experience import Experience
 from tensorflow import keras
 from keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, AveragePooling1D, BatchNormalization
 from keras.layers import Activation, ReLU, Dropout

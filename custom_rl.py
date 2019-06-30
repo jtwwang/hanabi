@@ -12,7 +12,7 @@ from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
 from agents.neuroEvo_agent import NeuroEvoAgent
-import experience as exp
+import data_pipeline.experience as exp
 import rl_env
 import getopt
 
