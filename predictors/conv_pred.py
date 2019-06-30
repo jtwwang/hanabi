@@ -67,9 +67,8 @@ class conv_pred(policy_pred):
         obs, actions, _ = super(conv_pred, self).extract_data(agent_class,
                                                               val_split, games=games, balance=balance)
 
-        self.X = self.reshape_data(self.X_train)
+        self.X_train = self.reshape_data(self.X_train)
         self.X_test = self.reshape_data(self.X_test)
-        self.y = self.y_train
 
         self.input_dim = self.X_train.shape[1]
         self.action_space = self.y_train.shape[1]

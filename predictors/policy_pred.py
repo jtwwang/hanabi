@@ -73,8 +73,8 @@ class policy_pred(object):
         tensorboard = TensorBoard(log_dir=self.path)
 
         self.model.fit(
-            self.X,
-            self.y,
+            self.X_train,
+            self.y_train,
             batch_size=batch_size,
             epochs=epochs,
             validation_data=(self.X_test, self.y_test),
@@ -119,8 +119,6 @@ class policy_pred(object):
         replay = Experience(agent_class, load=True)
         moves, _, obs, eps = replay.load(games=games)
 
-        assert obs.shape[0] == moves.shape[0]
-
         # split dataset here
         size_test = int(val_split * obs.shape[0])
         X_test, X_train = obs[:size_test], obs[size_test:]
@@ -129,8 +127,6 @@ class policy_pred(object):
         if balance:
             # make class balanced
             X_train, y_train = balance_data(X_train, y_train)
-
-        print(y_train.shape)
 
         # conver to one-hot encoded tensor
         y_train = one_hot(y_train, replay.n_moves)

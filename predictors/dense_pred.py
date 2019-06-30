@@ -21,7 +21,7 @@ class dense_pred(policy_pred):
         self.model = x
         return x
 
-    def extract_data(self, agent_class, val_split=0.3, games=-1):
+    def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
         """
         args:
                 agent_class (string)
@@ -29,10 +29,8 @@ class dense_pred(policy_pred):
         """
         obs, actions, _ = super(dense_pred, self).extract_data(agent_class,
                                                                val_split,
-                                                               games=games)
-
-        self.X = obs
-        self.y = actions
+                                                               games=games,
+                                                               balance=balance)
 
         self.input_dim = obs.shape[1]
         self.action_space = actions.shape[1]
