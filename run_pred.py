@@ -1,6 +1,5 @@
 import getopt
 import sys
-import numpy as np
 
 from predictors.conv_pred import conv_pred
 from predictors.dense_pred import dense_pred
@@ -21,8 +20,9 @@ if __name__ == "__main__":
              'val_split': 0.3,
              'cv': -1,
              'load': False,
-             'summary':False,
+             'summary': False,
              'games': -1,
+             'balance': False,
              'model_name': "predictor.h5"}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
@@ -36,6 +36,7 @@ if __name__ == "__main__":
                                         'load=',
                                         'summary=',
                                         'games=',
+                                        'balance=',
                                         'model_name='])
     if arguments:
         sys.exit()
@@ -47,8 +48,10 @@ if __name__ == "__main__":
     model_class = model_dict[flags['model_class']]
 
     pp = model_class(agent_class)
-    pp.extract_data(agent_class, games = flags['games'])
-    pp.create_model()  # Add Model_name here to create different models
+    pp.extract_data(agent_class,
+                    val_split=flags['val_split'],
+                    games=flags['games'],
+                    balance=flags['balance'])
 
     if flags['load']:
         pp.load(flags['model_name'])
@@ -58,6 +61,5 @@ if __name__ == "__main__":
 
     pp.fit(epochs=flags['epochs'],
            batch_size=flags['batch_size'],
-           learning_rate=flags['lr'],
-           val_split=flags['val_split'])
+           learning_rate=flags['lr'])
     pp.save(flags['model_name'])
