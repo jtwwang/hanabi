@@ -1,8 +1,8 @@
-import matplotlib.pyplot as plt
 from experience import Experience
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
+import matplotlib.pyplot as plt
 
 
 def plot_classes(class_count):
