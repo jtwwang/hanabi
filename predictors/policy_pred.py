@@ -1,7 +1,7 @@
 from __future__ import print_function
 from data_pipeline.experience import Experience
 from data_pipeline.balance_data import balance_data
-from data_pipeline.util import one_hot
+from data_pipeline.util import one_hot, split_dataset
 from tensorflow.keras.callbacks import Callback, TensorBoard
 from tensorflow.keras.models import load_model
 from tensorflow.keras import optimizers
@@ -113,33 +113,36 @@ class policy_pred(object):
         """
         args:
                 agent_class (string): "SimpleAgent", "RainbowAgent"
-                num_games (int): how many games we want to load
+                val_split (float): the split between training and test set
+                games (int): how many games we want to load
+                balanec (bool)
         """
         print("Loading Data...", end='')
         replay = Experience(agent_class, load=True)
         moves, _, obs, eps = replay.load(games=games)
 
         # split dataset here
-        size_test = int(val_split * obs.shape[0])
-        X_test, X_train = obs[:size_test], obs[size_test:]
-        y_test, y_train = moves[:size_test], moves[size_test:]
+        X_train, y_train, X_test, y_test = split_dataset(obs, moves, val_split)
 
         if balance:
             # make class balanced
             X_train, y_train = balance_data(X_train, y_train)
 
-        # conver to one-hot encoded tensor
-        y_train = one_hot(y_train, replay.n_moves)
-        y_test = one_hot(y_test, replay.n_moves)
+        # convert to one-hot encoded tensor
+        self.y_train = one_hot(y_train, replay.n_moves)
+        self.y_test = one_hot(y_test, replay.n_moves)
 
         self.X_train = X_train
-        self.y_train = y_train
         self.X_test = X_test
-        self.y_test = y_test
 
         print("Experience Loaded!")
         return X_train, y_train, eps
 
     def define_model_dim(self, input_dim, action_space):
+        """
+        Args:
+            input_dim (int)
+            action_space (int)
+        """
         self.input_dim = input_dim
         self.action_space = action_space
