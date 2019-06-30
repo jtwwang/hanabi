@@ -1,5 +1,7 @@
 from experience import Experience
 import numpy as np
+import matplotlib
+matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
 def plot_classes(class_count):
@@ -65,10 +67,11 @@ def balance_data(examples, labels):
         new_labels.append(np.repeat(k, mean))
 
     # convert into numpy arrays
-    new_examples = np.asarray(new_examples)
-    new_labels = np.asarray(new_labels)
+    new_examples = np.asarray(new_examples).reshape((-1, examples.shape[1]))
+    new_labels = np.asarray(new_labels).flatten()
 
-    p = np.random.permutation(new_examples.shape[0])
+    # randomize
+    p = np.random.permutation(new_labels.shape[0])
     return new_examples[p], new_labels[p]
 
 def main():
