@@ -1,7 +1,9 @@
+import os, sys
 import numpy as np
-import rl_env
-import os
 import pickle
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import rl_env
+from data_pipeline.util import one_hot
 
 
 class Experience():
@@ -142,7 +144,7 @@ class Experience():
     def load(self, games = -1):
         """
         load all the data from numpy files previously saved
-        returns [moves, rs, obs eps]
+        returns [moves, rs, obs, eps]
             numpy matrices with data
         """
 
@@ -198,7 +200,4 @@ class Experience():
             index = self.ptr
 
         # create one-hot encoding
-        a = np.zeros((index, self.n_moves))
-        a[np.arange(index), self.moves[:index]] = 1
-
-        return a
+        return one_hot(a, self.n_moves)
