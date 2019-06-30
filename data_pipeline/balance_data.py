@@ -1,22 +1,26 @@
+import matplotlib.pyplot as plt
 from experience import Experience
 import numpy as np
 import matplotlib
 matplotlib.use('agg')
-import matplotlib.pyplot as plt
+
 
 def plot_classes(class_count):
     plt.bar(list(class_count.keys()), class_count.values(), color='blue')
     plt.show()
 
+
 def undersample(data, target):
-    sample_index = np.random.choice(data.shape[0], size = target)
+    sample_index = np.random.choice(data.shape[0], size=target)
     return data[sample_index]
+
 
 def oversample(data, target):
     size_to_add = target - data.shape[0]
-    sample_index = np.random.choice(data.shape[0], size = size_to_add)
+    sample_index = np.random.choice(data.shape[0], size=size_to_add)
     sample = data[sample_index]
-    return np.append(data, sample, axis = 0)
+    return np.append(data, sample, axis=0)
+
 
 def compute_mean(class_count):
     count = 0
@@ -29,7 +33,7 @@ def compute_mean(class_count):
 
 
 def balance_data(examples, labels):
-   
+
     # create dictionaries
     class_count = {}
     class_data = {}
@@ -49,7 +53,7 @@ def balance_data(examples, labels):
     # convert into numpy arrays
     for k in class_data.keys():
         class_data[k] = np.asarray(class_data[k])
-    
+
     # make all class having the same amount of data
     for label in class_count.keys():
         if class_count[label] < mean:
@@ -74,12 +78,13 @@ def balance_data(examples, labels):
     p = np.random.permutation(new_labels.shape[0])
     return new_examples[p], new_labels[p]
 
+
 def main():
     exp = Experience('SimpleAgent',
-            load = True)
+                     load=True)
     labels, _, examples, _ = exp.load()
     new_examples, new_labels = balance_data(examples, labels)
 
+
 if __name__ == "__main__":
     main()
-

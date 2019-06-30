@@ -1,5 +1,6 @@
 import numpy as np
 
+
 def one_hot(data, classes):
 
     entries = data.shape[0]

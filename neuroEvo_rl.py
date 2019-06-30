@@ -6,7 +6,6 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 import rl_env
-import getopt
 import numpy as np
 import os
 import sys
@@ -21,7 +20,7 @@ def model_crossover(weights1, weights2):
 
     new_weights = []
     assert len(weights1) == len(weights2)
-    if random.uniform(0,1) > 0.3:
+    if random.uniform(0, 1) > 0.3:
         print("crossover")
         for layer in range(len(weights1)):
             # alternate odd and even layers
@@ -51,10 +50,10 @@ def make_mutation(ix_to_mutate, best_ones):
     p = p / np.sum(p)
 
     # select the weights from parents
-    randomA = np.random.choice(best_ones, p = p)
-    randomB = np.random.choice(best_ones, p = p)
+    randomA = np.random.choice(best_ones, p=p)
+    randomB = np.random.choice(best_ones, p=p)
     while randomB == randomA:
-        randomB = np.random.choice(best_ones, p = p)
+        randomB = np.random.choice(best_ones, p=p)
     weights1 = weights[randomA]
     weights2 = weights[randomB]
 
@@ -118,10 +117,10 @@ def run(ix, initialize=False):
 if __name__ == "__main__":
 
     global flags, scores, weights
-    flags={'players': 2,
-            'num_episodes': 100,
-            'debug': False,
-            'initialize': False}
+    flags = {'players': 2,
+             'num_episodes': 100,
+             'debug': False,
+             'initialize': False}
 
     # Initialize all models
     current_pool = []
@@ -139,26 +138,25 @@ if __name__ == "__main__":
     for i in range(total_models):
         run(i, flags['initialize'])
         agent.load(model_name=str(i))
-        weights[i]=agent.model.get_weights()
+        weights[i] = agent.model.get_weights()
 
-    
     for gen in range(generations):
 
         print("Generation %i " % gen)
 
         # sort the results
-        ranking=np.argsort(scores)
+        ranking = np.argsort(scores)
         print("best: %i with score %f" % (ranking[-1], scores[ranking[-1]]))
         print("avg: %f" % (sum(scores)/total_models))
 
         # divide worst from best
-        worst_ones=ranking[:2]
-        best_ones=ranking[2:]
+        worst_ones = ranking[:2]
+        best_ones = ranking[2:]
         print(scores)
         print(ranking)
 
-        ix_to_mutate=worst_ones[to_mutate]
-        ix_to_simulate=worst_ones[1 - to_mutate]
+        ix_to_mutate = worst_ones[to_mutate]
+        ix_to_simulate = worst_ones[1 - to_mutate]
         print(ix_to_mutate)
         print(ix_to_simulate)
 
@@ -170,4 +168,4 @@ if __name__ == "__main__":
         agent.save(model_name=str(ix_to_mutate))
 
         # prepare for next generation
-        to_mutate=(to_mutate + 1) % 2
+        to_mutate = (to_mutate + 1) % 2
