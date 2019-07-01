@@ -1,12 +1,16 @@
+# Developed by Lorenzo Mambretti
+# June 2019
+# lorenz.m97@gmail.com
+
 from experience import Experience
 import numpy as np
-import matplotlib
-matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
-global accepted_types
-accepted_types = [int,
-                  np.uint8]
+
+def remove_duplicates(class_data):
+    for k in class_data.keys():
+        class_data[k] = np.unique(class_data[k], axis=0)
+    return class_data
 
 
 def plot_classes(class_count):
@@ -36,6 +40,45 @@ def compute_mean(class_count):
     return int(mean)
 
 
+def divide(examples, labels):
+    """
+    Function to divide the examples in classes based on the labels
+    """
+    class_data = {}
+    # quantify class imbalance
+    for i in range(labels.shape[0]):
+        k = labels[i]
+        if k not in class_data.keys():
+            class_data[k] = []
+        else:
+            class_data[k].append(examples[i])
+
+    # convert into numpy arrays
+    for k in class_data.keys():
+        class_data[k] = np.asarray(class_data[k])
+
+    return class_data
+
+
+def count(class_data):
+    """
+    Function to count each class, given than the classes are divided
+    """
+    class_count = {}
+    for k in class_data.keys():
+        class_count[k] = class_data[k].shape[0]
+    return class_count
+
+
+def divide_and_count(examples, labels):
+    """
+    Function that counts and divide classes based on labels
+    """
+    class_data = divide(examples, labels)
+    class_count = count(class_data)
+    return class_count, class_data
+
+
 def balance_data(examples, labels, randomize=True):
     """
     Args:
@@ -44,25 +87,8 @@ def balance_data(examples, labels, randomize=True):
         randomize: boolean, default is True
     """
 
-    # create dictionaries
-    class_count = {}
-    class_data = {}
-
-    # quantify class imbalance
-    for i in range(labels.shape[0]):
-        l = labels[i]
-        if l not in class_count.keys():
-            class_count[l] = 1
-            class_data[l] = []
-        else:
-            class_count[l] += 1
-            class_data[l].append(examples[i])
-
+    class_count, class_data = divide_and_count(examples, labels)
     mean = compute_mean(class_count)
-
-    # convert into numpy arrays
-    for k in class_data.keys():
-        class_data[k] = np.asarray(class_data[k])
 
     # make all class having the same amount of data
     for label in class_count.keys():
@@ -92,10 +118,12 @@ def balance_data(examples, labels, randomize=True):
 
 
 def main():
-    exp = Experience('SimpleAgent',
+    exp = Experience('RainbowAgent',
                      load=True)
     labels, _, examples, _ = exp.load()
     new_examples, new_labels = balance_data(examples, labels)
+    class_count, class_data = divide_and_count(examples, labels)
+    plot_classes(class_count)
 
 
 if __name__ == "__main__":
