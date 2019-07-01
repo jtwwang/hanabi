@@ -3,6 +3,7 @@ from .policy_pred import policy_pred
 
 from data_pipeline.util import one_hot_list, split_dataset
 from data_pipeline.experience import Experience
+from data_pipeline.balance_data import balance_data
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, TimeDistributed
 from tensorflow.keras import optimizers
@@ -42,8 +43,8 @@ class lstm_pred(policy_pred):
         for ep in eps:
             X.append(obs[range(ep[0], ep[1])])
             y.append(actions[range(ep[0], ep[1])])
-        X = np.asarray(X)
-        y = np.asarray(y)
+        X = np.array(X)
+        y = np.array(y)
         return (X, y)
 
     def extract_data(self, agent_class, val_split, games=-1, balance=False):
@@ -56,16 +57,16 @@ class lstm_pred(policy_pred):
         replay = Experience(agent_class, load=True)
         moves, _, obs, eps = replay.load(games=games)
 
+        if balance:
+            # make class balanced
+            X, y = balance_data(obs, moves, randomize = False)
+
         # Dimensions: (episodes, moves_per_game, action_space)
         X, y = self.seperate_games(obs, moves, eps)
 
         # split dataset here
         X_train, y_train, X_test, y_test = split_dataset(X, y, val_split)
-
-        if balance:
-            # make class balanced
-            X_train, y_train = balance_data(X_train, y_train)
-
+        
         # convert to one-hot encoded tensor
         self.y_train = one_hot_list(y_train, replay.n_moves)
         self.y_test = one_hot_list(y_test, replay.n_moves)
