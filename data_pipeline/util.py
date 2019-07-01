@@ -10,7 +10,18 @@ def one_hot(data, classes):
     entries = data.shape[0]
     one_hot_data = np.zeros((entries, classes))
     one_hot_data[np.arange(entries), data[:entries]] = 1
+
     return one_hot_data
+
+
+def one_hot_list(data_list, classes):
+
+    new_list = []
+    for item in data_list:
+        new_list.append(one_hot(item, classes))
+
+    return np.asarray(new_list)
+
 
 def split_dataset(examples, labels, val_split):
     """
@@ -23,4 +34,3 @@ def split_dataset(examples, labels, val_split):
     y_test, y_train = labels[:size_test], labels[size_test:]
 
     return X_train, y_train, X_test, y_test
-

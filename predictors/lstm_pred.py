@@ -1,5 +1,8 @@
+from __future__ import print_function
 from .policy_pred import policy_pred
 
+from data_pipeline.util import one_hot_list, split_dataset
+from data_pipeline.experience import Experience
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, TimeDistributed
 from tensorflow.keras import optimizers
@@ -39,26 +42,41 @@ class lstm_pred(policy_pred):
         for ep in eps:
             X.append(obs[range(ep[0], ep[1])])
             y.append(actions[range(ep[0], ep[1])])
+        X = np.asarray(X)
+        y = np.asarray(y)
         return (X, y)
 
-    def extract_data(self, agent_class, games=-1):
+    def extract_data(self, agent_class, val_split, games=-1, balance=False):
         """
         args:
                 agent_class (string)
                 num_player (int)
         """
-        obs, actions, eps = super(lstm_pred, self).extract_data(
-            agent_class, games=games)
+        print("Loading Data...", end='')
+        replay = Experience(agent_class, load=True)
+        moves, _, obs, eps = replay.load(games=games)
+
         # Dimensions: (episodes, moves_per_game, action_space)
-        X, y = self.seperate_games(obs, actions, eps)
+        X, y = self.seperate_games(obs, moves, eps)
 
-        self.X = np.array(X)
-        self.y = np.array(y)
+        # split dataset here
+        X_train, y_train, X_test, y_test = split_dataset(X, y, val_split)
+
+        if balance:
+            # make class balanced
+            X_train, y_train = balance_data(X_train, y_train)
+
+        # convert to one-hot encoded tensor
+        self.y_train = one_hot_list(y_train, replay.n_moves)
+        self.y_test = one_hot_list(y_test, replay.n_moves)
+
+        self.X_train = X_train
+        self.X_test = X_test
+
         self.input_dim = obs.shape[1]
-        self.action_space = actions.shape[1]
-        #import IPython; IPython.embed()
+        self.action_space = replay.n_moves
 
-        return X, y, eps
+        print("Experience Loaded!")
 
     def separate_player_obs(self, X, y, players=2):
         """ Seperates observations into what each player sees
@@ -82,9 +100,6 @@ class lstm_pred(policy_pred):
                 #print("X_sep: {}".format(X_sep.shape))
                 X_train = self.reshape_data(X_sep)
                 y_train = self.reshape_data(y_sep)
-                # X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1],1))
-                # y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1],1))
-                # ip.embed()
                 yield X_train, y_train
             i = (i + 1) % len(X)
 
@@ -98,12 +113,8 @@ class lstm_pred(policy_pred):
         while True:
             X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i])
             for X_sep, y_sep in zip(X_sep_all, y_sep_all):
-                #print("X_sep: {}".format(X_sep.shape))
                 X_train = self.reshape_data(X_sep)
                 y_train = self.reshape_data(y_sep)
-                # X_train = np.reshape(X_sep,(1,X_sep.shape[0],X_sep.shape[1]))
-                # y_train = np.reshape(y_sep,(1,y_sep.shape[0],y_sep.shape[1]))
-                # ip.embed()
                 yield X_train, y_train
             i = (i + 1) % len(X)
 
@@ -117,6 +128,7 @@ class lstm_pred(policy_pred):
             decay=0.0,
             amsgrad=False)
 
+        self.create_model()
         self.model.compile(loss='cosine_proximity',
                            optimizer=adam, metrics=['accuracy'])
 
@@ -131,34 +143,15 @@ class lstm_pred(policy_pred):
         checkpoints = ModelCheckpoint(
             os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'),
             save_weights_only=True, period=50)
-        #plot_acc = PlotAcc()
         tensorboard = TensorBoard(log_dir="./logs")
 
-        if val_split is None:
-            # ip.embed()
-            self.model.fit_generator(
-                self.generate(self.X, self.y),
-                steps_per_epoch=self.X.shape[0]/batch_size,
-                epochs=epochs,
-                callbacks=[checkpoints])
-        else:
-            X_train, X_test, y_train, y_test = self.create_validation_split(
-                val_split)
-            # ip.embed()
-            self.model.fit_generator(
-                self.generate(X_train, y_train),
-                steps_per_epoch=X_train.shape[0]/batch_size,
-                epochs=epochs,
-                validation_data=self.generate(X_test, y_test),
-                validation_steps=X_test.shape[0]/batch_size,
-                callbacks=[checkpoints, tensorboard])
-
-        # Test predict
-        # print(self.predict(self.X[0]))
-
-    # def predict(self,X):
-    # 	X = self.reshape_data(X)
-    # 	self.model.predict()
+        self.model.fit_generator(
+            self.generate(self.X_train, self.y_train),
+            steps_per_epoch=self.X_train.shape[0]/batch_size,
+            epochs=epochs,
+            validation_data=self.generate(self.X_test, self.y_test),
+            validation_steps=self.X_test.shape[0]/batch_size,
+            callbacks=[checkpoints, tensorboard])
 
     # CURRENTLY UNUSED. TODO: REWRITE
     def perform_lstm_cross_validation(self, k, max_ep):
