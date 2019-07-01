@@ -27,13 +27,13 @@ class dense_pred(policy_pred):
                 agent_class (string)
                 num_player (int)
         """
-        obs, actions, _ = super(dense_pred, self).extract_data(agent_class,
-                                                               val_split,
-                                                               games=games,
-                                                               balance=balance)
+        super(dense_pred, self).extract_data(agent_class,
+                                             val_split,
+                                             games=games,
+                                             balance=balance)
 
-        self.input_dim = obs.shape[1]
-        self.action_space = actions.shape[1]
+        self.input_dim = self.X_train.shape[1]
+        self.action_space = self.y_train.shape[1]
 
     def reshape_data(self, X):
         if X.shape == (self.action_space,):  # Only one sample inputted
