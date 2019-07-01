@@ -4,6 +4,10 @@ import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
 
+global accepted_types
+accepted_types = [int,
+                  np.uint8]
+
 
 def plot_classes(class_count):
     plt.bar(list(class_count.keys()), class_count.values(), color='blue')
@@ -32,7 +36,13 @@ def compute_mean(class_count):
     return int(mean)
 
 
-def balance_data(examples, labels):
+def balance_data(examples, labels, randomize=True):
+    """
+    Args:
+        examples: 2d ndarray
+        labels: 1d ndarray
+        randomize: boolean, default is True
+    """
 
     # create dictionaries
     class_count = {}
@@ -75,8 +85,10 @@ def balance_data(examples, labels):
     new_labels = np.asarray(new_labels).flatten()
 
     # randomize
-    p = np.random.permutation(new_labels.shape[0])
-    return new_examples[p], new_labels[p]
+    if randomize:
+        p = np.random.permutation(new_labels.shape[0])
+        new_examples, new_labels = new_examples[p], new_labels[p]
+    return new_examples, new_labels
 
 
 def main():
