@@ -13,7 +13,16 @@
 # limitations under the License.
 
 from rl_env import Agent
-import bayes
+from bayes import Belief
+from state_translate import state_translator
+
+Fireworks_ix = {
+        'B': 0,
+        'G': 1,
+        'R': 2,
+        'W': 3,
+        'Y': 4
+        }
 
 Weights = {
     "indirectHintWeight" : 1.0,
@@ -39,9 +48,53 @@ class ProbabilisticAgent(Agent):
         self.config = config
         # Extract max info tokens or set default to 8.
         self.max_information_tokens = config.get('information_tokens', 8)
+        # Initialize the belief
+        self.belief = Belief(config['players'])
 
     def is_likely_playable(self, card, fireworks, life_tokens):
-        raise NotImplementedError()
+        """
+        Check whether the probability that the card is playable is over
+        an established threshold
+
+        Args:
+            card
+            fireworks
+            life_tokens
+        """
+        
+        if life_tokens == 3:
+            epsilon = 0.8
+        elif life_tokens == 2:
+            epsilon = 0.9
+        else:
+            epsilon = 1
+        #print("\n**** is_likely_playable ****\n.")
+        #print(fireworks)
+        #print(life_tokens)
+        
+        prob_card = self.belief.prob(card)
+        #print(prob_card)
+
+        # probability that it is playable in one of the spots
+        probability = 0.0
+
+        color = 0   # color index
+        for k in fireworks.keys():
+            rank = Fireworks_ix[k]
+            if rank == 5:
+                continue    # ignore if firework is full
+            else:
+                # add the probability of being in a playable spot
+                probability += prob_card[color*5+rank]
+
+            color += 1  # increment color index
+        
+        if probability >= epsilon:
+            print("playable")
+            return True
+        else:
+            print("not playable")
+            return False
 
     def scale_probability(self, probability, scale):
         return probability ** (1.0 / scale)
@@ -66,12 +119,27 @@ class ProbabilisticAgent(Agent):
         if ob['current_player_offset'] != 0:
             return None
 
+        # Extract the information
         fireworks = ob['fireworks']
         life_tokens = ob['life_tokens']
+        vec = ob['vectorized']
+
+        # Encode this moment of the game in the belief
+        self.belief.encode(vec)
+
+        # load state translator
+        translator = state_translator(vec, self.config['players'])
+        translator.encodeVector()
 
         # Check if it's likely that we have a card to play
-        for card_index, hint in enumerate(ob['card_knowledge'][0]):
-            if self.is_likely_playable(hint, fireworks, life_tokens):
+        for card_index, _ in enumerate(ob['card_knowledge'][0]):
+
+            # extract card knowledge from vector representation
+            start_card = card_index * 35
+            end_card = (card_index * 35) + 25
+            card = translator.cardKnowledge[start_card:end_card]
+
+            if self.is_likely_playable(card, fireworks, life_tokens):
                 return {'action_type': 'PLAY', 'card_index': card_index}
 
         # Check if it's possible to hint a card to your colleagues.
