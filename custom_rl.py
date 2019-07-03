@@ -12,6 +12,7 @@ from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
 from agents.neuroEvo_agent import NeuroEvoAgent
+from agents.probabilistic_agent import ProbabilisticAgent
 import experience as exp
 import rl_env
 import getopt
@@ -29,7 +30,8 @@ AGENT_CLASSES = {
     'RainbowAgent': RainbowAgent,
     'MCAgent': MCAgent,
     'NNAgent': NNAgent,
-    'NeuroEvoAgent': NeuroEvoAgent}
+    'NeuroEvoAgent': NeuroEvoAgent,
+    'ProbabilisticAgent': ProbabilisticAgent}
 
 class Runner(object):
     """Runner class."""
