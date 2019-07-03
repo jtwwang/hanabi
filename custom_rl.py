@@ -14,6 +14,8 @@ from agents.random_agent import RandomAgent
 from agents.neuroEvo_agent import NeuroEvoAgent
 from agents.probabilistic_agent import ProbabilisticAgent
 import experience as exp
+
+import data_pipeline.experience as exp
 import rl_env
 import getopt
 

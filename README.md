@@ -10,7 +10,6 @@ sudo apt-get install python-pip  # if you don't already have pip
 pip install cffi                 # if you don't already have cffi
 pip install sklearn              # if you don't already have sklearn
 pip install tensorflow           # if you don't already have tensorflow
-pip install keras                # if you don't already have keras
 pip install matplotlib           # if you don't already have matplotlib
 cmake .
 make
@@ -55,17 +54,18 @@ python run_pred.py
 ```
 There are several flags that you can currently use:
 ```
---agent_class <str      # Agent type ["SimpleAgent", "RainbowAgent"]
+--agent_class <str>     # Agent type ["SimpleAgent", "RainbowAgent"]
+--balance <bool>	# Optional. Whether to make classes balanced
 --batch_size <int>      # Batch size
---cv <int>				# Optional. Run cross-validation @cv number of times.
+--cv <int>		# Optional. Run cross-validation @cv number of times.
 --epochs <int>          # Number of training epochs
 --games <int>           # The number of games to load
 --load <bool>           # Whether to laod an existing model (if exists)
 --lr <float>            # Learning rate
---model_class <str>		# Network type ["dense", "conv", "lstm"]
+--model_class <str>	# Network type ["dense", "conv", "lstm"]
 --model_name <str>      # The name to give to the model
 --summary <bool>        # Whether to print the summary of the model
---val_split <float>		# Proportion of data used to validate
+--val_split <float>	# Proportion of data used to validate
 ```
 
 Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors. For the agents `RainbowAgent` are already available 5K episodes of memory, and there are 20K available for `SimpleAgent`.
