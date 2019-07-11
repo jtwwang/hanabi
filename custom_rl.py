@@ -113,7 +113,9 @@ class Runner(object):
         avg_steps = 0
 
         for eps in range(flags['num_episodes']):
-            print('Running episode: %d' % eps)
+
+            if eps % 10 == 0:
+                print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
             done = False
@@ -149,8 +151,74 @@ class Runner(object):
             avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])
-        print('Average Reward: %.3f' % (sum(rewards)/n_eps))
-        print('Average steps: %.2f' % (avg_steps/float(n_eps)))
+        avg_reward = (sum(rewards)/n_eps)
+        avg_steps /= n_eps
+        print('Average Reward: %.3f' % avg_reward)
+        print('Average steps: %.2f' % avg_steps)
+
+        return avg_reward, avg_steps
+
+def cross_play(flags):
+
+    import numpy as np
+    import matplotlib
+    import matplotlib.pyplot as plt
+
+
+    """
+    Function to play the cross_play between all agents
+    """
+    AgentList = [
+            'RandomAgent',
+            'SimpleAgent',
+            'SecondAgent',
+            'ProbabilisticAgent']
+
+    results = []
+    for agent in AgentList:
+        for agent2 in AgentList:
+            flags['agent_class'] = agent
+            flags['agent2'] = agent2
+            flags['num_episodes'] = 1000
+
+            runner = Runner(flags)
+            avg_score, _ = runner.run()
+            results.append(avg_score)
+
+    results = np.asarray(results)
+    results = np.reshape(results, (len(AgentList), len(AgentList)))
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(results)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel("score", rotation=-90, va="bottom")
+
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(len(AgentList)))
+    ax.set_yticks(np.arange(len(AgentList)))
+    # ... and label them with the respective list entries
+    ax.set_xticklabels(AgentList)
+    ax.set_yticklabels(AgentList)
+
+    # Loop over data dimensions and create text annotations.
+    for i in range(len(AgentList)):
+        for j in range(len(AgentList)):
+            text = ax.text(j, i, results[i, j],
+                       ha="center", va="center", color="w")
+
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    ax.set_xticks(np.arange(results.shape[1]+1)-.5, minor=True)
+    ax.set_yticks(np.arange(results.shape[0]+1)-.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    ax.set_title("Cross Play")
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -164,7 +232,8 @@ if __name__ == "__main__":
              'model_name': "predictor.h5",
              'agent2': "",
              'checkpoint_dir':"",
-             'checkpoint_dir2':""}
+             'checkpoint_dir2':"",
+             'cross_play': True}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
@@ -175,7 +244,8 @@ if __name__ == "__main__":
                                         'model_name=',
                                         'agent2=',
                                         'checkpoint_dir=',
-                                        'checkpoint_dir2='])
+                                        'checkpoint_dir2=',
+                                        'cross_play='])
     if arguments:
         sys.exit('usage: customAgent.py [options]\n'
                  '--players       number of players in the game.\n'
@@ -185,7 +255,7 @@ if __name__ == "__main__":
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
-    # initialize the replay memory
+        # initialize the replay memory
     if flags['agent2'] == "":
         nameDir = flags['agent_class']
     else:
@@ -193,9 +263,12 @@ if __name__ == "__main__":
 
     replay = exp.Experience(nameDir, numAgents=flags['players'])    
 
-    # run the episodes
-    runner = Runner(flags)
-    runner.run()
-
-    # save the memory to file
-    replay.save()
+    if flags['cross_play']:
+        cross_play(flags)
+    else:  
+        # run the episodes
+        runner = Runner(flags)
+        runner.run()
+        
+        # save the memory to file
+        replay.save()
