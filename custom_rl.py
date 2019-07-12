@@ -233,7 +233,7 @@ if __name__ == "__main__":
              'agent2': "",
              'checkpoint_dir':"",
              'checkpoint_dir2':"",
-             'cross_play': True}
+             'cross_play': False}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
