@@ -27,6 +27,7 @@ class Experience():
 
         self.size = size
         self.ptr = 0
+        self.ep_start_id = self.ptr
         self.full = False
         self.path = os.path.join(self.path, agent_class)
 
@@ -204,3 +205,11 @@ class Experience():
 
         # create one-hot encoding
         return one_hot(a, self.n_moves)
+
+    def moves_ep(self):
+        """
+        Returns the moves done in the entire episode
+        """
+
+        return self.moves[self.ep_start_id:self.ptr]
+
