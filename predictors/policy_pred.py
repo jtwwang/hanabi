@@ -90,7 +90,8 @@ class policy_pred(object):
                 prediction given the model and the input X
         """
         X = self.reshape_data(X)
-        self.create_model()
+        if self.model == None:
+            self.create_model()
         pred = self.model.predict(X)
         return pred
 
