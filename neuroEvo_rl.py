@@ -10,6 +10,7 @@ import numpy as np
 import os
 import sys
 import random
+import getopt
 from agents.neuroEvo_agent import NeuroEvoAgent
 from predictors.conv_pred import conv_pred
 # To find local modules
@@ -119,8 +120,21 @@ if __name__ == "__main__":
     global flags, scores, weights
     flags = {'players': 2,
              'num_episodes': 100,
-             'debug': False,
              'initialize': False}
+
+    options, arguments = getopt.getopt(sys.argv[1:], '',
+            ['players=',
+            'num_episodes=',
+            'initialize='])
+    if arguments:
+        sys.exit('usage: neuroEvo.py [options]\n'
+                '--players      number of players in the game.\n'
+                '--num_episodes number of game episodes to run.\n'
+                '--initialize   whether to re-initialize the weights for all agents.\n')
+
+    for flag, value in options:
+        flag = flag[2:] # Strip leading --.
+        flags[flag] = type(flags[flag])(value)
 
     # Initialize all models
     current_pool = []

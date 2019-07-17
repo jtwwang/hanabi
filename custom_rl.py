@@ -1,17 +1,19 @@
-# Artificial Intelligence Society at UC Davis
+# Developed by Lorenzo Mambretti
 #
-#   http://www,aidavis.org
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    https://www.aidavis.org
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
-from agents.second_agent import SecondAgent
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+from agents.load_agents import load_agent
 from agents.mc_agent import MCAgent
-from agents.nn_agent import NNAgent
-from agents.rainbow_agent_rl import RainbowAgent
-from agents.simple_agent import SimpleAgent
-from agents.random_agent import RandomAgent
-from agents.neuroEvo_agent import NeuroEvoAgent
 import data_pipeline.experience as exp
 import rl_env
 import getopt
@@ -21,15 +23,6 @@ import sys
 # To find local modules
 sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 
-
-AGENT_CLASSES = {
-    'SimpleAgent':  SimpleAgent,
-    'SecondAgent': SecondAgent,
-    'RandomAgent':  RandomAgent,
-    'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent,
-    'NNAgent': NNAgent,
-    'NeuroEvoAgent': NeuroEvoAgent}
 
 class Runner(object):
     """Runner class."""
@@ -47,16 +40,16 @@ class Runner(object):
             'model_name': flags['model_name'],
             'debug': flags['debug'],
             'checkpoint_dir': flags['checkpoint_dir']}
-        self.agent_class = AGENT_CLASSES[flags['agent_class']]
+        self.agent_class = load_agent(flags['agent_class'])
         if flags['agent2'] != "":
             self.agent_2_config = {
                 'players': flags['players'],
                 'num_moves': self.env.num_moves(),
                 'observation_size': self.env.vectorized_observation_shape()[0],
                 'checkpoint_dir': flags['checkpoint_dir2']}
-            self.agent_2_class = AGENT_CLASSES[flags['agent2']]
+            self.agent_2_class = load_agent(flags['agent2'])
         else:
-            self.agent_2_class = AGENT_CLASSES[flags['agent_class']]
+            self.agent_2_class = load_agent(flags['agent_class'])
             self.agent_2_config = self.agent_config # create copy
         
     def moves_lookup(self, move, ob):
@@ -84,8 +77,6 @@ class Runner(object):
 
     def run(self):
 
-        global replay
-
         rewards = []
 
         if self.agent_2_class == self.agent_class:
@@ -110,7 +101,9 @@ class Runner(object):
         avg_steps = 0
 
         for eps in range(flags['num_episodes']):
-            print('Running episode: %d' % eps)
+
+            if eps % 10 == 0:
+                print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
             done = False
@@ -146,8 +139,68 @@ class Runner(object):
             avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])
-        print('Average Reward: %.3f' % (sum(rewards)/n_eps))
-        print('Average steps: %.2f' % (avg_steps/float(n_eps)))
+        avg_reward = sum(rewards)/n_eps
+        avg_steps /= n_eps
+        print('Average Reward: %.3f' % avg_reward)
+        print('Average steps: %.2f' % avg_steps)
+
+        return avg_reward, avg_steps
+
+def cross_play(flags):
+
+    import numpy as np
+    import matplotlib.pyplot as plt
+
+
+    """
+    Function to play the cross_play between all agents
+    """
+    AgentList = [
+            'NewestCardAgent',
+            'RandomAgent',
+            'SimpleAgent',
+            'SecondAgent',
+            'ProbabilisticAgent']
+
+    results = []
+    for agent in AgentList:
+        for agent2 in AgentList:
+            flags['agent_class'] = agent
+            flags['agent2'] = agent2
+            flags['num_episodes'] = 1000
+
+            runner = Runner(flags)
+            avg_score, _ = runner.run()
+            results.append(avg_score)
+
+    results = np.asarray(results)
+    results = np.reshape(results, (len(AgentList), len(AgentList)))
+
+    fig, ax = plt.subplots()
+    im = ax.imshow(results)
+
+    # Create colorbar
+    cbar = ax.figure.colorbar(im, ax=ax)
+    cbar.ax.set_ylabel("score", rotation=-90, va="bottom")
+
+    # We want to show all ticks...
+    ax.set_xticks(np.arange(len(AgentList)))
+    ax.set_yticks(np.arange(len(AgentList)))
+    # ... and label them with the respective list entries
+    ax.set_xticklabels(AgentList)
+    ax.set_yticklabels(AgentList)
+
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+
+    ax.set_xticks(np.arange(results.shape[1]+1)-.5, minor=True)
+    ax.set_yticks(np.arange(results.shape[0]+1)-.5, minor=True)
+    ax.grid(which="minor", color="w", linestyle='-', linewidth=3)
+    ax.tick_params(which="minor", bottom=False, left=False)
+
+    ax.set_title("Cross Play")
+
+    plt.show()
 
 
 if __name__ == "__main__":
@@ -161,7 +214,8 @@ if __name__ == "__main__":
              'model_name': "predictor.h5",
              'agent2': "",
              'checkpoint_dir':"",
-             'checkpoint_dir2':""}
+             'checkpoint_dir2':"",
+             'cross_play': False}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
@@ -172,27 +226,40 @@ if __name__ == "__main__":
                                         'model_name=',
                                         'agent2=',
                                         'checkpoint_dir=',
-                                        'checkpoint_dir2='])
+                                        'checkpoint_dir2=',
+                                        'cross_play='])
     if arguments:
-        sys.exit('usage: customAgent.py [options]\n'
-                 '--players       number of players in the game.\n'
-                 '--num_episodes  number of game episodes to run.\n'
-                 '--agent_class   {}'.format(' or '.join(AGENT_CLASSES.keys())))
+        sys.exit(
+    'usage: customAgent.py [options]\n'
+    '--players                 number of players in the game.\n'
+    '--num_episodes            number of game episodes to run.\n'
+    '--agent_class             the agent that you want to use.\n'
+    '--agent_predicted <str>   necessary if using MCAgent or NNAgent. Use one of the other classes as string.\n'
+    '--model_class <str>       network type ["dense", "conv", "lstm"].\n'
+    '--model_name <str>        model name of a pre-trained model.\n'
+    '--agent2 <str>            to play \'ad hoc\' against another agent.\n' 
+    '--checkpoint_dir <str>    path to the checkpoints for RainbowAgent.\n'
+    '--checkpoint_dir2 <str>   path to the checkpoints for RainbowAgent as agent2.\n'
+    '--cross_play <True/False> cross_play between all agents.\n')
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
-    # initialize the replay memory
+        # initialize the replay memory
     if flags['agent2'] == "":
         nameDir = flags['agent_class']
     else:
         nameDir = flags['agent_class'] + flags['agent2']
 
+    global replay
     replay = exp.Experience(nameDir, numAgents=flags['players'])    
 
-    # run the episodes
-    runner = Runner(flags)
-    runner.run()
-
-    # save the memory to file
-    replay.save()
+    if flags['cross_play']:
+        cross_play(flags)
+    else:  
+        # run the episodes
+        runner = Runner(flags)
+        runner.run()
+        
+        # save the memory to file
+        replay.save()
