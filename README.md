@@ -31,8 +31,9 @@ To run an arbitrary number of games between some of the existent agents and coll
 ```
 python custom_rl.py --agent_class <nameAgent>
 ```
-currently supports 8 classes:
+currently supports 9 classes:
 - `MCAgent`
+- `NeuroEvoAgent`
 - `NewestCardAgent`
 - `NNAgent`
 - `ProbabilisticAgent`
