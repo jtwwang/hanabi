@@ -170,6 +170,7 @@ def cross_play(flags):
     Function to play the cross_play between all agents
     """
     AgentList = [
+            'NewestCardAgent',
             'RandomAgent',
             'SimpleAgent',
             'SecondAgent',
