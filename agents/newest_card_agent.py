@@ -51,10 +51,11 @@ class NewestCardAgent(Agent):
 
 		# Play the first color hinted if a fresh hint was received
 		# TODO: Only do this on FRESH HINTS
-		for card_index, hint in enumerate(reversed(observation['card_knowledge'][0])):
+		self_cn = observation['card_knowledge'][0]
+		for card_index, hint in zip(range(len(self_cn)-1,-1,-1),reversed(self_cn)):
 			if hint['color'] is not None or hint['rank'] is not None:
-				print("\nPLAYING: " + str(card_index) + '\n')
-				self.hint_received
+				# print("\nPLAYING: " + str(card_index) + '\n')
+				#self.hint_received
 				return {'action_type': 'PLAY', 'card_index': card_index}
 
 		# Hint the newest playable card
@@ -68,7 +69,7 @@ class NewestCardAgent(Agent):
 				for card, hint in reversed(zip(player_hand, player_hints)):
 					if NewestCardAgent.playable_card(card,
 						fireworks) and hint['color'] is None:
-						print("HINTING: " + card['color'] + '\n')
+						# print("HINTING: " + card['color'] + '\n')
 						return {
 							'action_type': 'REVEAL_COLOR',
 							'color': card['color'],
