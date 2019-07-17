@@ -1,6 +1,6 @@
 # A Cooperative Agent for Hanabi
 
-This is a research project created by Lorenzo Mambretti, Justin Wang, Daniel Loran, Aron Sarmasi and Victoria Salova.
+This is a research project directed by Lorenzo Mambretti and Justin Wang, with the contributions of Daniel Loran, Aron Sarmasi and Victoria Salova.
 
 We provide a set of scripts, agents, and models that are used in the attempt to solve the ad-hoc challenge purposed by Nolan Bard et al. in the paper [The Hanabi Challenge: A New Frontier for AI Research](
 https://arxiv.org/abs/1902.00506). These scripts are built on top of the hanabi\_learning\_environment provided by Google Deepmind.
@@ -81,4 +81,7 @@ There are several flags that you can currently use:
 
 Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors.
 
-For the agents `RainbowAgent` and `SecondAgent` 5k episodes are already provided, and there are 20K available for `SimpleAgent`.
+## Experience
+We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent` and `SecondAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
+
+The experience is managed by the class Experience, that is called during the simulations in `custom.py` to save the observations, moves, and rewards. We call again the class in `run_pred.py` to access the experience memory.
