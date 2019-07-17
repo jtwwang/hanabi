@@ -11,6 +11,7 @@ import os
 import sys
 import random
 import getopt
+import pickle
 from agents.neuroEvo_agent import NeuroEvoAgent
 from predictors.conv_pred import conv_pred
 # To find local modules
@@ -120,12 +121,16 @@ if __name__ == "__main__":
     global flags, scores, weights
     flags = {'players': 2,
              'num_episodes': 100,
-             'initialize': False}
+             'initialize': False,
+             'models': 20,
+             'generations': 100}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
             ['players=',
             'num_episodes=',
-            'initialize='])
+            'initialize=',
+            'models=',
+            'generations='])
     if arguments:
         sys.exit('usage: neuroEvo.py [options]\n'
                 '--players      number of players in the game.\n'
@@ -138,30 +143,41 @@ if __name__ == "__main__":
 
     # Initialize all models
     current_pool = []
-    total_models = 20
-    scores = np.zeros(total_models)
+    scores = np.zeros(flags['models'])
     weights = {}
-    generations = 100
     to_mutate = 0
 
     # create one agent
     agent = conv_pred("NeuroEvo_agent")
 
+    # load the file
+    filepath = os.path.join("model","NeuroEvo_agent")
+    filepath = os.path.join(filepath,"scores.pickle")
+    if not flags['initialize']:
+        try:
+            scores = pickle.load(open(filepath, "rb"))
+            loaded = True
+        except IOError:
+            loaded = False
+    else:
+        loaded = False
+
     print("Initialize")
     # do an initial loop to evaluate all models
-    for i in range(total_models):
-        run(i, flags['initialize'])
+    for i in range(flags['models']):
+        if flags['initialize'] or not loaded:
+            run(i, flags['initialize'])
         agent.load(model_name=str(i))
         weights[i] = agent.model.get_weights()
 
-    for gen in range(generations):
+    for gen in range(flags['generations']):
 
         print("Generation %i " % gen)
 
         # sort the results
         ranking = np.argsort(scores)
         print("best: %i with score %f" % (ranking[-1], scores[ranking[-1]]))
-        print("avg: %f" % (sum(scores)/total_models))
+        print("avg: %f" % (sum(scores)/flags['models']))
 
         # divide worst from best
         worst_ones = ranking[:2]
@@ -171,8 +187,6 @@ if __name__ == "__main__":
 
         ix_to_mutate = worst_ones[to_mutate]
         ix_to_simulate = worst_ones[1 - to_mutate]
-        print(ix_to_mutate)
-        print(ix_to_simulate)
 
         run(ix_to_simulate)
         make_mutation(ix_to_mutate, best_ones)
@@ -183,3 +197,7 @@ if __name__ == "__main__":
 
         # prepare for next generation
         to_mutate = (to_mutate + 1) % 2
+
+    # save the rankings
+    pickle.dump(scores, open(filepath,"wb"))
+    print("Saved scores.")
