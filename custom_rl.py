@@ -12,6 +12,7 @@ from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
 from agents.neuroEvo_agent import NeuroEvoAgent
+from agents.newest_card_agent import NewestCardAgent
 import experience as exp
 import rl_env
 import getopt
@@ -24,6 +25,7 @@ sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 
 AGENT_CLASSES = {
     'SimpleAgent':  SimpleAgent,
+    'NewestCardAgent': NewestCardAgent,
     'SecondAgent': SecondAgent,
     'RandomAgent':  RandomAgent,
     'RainbowAgent': RainbowAgent,
@@ -154,7 +156,7 @@ if __name__ == "__main__":
 
     flags = {'players': 2,
              'num_episodes': 1000,
-             'agent_class': 'SimpleAgent',
+             'agent_class': 'NewestCardAgent',
              'debug': False,
              'agent_predicted': "",
              'model_class': "",
