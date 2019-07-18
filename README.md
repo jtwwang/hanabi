@@ -29,7 +29,7 @@ python game_example.py           # Plays a game using the lower level interface
 ### Data collection and evaluation agents
 To run an arbitrary number of games between some of the existent agents and collect data you can use the script
 ```
-python custom_rl.py --agent_class <nameAgent>
+python run_simulations.py --agent_class <nameAgent>
 ```
 currently supports 9 classes:
 - `MCAgent`
@@ -86,4 +86,20 @@ Make sure there is training data in the folder `experience_replay` before starti
 ## Experience
 We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent` and `SecondAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
 
-The experience is managed by the class Experience, that is called during the simulations in `custom.py` to save the observations, moves, and rewards. We call again the class in `run_pred.py` to access the experience memory.
+The experience is managed by the class Experience, that is called during the simulations in `run_simulations.py` to save the observations, moves, and rewards. We call again the class in `run_pred.py` to access the experience memory.
+
+## Neuro-Evolution Agents
+We provide a script to train agents based on genetic algorithm to evolve CNN to play the game of hanabi.
+The development of this process is still undergoing development.
+
+```
+python neuroEvo_train.py
+```
+You can use the following flags:
+```
+--players <int>		   # the number of players
+--num_episodes <int>	   # number of episodes
+--initialize <True/False>  # whether to re-initialize the weights of all agents
+--models <int>		   # how many specimens in the simulations
+--generations <int>	   # how many generations to run
+```
