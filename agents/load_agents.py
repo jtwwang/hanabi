@@ -34,7 +34,7 @@ def load_agent(agent_class):
         from agents.probabilistic_agent import ProbabilisticAgent
         agent = ProbabilisticAgent
     elif agent_class == 'RainbowAgent':
-        from agents.raimbow_agent_rl import RainbowAgent
+        from agents.rainbow_agent_rl import RainbowAgent
         agent = RainbowAgent
     elif agent_class == 'RandomAgent':
         from agents.random_agent import RandomAgent
