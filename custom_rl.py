@@ -31,26 +31,30 @@ class Runner(object):
         """Initialize runner."""
         self.flags = flags
         self.env = rl_env.make('Hanabi-Full', num_players=flags['players'])
-        self.agent_config = {
-            'players': flags['players'],
-            'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0],
-            'agent_predicted': flags['agent_predicted'],
-            'model_class': flags['model_class'],
-            'model_name': flags['model_name'],
-            'debug': flags['debug'],
-            'checkpoint_dir': flags['checkpoint_dir']}
-        self.agent_class = load_agent(flags['agent_class'])
-        if flags['agent2'] != "":
-            self.agent_2_config = {
+        general_config = {
                 'players': flags['players'],
                 'num_moves': self.env.num_moves(),
                 'observation_size': self.env.vectorized_observation_shape()[0],
+                'debug': flags['debug']}
+
+        # setup first agent
+        self.agent_config = {
+            'agent_predicted': flags['agent_predicted'],
+            'model_class': flags['model_class'],
+            'model_name': flags['model_name'],
+            'checkpoint_dir': flags['checkpoint_dir']}
+        self.agent_config.update(general_config) # merge the two dictionaries
+        self.agent = flags['agent']
+
+        # setup second agent
+        self.agent_2_config = {
+                'agent_predicted': flags['agent_predicted2'],
+                'model_class': flags['model_class2'],
+                'model_name': flags['model_name2'],
                 'checkpoint_dir': flags['checkpoint_dir2']}
-            self.agent_2_class = load_agent(flags['agent2'])
-        else:
-            self.agent_2_class = load_agent(flags['agent_class'])
-            self.agent_2_config = self.agent_config # create copy
+        self.agent_2_config.update(general_config) # merge the two dictionaries
+        print(self.agent_2_config)
+        self.agent_2 = flags['agent2']
         
     def moves_lookup(self, move, ob):
         """returns the int given the dictionary form"""
@@ -77,28 +81,23 @@ class Runner(object):
 
     def run(self):
 
-        rewards = []
-
-        if self.agent_2_class == self.agent_class:
-            agent = self.agent_class(self.agent_config)
-            agents = [agent for _ in range(self.flags['players'])]
-        elif self.flags['agent_class'] == 'NeuroEvoAgent':
-            self.agent_config['model_name'] = self.flags['model_name']
-            agent = self.agent_class(self.agent_config)
+        if self.agent == self.agent_2:
+            agent = self.agent(self.agent_config)
             agents = [agent for _ in range(self.flags['players'])]
         else:
-            agent = self.agent_2_class(self.agent_2_config)
+            agent = self.agent_2(self.agent_2_config)
             agents = [agent for _ in range(self.flags['players'] - 1)]
-            agents = [self.agent_class(self.agent_config)] + agents
+            agents = [self.agent(self.agent_config)] + agents
 
         # one more thing for the MC agent
         if self.flags['agent_class'] == 'MCAgent':
             agents[0].player_id = 0
-        if self.flags['agent2'] == 'MCAgent':
+        if self.flags['agent2_class'] == 'MCAgent':
             for i in range(1, self.len(agents)):
                 agents[i].player_id = i
 
         avg_steps = 0
+        avg_reward = 0
 
         for eps in range(flags['num_episodes']):
 
@@ -107,8 +106,6 @@ class Runner(object):
 
             obs = self.env.reset()  # Observation of all players
             done = False
-            eps_reward = 0
-            n_steps = 0
 
             while not done:
                 for agent_id, agent in enumerate(agents):
@@ -119,7 +116,7 @@ class Runner(object):
                         action = agent.act(ob)
 
                     move = self.moves_lookup(action, ob)
-                    n_steps += 1
+                    avg_steps += 1
 
                     # for debugging purpose
                     if flags['debug']:
@@ -131,15 +128,13 @@ class Runner(object):
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
 
-                    eps_reward += reward
+                    avg_reward += reward
 
                     if done:
                         break
-            rewards.append(eps_reward)
-            avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])
-        avg_reward = sum(rewards)/n_eps
+        avg_reward /= n_eps
         avg_steps /= n_eps
         print('Average Reward: %.3f' % avg_reward)
         print('Average steps: %.2f' % avg_steps)
@@ -155,26 +150,32 @@ def cross_play(flags):
     """
     Function to play the cross_play between all agents
     """
-    AgentList = [
+    AgentClassList = [
             'NewestCardAgent',
             'RandomAgent',
             'SimpleAgent',
             'SecondAgent',
             'ProbabilisticAgent']
 
+    # create the agents
+    AgentDict = {}
+    for a_class in AgentClassList:
+        AgentDict[a_class] = load_agent(a_class)
+
     results = []
-    for agent in AgentList:
-        for agent2 in AgentList:
+    for agent in AgentClassList:
+        for agent2 in AgentClassList:
             flags['agent_class'] = agent
-            flags['agent2'] = agent2
-            flags['num_episodes'] = 1000
+            flags['agent2_class'] = agent2
+            flags['agent'] = AgentDict[agent]
+            flags['agent2'] = AgentDict[agent2]
 
             runner = Runner(flags)
             avg_score, _ = runner.run()
             results.append(avg_score)
 
     results = np.asarray(results)
-    results = np.reshape(results, (len(AgentList), len(AgentList)))
+    results = np.reshape(results, (len(AgentClassList), len(AgentClassList)))
 
     fig, ax = plt.subplots()
     im = ax.imshow(results)
@@ -184,11 +185,17 @@ def cross_play(flags):
     cbar.ax.set_ylabel("score", rotation=-90, va="bottom")
 
     # We want to show all ticks...
-    ax.set_xticks(np.arange(len(AgentList)))
-    ax.set_yticks(np.arange(len(AgentList)))
+    ax.set_xticks(np.arange(len(AgentClassList)))
+    ax.set_yticks(np.arange(len(AgentClassList)))
     # ... and label them with the respective list entries
-    ax.set_xticklabels(AgentList)
-    ax.set_yticklabels(AgentList)
+    ax.set_xticklabels(AgentClassList)
+    ax.set_yticklabels(AgentClassList)
+
+    # Loop over data dimensions and create text annotations.	
+    for i in range(len(AgentClassList)):	
+        for j in range(len(AgentClassList)):	
+            text = ax.text(j, i, results[i, j],	
+                       ha="center", va="center", color="w")
 
     for edge, spine in ax.spines.items():
         spine.set_visible(False)
@@ -208,11 +215,14 @@ if __name__ == "__main__":
     flags = {'players': 2,
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
+             'agent2_class': "",
              'debug': False,
              'agent_predicted': "",
+             'agent_predicted2': "",
              'model_class': "",
+             'model_class2': "",
              'model_name': "predictor.h5",
-             'agent2': "",
+             'model_name2': "predictor.h5",
              'checkpoint_dir':"",
              'checkpoint_dir2':"",
              'cross_play': False}
@@ -220,11 +230,14 @@ if __name__ == "__main__":
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
+                                        'agent2_class=',
                                         'debug=',
                                         'agent_predicted=',
+                                        'agent_predicted2=',
                                         'model_class=',
+                                        'model_class2=',
                                         'model_name=',
-                                        'agent2=',
+                                        'model_name2=',
                                         'checkpoint_dir=',
                                         'checkpoint_dir2=',
                                         'cross_play='])
@@ -237,7 +250,7 @@ if __name__ == "__main__":
     '--agent_predicted <str>   necessary if using MCAgent or NNAgent. Use one of the other classes as string.\n'
     '--model_class <str>       network type ["dense", "conv", "lstm"].\n'
     '--model_name <str>        model name of a pre-trained model.\n'
-    '--agent2 <str>            to play \'ad hoc\' against another agent.\n' 
+    '--agent2_class <str>            to play \'ad hoc\' against another agent.\n' 
     '--checkpoint_dir <str>    path to the checkpoints for RainbowAgent.\n'
     '--checkpoint_dir2 <str>   path to the checkpoints for RainbowAgent as agent2.\n'
     '--cross_play <True/False> cross_play between all agents.\n')
@@ -246,17 +259,28 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
         # initialize the replay memory
-    if flags['agent2'] == "":
+    if flags['agent2_class'] == "":
         nameDir = flags['agent_class']
     else:
-        nameDir = flags['agent_class'] + flags['agent2']
+        nameDir = flags['agent_class'] + flags['agent2_class']
 
     global replay
     replay = exp.Experience(nameDir, numAgents=flags['players'])    
 
     if flags['cross_play']:
         cross_play(flags)
-    else:  
+    else:
+        # create the agents
+        if flags['agent2_class'] == "":
+            flags['agent2_class'] = flags['agent_class']
+            flags['model_name2'] = flags['model_name']
+            flags['checkpoint_dir2'] = flags['checkpoint_dir']
+            flags['model_class2'] = flags['model_class']
+            flags['agent_predicted2'] = flags['agent_predicted']
+        
+        flags['agent'] = load_agent(flags['agent_class'])
+        flags['agent2'] = load_agent(flags['agent2_class'])
+
         # run the episodes
         runner = Runner(flags)
         runner.run()
