@@ -14,8 +14,8 @@
 
 import numpy as np
 from rl_env import Agent
-from bayes import Belief
-from state_translate import state_translator
+from data_pipeline.bayes import Belief
+from data_pipeline.state_translate import state_translator
 
 Fireworks_ix = {
         'R': 0,

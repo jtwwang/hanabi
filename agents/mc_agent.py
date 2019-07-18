@@ -7,10 +7,10 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
 from math import sqrt, log
-from state_translate import state_translator
+from data_pipeline.state_translate import state_translator
 from rl_env import Agent
 import numpy as np
-import bayes
+from data_pipeline import bayes
 import random
 import pyhanabi
 from predictors.conv_pred import conv_pred

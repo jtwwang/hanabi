@@ -10,12 +10,12 @@ from agents.mc_agent import MCAgent
 from agents.rainbow_agent_rl import RainbowAgent
 from agents.simple_agent import SimpleAgent
 from agents.random_agent import RandomAgent
-import experience as exp
+import data_pipeline.experience as exp
 import rl_env
 import numpy as np
 import getopt
 from state_transition import state_tr
-from state_translate import state_translator
+from data_pipeline.state_translate import state_translator
 
 import os
 import sys

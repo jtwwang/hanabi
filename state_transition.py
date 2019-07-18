@@ -1,6 +1,6 @@
 import numpy as np
-from state_translate import state_translator
-from bayes import Belief
+from data_pipeline.state_translate import state_translator
+from data_pipeline.bayes import Belief
 
 """
 function to map the letter of the color to a corresponding number
