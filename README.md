@@ -47,11 +47,13 @@ The data is saved in a folder automatically created called `/experience_replay`.
 --num_episodes <int>
 --players <int 2 to 5>
 --debug <true/false>
+--agent2_class		    # to play 'ad hoc' against another agent. 
 --agent_predicted <str>     # necessary if using MCAgent or NNAgent. Use one of the other classes as string
+--agent_predicted2 <str>    # necessary if using MCAgent or NNAgent for agent2
 --model_class <str>         # Network type ["dense", "conv", "lstm"]
+--model_class2 <str>	    # Network type for agent2
 --model_name <str>          # Model name of a pre-trained model
---agent2 <str>              # to play 'ad hoc' against another agent. 
-                            # The second agent cannot be one of thetwo customs agents ["MCAgent", "NNAgent"]
+--model_name2 <str>	    # Model name of a pre-trained model for agent2
 --checkpoint_dir <str>      # path to the checkpoints for RainbowAgent
 --checkpoint_dir2 <str>     # path to the checkpoints for RainbowAgent as agent2
 --cross_play <True/False>   # cross_play between all agents
