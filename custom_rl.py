@@ -31,31 +31,46 @@ class Runner(object):
         """Initialize runner."""
         self.flags = flags
         self.env = rl_env.make('Hanabi-Full', num_players=flags['players'])
+                
+        # create configurations
+        self.agent_config, self.agent_2_config = self.generate_config(flags)
+
+        # use configurations to create agent
+        self.agent = load_agent(flags['agent_class'])(self.agent_config)
+        
+        if flags['agent2_class'] != flags['agent_class']:
+           # use configurations to create second agent
+           self.agent2 = load_agent(flags['agent2_class'])(self.agent_2_config)
+        
+    def set_agents(self, agent1, agent2):
+        self.agent = agent1
+        self.agent2 = agent2
+
+    def generate_config(self, flags):
         general_config = {
                 'players': flags['players'],
                 'num_moves': self.env.num_moves(),
                 'observation_size': self.env.vectorized_observation_shape()[0],
                 'debug': flags['debug']}
-
-        # setup first agent
-        self.agent_config = {
+        
+        # config first agent
+        agent_config = {
             'agent_predicted': flags['agent_predicted'],
             'model_class': flags['model_class'],
             'model_name': flags['model_name'],
             'checkpoint_dir': flags['checkpoint_dir']}
-        self.agent_config.update(general_config) # merge the two dictionaries
-        self.agent = flags['agent']
+        agent_config.update(general_config) # merge the two dictionaries
 
-        # setup second agent
-        self.agent_2_config = {
+        # config second agent
+        agent_2_config = {
                 'agent_predicted': flags['agent_predicted2'],
                 'model_class': flags['model_class2'],
                 'model_name': flags['model_name2'],
                 'checkpoint_dir': flags['checkpoint_dir2']}
-        self.agent_2_config.update(general_config) # merge the two dictionaries
-        print(self.agent_2_config)
-        self.agent_2 = flags['agent2']
-        
+        agent_2_config.update(general_config) # merge the two dictionaries
+
+        return agent_config, agent_2_config
+
     def moves_lookup(self, move, ob):
         """returns the int given the dictionary form"""
 
@@ -79,15 +94,17 @@ class Runner(object):
         print("ERROR")
         return -1
 
-    def run(self):
+    def generate_pool(self):
+        """
+        Function to generate the pool of agents given one or two agents
+        and specified the number of players (size of the pool)
+        """
 
-        if self.agent == self.agent_2:
-            agent = self.agent(self.agent_config)
-            agents = [agent for _ in range(self.flags['players'])]
+        if self.flags['agent_class'] == self.flags['agent2_class']:
+            agents = [self.agent for _ in range(self.flags['players'])]
         else:
-            agent = self.agent_2(self.agent_2_config)
-            agents = [agent for _ in range(self.flags['players'] - 1)]
-            agents = [self.agent(self.agent_config)] + agents
+            agents = [self.agent2 for _ in range(self.flags['players'] - 1)]
+            agents = [self.agent] + agents
 
         # one more thing for the MC agent
         if self.flags['agent_class'] == 'MCAgent':
@@ -95,6 +112,12 @@ class Runner(object):
         if self.flags['agent2_class'] == 'MCAgent':
             for i in range(1, self.len(agents)):
                 agents[i].player_id = i
+
+        return agents
+
+    def run(self):
+        
+        agents = self.generate_pool()
 
         avg_steps = 0
         avg_reward = 0
@@ -150,27 +173,31 @@ def cross_play(flags):
     """
     Function to play the cross_play between all agents
     """
+
+    runner = Runner(flags)
+
     AgentClassList = [
             'NewestCardAgent',
             'RandomAgent',
             'SimpleAgent',
             'SecondAgent',
-            'ProbabilisticAgent']
+            'ProbabilisticAgent',
+            'RainbowAgent']
 
     # create the agents
     AgentDict = {}
     for a_class in AgentClassList:
-        AgentDict[a_class] = load_agent(a_class)
+        flags['agent_class'] = a_class
+        config1, config2 = runner.generate_config(flags)
+        AgentDict[a_class] = load_agent(a_class)(config1)
 
     results = []
     for agent in AgentClassList:
         for agent2 in AgentClassList:
             flags['agent_class'] = agent
             flags['agent2_class'] = agent2
-            flags['agent'] = AgentDict[agent]
-            flags['agent2'] = AgentDict[agent2]
 
-            runner = Runner(flags)
+            runner.set_agents(AgentDict[agent], AgentDict[agent2])
             avg_score, _ = runner.run()
             results.append(avg_score)
 
@@ -267,20 +294,18 @@ if __name__ == "__main__":
     global replay
     replay = exp.Experience(nameDir, numAgents=flags['players'])    
 
+    # create the agents
+    if flags['agent2_class'] == "":
+        flags['agent2_class'] = flags['agent_class']
+        flags['model_name2'] = flags['model_name']
+        flags['checkpoint_dir2'] = flags['checkpoint_dir']
+        flags['model_class2'] = flags['model_class']
+        flags['agent_predicted2'] = flags['agent_predicted']
+
     if flags['cross_play']:
         cross_play(flags)
     else:
-        # create the agents
-        if flags['agent2_class'] == "":
-            flags['agent2_class'] = flags['agent_class']
-            flags['model_name2'] = flags['model_name']
-            flags['checkpoint_dir2'] = flags['checkpoint_dir']
-            flags['model_class2'] = flags['model_class']
-            flags['agent_predicted2'] = flags['agent_predicted']
-        
-        flags['agent'] = load_agent(flags['agent_class'])
-        flags['agent2'] = load_agent(flags['agent2_class'])
-
+                
         # run the episodes
         runner = Runner(flags)
         runner.run()
