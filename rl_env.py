@@ -20,6 +20,8 @@ import pyhanabi
 from pyhanabi import color_char_to_idx
 
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
+import IPython as ip
+import pandas as pd
 
 #-------------------------------------------------------------------------------
 # Environment API
@@ -106,6 +108,11 @@ class HanabiEnv(Environment):
     self.observation_encoder = pyhanabi.ObservationEncoder(
         self.game, pyhanabi.ObservationEncoderType.CANONICAL)
     self.players = self.game.num_players()
+    self.history = self.create_history()
+
+  def create_history(self):
+    df = pd.DataFrame(columns=['player{}'.format(i) for i in range(self.players)])
+    ip.embed()
 
   def reset(self):
     r"""Resets the environment for a new game.
@@ -375,6 +382,16 @@ class HanabiEnv(Environment):
     player_observations = [self._extract_dict_from_backend(
         player_id, self.state.observation(player_id))
         for player_id in range(self.players)]  # pylint: disable=bad-continuation
+    
+
+    ##### WORK IN PROGRESS
+    # APPEND HISTORY TO THIS
+    print("Inside _make_observation_all_players()") 
+    ip.embed()
+
+
+
+
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
     return obs
