@@ -20,7 +20,6 @@ import pyhanabi
 from pyhanabi import color_char_to_idx
 
 # Libraries for keeping a history of actions
-from collections import deque
 import IPython as ip
 
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
