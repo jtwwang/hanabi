@@ -117,10 +117,12 @@ class policy_pred(object):
         """
         function to load the saved model
         """
+        model_path = os.path.join(self.path, model_name)
+
         try:
-            self.model = load_model(os.path.join(self.path, model_name))
+            self.model = load_model(model_path)
         except:
-            print("Create new model")
+            print("Create new model.")
 
     def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
         """

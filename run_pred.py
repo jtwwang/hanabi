@@ -16,11 +16,13 @@ import sys
 from predictors.conv_pred import conv_pred
 from predictors.dense_pred import dense_pred
 from predictors.lstm_pred import lstm_pred
+from predictors.multihead_pred import multihead_pred
 
 model_dict = {
     "lstm": lstm_pred,
     "dense": dense_pred,
-    "conv": conv_pred
+    "conv": conv_pred,
+    "multihead": multihead_pred
 }
 
 if __name__ == "__main__":
