@@ -19,6 +19,10 @@ from __future__ import division
 import pyhanabi
 from pyhanabi import color_char_to_idx
 
+# Libraries for keeping a history of actions
+from collections import deque
+import IPython as ip
+
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
 
 #-------------------------------------------------------------------------------
@@ -106,6 +110,61 @@ class HanabiEnv(Environment):
     self.observation_encoder = pyhanabi.ObservationEncoder(
         self.game, pyhanabi.ObservationEncoderType.CANONICAL)
     self.players = self.game.num_players()
+    self.hist = self.init_hist()
+
+  # HISTORY FUNCTIONS
+  def init_hist(self):
+    """ Creates an empty nested array the size of #players.
+
+    """
+
+    hist = [[] for player in range(self.players)]
+    return hist
+
+  def hist_append(self, action_type, card_index=None, color=None, rank=None, target_offset=None):
+
+    current_player = 0 #TODO: Detect
+    obs = self._make_observation_all_players()
+    current_player = obs['player_observations'][0]['current_player']
+    self_obs = obs['player_observations'][current_player]
+
+    action = {}
+    if action_type == 'PLAY':
+      action['action_type'] = 'PLAY'
+      action['card_index'] = card_index
+    elif action_type == 'DISCARD':
+      action['action_type'] = 'DISCARD'
+      action['card_index'] = card_index
+    elif action_type == 'REVEAL_COLOR':
+      action['action_type'] = 'REVEAL_COLOR'
+      action['color'] = color
+      action['target_offset'] = target_offset
+      # Find indices affected
+      affected_indices = []
+      target_hand = self_obs['observed_hands'][target_offset]
+      for index, card in enumerate(target_hand):
+        if color_char_to_idx(card['color']) == color:
+          affected_indices.append(index)
+      action['indices_affected'] = affected_indices
+    elif action_type == 'REVEAL_RANK':
+      action['action_type'] = 'REVEAL_RANK'
+      action['rank'] = rank
+      action['target_offset'] = target_offset
+      # Find indices affected
+      affected_indices = []
+      target_hand = self_obs['observed_hands'][target_offset]
+      for index, card in enumerate(target_hand):
+        if card['rank'] == rank:
+          affected_indices.append(index)
+      action['indices_affected'] = affected_indices
+    
+    self.hist[current_player].append(action)
+    #ip.embed()
+    # TODO: RECORD OTHER INFO AS DESCRIBED IN IPAD. NEEDS FUTURE OBSERVATION.
+
+
+  # END HISTORY FUNCTIONS
+
 
   def reset(self):
     r"""Resets the environment for a new game.
@@ -472,20 +531,24 @@ class HanabiEnv(Environment):
     if action_type == "PLAY":
       card_index = action["card_index"]
       move = pyhanabi.HanabiMove.get_play_move(card_index=card_index)
+      self.hist_append("PLAY", card_index=card_index)
     elif action_type == "DISCARD":
       card_index = action["card_index"]
       move = pyhanabi.HanabiMove.get_discard_move(card_index=card_index)
+      self.hist_append("DISCARD", card_index=card_index)
     elif action_type == "REVEAL_RANK":
       target_offset = action["target_offset"]
       rank = action["rank"]
       move = pyhanabi.HanabiMove.get_reveal_rank_move(
           target_offset=target_offset, rank=rank)
+      self.hist_append("REVEAL_RANK", target_offset=target_offset, rank=rank)
     elif action_type == "REVEAL_COLOR":
       target_offset = action["target_offset"]
       assert isinstance(action["color"], str)
       color = color_char_to_idx(action["color"])
       move = pyhanabi.HanabiMove.get_reveal_color_move(
           target_offset=target_offset, color=color)
+      self.hist_append("REVEAL_COLOR", target_offset=target_offset, color=color)
     else:
       raise ValueError("Unknown action_type: {}".format(action_type))
 
