@@ -131,6 +131,10 @@ class multihead_pred(policy_pred):
 
         # Define the loss
         loss = self.loss(self.model.y_pred, self.model.y)
+
+        with tf.name_scope('summaries'):
+            tf.summary.scalar('loss', loss)
+        merged = tf.summary.merge_all()
         
         # Create an optimizer with the desired parameters
         variables = self.model.var_list
@@ -149,15 +153,15 @@ class multihead_pred(policy_pred):
                 except ValueError:
                     print("Create new model.")
 
-            writer = FileWriter("tmp/log/", sess.graph)
+            writer = FileWriter(os.path.join(self.path,"logs/"), sess.graph)
 
             sess.run(init_model) # initialize model
             sess.run(init_global) # initialize all other variables
             for e in range(epochs):
-                loss_p, _ = sess.run([loss, opt_op], feed_dict={
+                summary, _ = sess.run([merged, opt_op], feed_dict={
                                             self.model.x: self.X_train,
                                             self.model.y: self.y_train})
-                print(loss_p)
+                writer.add_summary(summary, e)
             self.saver.save(sess, self.model_path)
             writer.close()
             
