@@ -128,6 +128,12 @@ class HanabiEnv(Environment):
     current_player = obs['player_observations'][0]['current_player']
     self_obs = obs['player_observations'][current_player]
 
+    # USING Pyhanabi:
+    # Pyhanabi seems to be a player off for some reason
+    # obs_pyhanabi = self.state.observation(current_player)
+    # action_pyhanabi = obs_pyhanabi.last_moves()
+    # ip.embed()
+
     action = {}
     if action_type == 'PLAY':
       action['action_type'] = 'PLAY'
@@ -436,6 +442,7 @@ class HanabiEnv(Environment):
         for player_id in range(self.players)]  # pylint: disable=bad-continuation
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
+    obs["action_hist"] = self.hist
     return obs
 
   def _extract_dict_from_backend(self, player_id, observation):
@@ -475,7 +482,6 @@ class HanabiEnv(Environment):
     obs_dict["discard_pile"] = [
         card.to_dict() for card in observation.discard_pile()
     ]
-
     # Return hints received.
     obs_dict["card_knowledge"] = []
     for player_hints in observation.card_knowledge():
