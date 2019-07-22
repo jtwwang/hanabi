@@ -2,7 +2,7 @@
 
 This is a research project directed by Lorenzo Mambretti and Justin Wang, with the contributions of Daniel Loran, Aron Sarmasi and Victoria Salova.
 
-We provide a set of scripts, agents, and models that are used in the attempt to solve the ad-hoc challenge purposed by Nolan Bard et al. in the paper [The Hanabi Challenge: A New Frontier for AI Research](
+We provide a set of scripts, agents, and models that are used in the attempt to solve the ad-hoc challenge proposed by Nolan Bard et al. in the paper [The Hanabi Challenge: A New Frontier for AI Research](
 https://arxiv.org/abs/1902.00506). These scripts are built on top of the hanabi\_learning\_environment provided by Google Deepmind.
 
 If you use this code for your research, please cite:

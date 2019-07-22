@@ -18,6 +18,10 @@
 # This file is a fork of the original Dopamine code incorporating changes for
 # the multiplayer setting and the Hanabi Learning Environment.
 #
+# This file has been edited and it differs from the file provided by Deepmind
+# in the Hanabi Learning Environment. All modifications to this file have been
+# made by Lorenzo Mambretti and Justin Wang.
+#
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
