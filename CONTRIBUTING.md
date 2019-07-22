@@ -14,6 +14,7 @@ just a few small guidelines you need to follow.
 [Style Guide](#style-guide)
 * [Git Commit Messages](#git-commit-messages)
 * [Python Documentation](#python-documentation)
+* [License Update](#license-update)
 
 ## What should I know before I get started?
 
@@ -55,5 +56,5 @@ If you wrote a patch that fixes bugs, a cosmetic improvement, or added a new fea
 * Write the arguments needed (if any) and their data type for each new function
 * Write the return variables (if any) and their data type for each new function
 
-### License update
+### License Update
 If you modify one of the files that was natively provided by Deepmind in their Hanabi Learning Environment, please specify that you edited the file. Such files can be recognized by the google copyright mark at the top of the file.
