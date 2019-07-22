@@ -83,7 +83,7 @@ There are several flags that you can currently use:
 Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors.
 
 ## Experience
-We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent` and `SecondAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
+We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent`, `SecondAgent` and `ProbabilisticAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
 
 The experience is managed by the class Experience, that is called during the simulations in `run_simulations.py` to save the observations, moves, and rewards. We call again the class in `run_pred.py` to access the experience memory.
 
