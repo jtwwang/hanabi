@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# This file has been edited and it differs from the file provided by Deepmind
+# in the Hanabi Learning Environment. All modifications to this file have been
+# made by Lorenzo Mambretti and Justin Wang.
+
 """RL environment for Hanabi, using an API similar to OpenAI Gym."""
 
 from __future__ import absolute_import
@@ -19,8 +24,7 @@ from __future__ import division
 import pyhanabi
 from pyhanabi import color_char_to_idx
 
-# Libraries for keeping a history of actions
-import IPython as ip
+
 
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
 
@@ -121,13 +125,12 @@ class HanabiEnv(Environment):
     return hist
 
   def hist_append(self, action_type, card_index=None, color=None, rank=None, target_offset=None):
-
-    current_player = 0 #TODO: Detect
     obs = self._make_observation_all_players()
     current_player = obs['player_observations'][0]['current_player']
     self_obs = obs['player_observations'][current_player]
 
-    # USING Pyhanabi:
+    """ Using Pyhanabi, the current_player seems to be off. """
+    # import IPython as ip
     # Pyhanabi seems to be a player off for some reason
     # obs_pyhanabi = self.state.observation(current_player)
     # action_pyhanabi = obs_pyhanabi.last_moves()
@@ -164,9 +167,6 @@ class HanabiEnv(Environment):
       action['indices_affected'] = affected_indices
     
     self.hist[current_player].append(action)
-    #ip.embed()
-    # TODO: RECORD OTHER INFO AS DESCRIBED IN IPAD. NEEDS FUTURE OBSERVATION.
-
 
   # END HISTORY FUNCTIONS
 
