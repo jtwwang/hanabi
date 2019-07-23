@@ -17,7 +17,7 @@ import os
 import numpy as np
 import tensorflow as tf
 from tensorflow.compat.v1.train import AdamOptimizer, Saver
-from tensorflow.compat.v1 import variable_scope, get_variable, placeholder, Session, reset_default_graph
+from tensorflow.compat.v1 import variable_scope, get_variable, placeholder, reset_default_graph
 from tensorflow.compat.v1 import global_variables_initializer, variables_initializer
 from tensorflow.compat.v1.losses import softmax_cross_entropy
 from tensorflow.compat.v1.layers import Flatten
@@ -52,9 +52,6 @@ class MultiHeadModel(object):
         bias_shape = kernel_shape[-1]
         biases = get_variable("biases", [bias_shape],
                 initializer=tf.constant_initializer(0.0))
-
-        self.var_list.append(weights)
-        self.var_list.append(biases)
 
         conv = tf.nn.conv1d(inputs, weights,
                 stride=stride, padding='SAME')
@@ -92,7 +89,6 @@ class multihead_pred(policy_pred):
         super(multihead_pred, self).__init__(agent_class, self.model_type)
 
         reset_default_graph()
-        self.model_path = os.path.join(self.path, "model.ckpt")
 
     def create_model(self):
         """ Create the model of the network in separate class """
@@ -128,6 +124,12 @@ class multihead_pred(policy_pred):
             batch_size: (int) size of the mini-batch that we're using
             learning rate: (float) the relative size of the training step
         """
+        
+        # Batch Dataset
+        #dataset = self.dataset.batch(batch_size)
+        #dataset = dataset.repeat(epochs)
+        #iterator = dataset.make_one_shot_iterator()
+        #next_example, next_label = iterator.get_next()
 
         # Define the loss
         loss = self.loss(self.model.y_pred, self.model.y)
@@ -139,32 +141,29 @@ class multihead_pred(policy_pred):
         # Create an optimizer with the desired parameters
         variables = self.model.var_list
         opt = AdamOptimizer(learning_rate = learning_rate)
-        opt_op = opt.minimize(loss, var_list = self.model.var_list)
+        opt_op = opt.minimize(loss)
 
-        # Add an op to initialize the variables
-        init_model = variables_initializer(self.model.var_list)
-        init_global = global_variables_initializer()
+        saver_hook = tf.train.CheckpointSaverHook(
+                checkpoint_dir = self.path,
+                save_steps = 100)
+        summary_hook = tf.train.SummarySaverHook(
+                save_steps = 100,
+                output_dir = self.path,
+                summary_op = merged)
+        stop_hook = tf.train.StopAtStepHook(last_step = 100)
 
-        with Session() as sess:
+        hooks = [saver_hook, summary_hook, stop_hook]
 
-            if (self.load):
-                try:
-                    self.saver.restore(sess, self.model_path)
-                except ValueError:
-                    print("Create new model.")
+        tf.train.create_global_step()
 
-            writer = FileWriter(os.path.join(self.path,"logs/"), sess.graph)
-
-            sess.run(init_model) # initialize model
-            sess.run(init_global) # initialize all other variables
-            for e in range(epochs):
-                summary, _ = sess.run([merged, opt_op], feed_dict={
+        with tf.train.MonitoredTrainingSession(hooks=hooks) as sess:
+            print("Start training session")
+            
+            while not sess.should_stop():
+                summ, _, _ = sess.run([loss, merged, opt_op], feed_dict={
                                             self.model.x: self.X_train,
                                             self.model.y: self.y_train})
-                writer.add_summary(summary, e)
-            self.saver.save(sess, self.model_path)
-            writer.close()
-            
+                print(summ)
 
     def extract_data(self, agent_class, val_split=0.3,
                      games=-1, balance=False):
@@ -187,6 +186,8 @@ class multihead_pred(policy_pred):
 
         self.input_dim = self.X_train.shape[1]
         self.action_space = self.y_train.shape[1]
+
+        self.dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
 
         # Create the model
         self.model = self.create_model()
