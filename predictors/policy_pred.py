@@ -17,11 +17,27 @@ from data_pipeline.util import one_hot, split_dataset
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.models import load_model
 from tensorflow.keras import optimizers
+from tensorflow.keras.utils import Sequence
 import os
+import math
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+class HanabiSequence(Sequence):
+
+    def __init__(self, x_set, y_set, batch_size):
+        self.x, self.y = x_set, y_set
+        self.batch_size = batch_size
+
+    def __len__(self):
+        return math.ceil(self.x.shape[0] / self.batch_size)
+
+    def __getitem__(self, idx):
+        batch_x = self.x[idx * self.batch_size:(idx + 1) * self.batch_size]
+        batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
+
+        return batch_x, batch_y
 
 class policy_pred(object):
     def __init__(self, agent_class, model_type=None):
@@ -88,13 +104,14 @@ class policy_pred(object):
 
         tensorboard = TensorBoard(log_dir=self.path)
 
-        self.model.fit(
-            self.X_train,
-            self.y_train,
-            batch_size=batch_size,
+        train_sequence = HanabiSequence(self.X_train, self.y_train, batch_size)
+        test_sequence = HanabiSequence(self.X_test, self.y_test, batch_size)
+
+        self.model.fit_generator(
+            train_sequence,
             epochs=epochs,
             verbose=2,
-            validation_data=(self.X_test, self.y_test),
+            validation_data=test_sequence,
             callbacks=[tensorboard],
             shuffle=True
         )
@@ -132,7 +149,7 @@ class policy_pred(object):
 
         try:
             self.model = load_model(model_path)
-        except:
+        except IOError:
             print("Create new model.")
 
     def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
