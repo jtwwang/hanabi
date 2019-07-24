@@ -93,9 +93,13 @@ class lstm_pred(policy_pred):
 
     def separate_player_obs(self, X, y, players=2):
         """ Seperates observations into what each player sees
+        args:
+            X: samples
+            y: labels
+            players (int): number of players
         Returns:
-                X_sep_all (np arr): obs belonging to a single agent
-                y_sep_all (np arr): labels belonging to a single agent
+            X_sep_all (np arr): obs belonging to a single agent
+            y_sep_all (np arr): labels belonging to a single agent
         """
         X_sep_all = []
         y_sep_all = []
@@ -110,7 +114,6 @@ class lstm_pred(policy_pred):
         while True:
             X_sep_all, y_sep_all = self.separate_player_obs(X[i], y[i])
             for X_sep, y_sep in zip(X_sep_all, y_sep_all):
-                #print("X_sep: {}".format(X_sep.shape))
                 X_train = self.reshape_data(X_sep)
                 y_train = self.reshape_data(y_sep)
                 yield X_train, y_train
@@ -142,7 +145,7 @@ class lstm_pred(policy_pred):
             amsgrad=False)
 
         self.create_model()
-        self.model.compile(loss='cosine_proximity',
+        self.model.compile(loss='categorical_crossentropy',
                            optimizer=adam, metrics=['accuracy'])
 
         # Create checkpoint directory
@@ -162,6 +165,7 @@ class lstm_pred(policy_pred):
             self.generate(self.X_train, self.y_train),
             steps_per_epoch=self.X_train.shape[0]/batch_size,
             epochs=epochs,
+            verbose=2,
             validation_data=self.generate(self.X_test, self.y_test),
             validation_steps=self.X_test.shape[0]/batch_size,
             callbacks=[checkpoints, tensorboard])
