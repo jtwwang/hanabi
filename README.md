@@ -11,6 +11,19 @@ A cooperative agent for Hanabi <br>
 [Mambretti Lorenzo](https://github.com/LorenzoM1997), [Wang Justin](https://github.com/jtwwang). July 2019.
 
 ## Getting started
+### Install git lfs
+Before cloning the repository, you need to install **git lfs**. This will allows you to download some large files that we provide correctly. Specifically, you will have access to the replay memory for the provided agents. If you do not need this, skip this step and proceed with next section
+
+```
+sudo apt-get install git-lfs
+git lfs install
+```
+For more instructions, please refer to [https://github.com/git-lfs/git-lfs/wiki/Installation](https://github.com/git-lfs/git-lfs/wiki/Installation)
+### Clone the repository
+```
+git clone https://github.com/jtwwang/hanabi.git
+```
+### Install dependencies
 ```
 sudo apt-get install g++         # if you don't already have a CXX compiler
 sudo apt-get install cmake       # if you don't already have CMake
@@ -23,7 +36,7 @@ make
 python2 game_example.py           # Plays a game using the lower level interface
 ```
 
-## Running our scripts
+## Usage
 
 ### Data collection and evaluation agents
 To run an arbitrary number of games between some of the existent agents and collect data you can use the script
