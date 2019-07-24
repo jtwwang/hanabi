@@ -13,17 +13,7 @@
 import getopt
 import sys
 
-from predictors.conv_pred import conv_pred
-from predictors.dense_pred import dense_pred
-from predictors.lstm_pred import lstm_pred
-from predictors.multihead_pred import multihead_pred
-
-model_dict = {
-    "lstm": lstm_pred,
-    "dense": dense_pred,
-    "conv": conv_pred,
-    "multihead": multihead_pred
-}
+from predictors.load_predictors import load_predictor
 
 if __name__ == "__main__":
     flags = {'model_class': "conv",
@@ -59,9 +49,8 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
     agent_class = flags['agent_class']
-    model_class = model_dict[flags['model_class']]
 
-    pp = model_class(agent_class)
+    pp = load_predictor(flags['model_class'])(agent_class)
     pp.extract_data(agent_class,
                     val_split=flags['val_split'],
                     games=flags['games'],
