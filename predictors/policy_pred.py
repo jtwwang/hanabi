@@ -14,19 +14,13 @@ from __future__ import print_function
 from data_pipeline.experience import Experience
 from data_pipeline.balance_data import balance_data
 from data_pipeline.util import one_hot, split_dataset
-from tensorflow.keras.callbacks import Callback, TensorBoard
+from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.models import load_model
 from tensorflow.keras import optimizers
 import os
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-
-
-class EvalAcc(Callback):
-    def on_epoch_end(self, epoch, logs={}):
-        print("acc: {} - val_acc: {} - loss: {} - eval_loss: {}".format(
-            logs.get('acc'), logs.get('val_acc'), logs.get('loss'), logs.get('val_loss')))
 
 
 class policy_pred(object):

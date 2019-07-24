@@ -11,6 +11,11 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
+# This file has been edited and it differs from the file provided by Deepmind
+# in the Hanabi Learning Environment. All modifications to this file have been
+# made by Lorenzo Mambretti and Justin Wang.
+
 """RL environment for Hanabi, using an API similar to OpenAI Gym."""
 
 from __future__ import absolute_import
@@ -18,6 +23,8 @@ from __future__ import division
 
 import pyhanabi
 from pyhanabi import color_char_to_idx
+
+
 
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
 
@@ -106,6 +113,63 @@ class HanabiEnv(Environment):
     self.observation_encoder = pyhanabi.ObservationEncoder(
         self.game, pyhanabi.ObservationEncoderType.CANONICAL)
     self.players = self.game.num_players()
+    self.hist = self.init_hist()
+
+  # HISTORY FUNCTIONS
+  def init_hist(self):
+    """ Creates an empty nested array the size of #players.
+
+    """
+
+    hist = [[] for player in range(self.players)]
+    return hist
+
+  def hist_append(self, action_type, card_index=None, color=None, rank=None, target_offset=None):
+    obs = self._make_observation_all_players()
+    current_player = obs['player_observations'][0]['current_player']
+    self_obs = obs['player_observations'][current_player]
+
+    """ Using Pyhanabi, the current_player seems to be off. """
+    # import IPython as ip
+    # Pyhanabi seems to be a player off for some reason
+    # obs_pyhanabi = self.state.observation(current_player)
+    # action_pyhanabi = obs_pyhanabi.last_moves()
+    # ip.embed()
+
+    action = {}
+    if action_type == 'PLAY':
+      action['action_type'] = 'PLAY'
+      action['card_index'] = card_index
+    elif action_type == 'DISCARD':
+      action['action_type'] = 'DISCARD'
+      action['card_index'] = card_index
+    elif action_type == 'REVEAL_COLOR':
+      action['action_type'] = 'REVEAL_COLOR'
+      action['color'] = color
+      action['target_offset'] = target_offset
+      # Find indices affected
+      affected_indices = []
+      target_hand = self_obs['observed_hands'][target_offset]
+      for index, card in enumerate(target_hand):
+        if color_char_to_idx(card['color']) == color:
+          affected_indices.append(index)
+      action['indices_affected'] = affected_indices
+    elif action_type == 'REVEAL_RANK':
+      action['action_type'] = 'REVEAL_RANK'
+      action['rank'] = rank
+      action['target_offset'] = target_offset
+      # Find indices affected
+      affected_indices = []
+      target_hand = self_obs['observed_hands'][target_offset]
+      for index, card in enumerate(target_hand):
+        if card['rank'] == rank:
+          affected_indices.append(index)
+      action['indices_affected'] = affected_indices
+    
+    self.hist[current_player].append(action)
+
+  # END HISTORY FUNCTIONS
+
 
   def reset(self):
     r"""Resets the environment for a new game.
@@ -377,6 +441,7 @@ class HanabiEnv(Environment):
         for player_id in range(self.players)]  # pylint: disable=bad-continuation
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
+    obs["action_hist"] = self.hist
     return obs
 
   def _extract_dict_from_backend(self, player_id, observation):
@@ -416,7 +481,6 @@ class HanabiEnv(Environment):
     obs_dict["discard_pile"] = [
         card.to_dict() for card in observation.discard_pile()
     ]
-
     # Return hints received.
     obs_dict["card_knowledge"] = []
     for player_hints in observation.card_knowledge():
@@ -472,20 +536,24 @@ class HanabiEnv(Environment):
     if action_type == "PLAY":
       card_index = action["card_index"]
       move = pyhanabi.HanabiMove.get_play_move(card_index=card_index)
+      self.hist_append("PLAY", card_index=card_index)
     elif action_type == "DISCARD":
       card_index = action["card_index"]
       move = pyhanabi.HanabiMove.get_discard_move(card_index=card_index)
+      self.hist_append("DISCARD", card_index=card_index)
     elif action_type == "REVEAL_RANK":
       target_offset = action["target_offset"]
       rank = action["rank"]
       move = pyhanabi.HanabiMove.get_reveal_rank_move(
           target_offset=target_offset, rank=rank)
+      self.hist_append("REVEAL_RANK", target_offset=target_offset, rank=rank)
     elif action_type == "REVEAL_COLOR":
       target_offset = action["target_offset"]
       assert isinstance(action["color"], str)
       color = color_char_to_idx(action["color"])
       move = pyhanabi.HanabiMove.get_reveal_color_move(
           target_offset=target_offset, color=color)
+      self.hist_append("REVEAL_COLOR", target_offset=target_offset, color=color)
     else:
       raise ValueError("Unknown action_type: {}".format(action_type))
 

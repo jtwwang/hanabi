@@ -11,6 +11,19 @@ A cooperative agent for Hanabi <br>
 [Mambretti Lorenzo](https://github.com/LorenzoM1997), [Wang Justin](https://github.com/jtwwang). July 2019.
 
 ## Getting started
+### Install git lfs
+Before cloning the repository, you need to install **git lfs**. This will allows you to download some large files that we provide correctly. Specifically, you will have access to the replay memory for the provided agents. If you do not need this, skip this step and proceed with next section
+
+```
+sudo apt-get install git-lfs
+git lfs install
+```
+For more instructions, please refer to [https://github.com/git-lfs/git-lfs/wiki/Installation](https://github.com/git-lfs/git-lfs/wiki/Installation)
+### Clone the repository
+```
+git clone https://github.com/jtwwang/hanabi.git
+```
+### Install dependencies
 ```
 sudo apt-get install g++         # if you don't already have a CXX compiler
 sudo apt-get install cmake       # if you don't already have CMake
@@ -20,15 +33,15 @@ pip install tensorflow           # if you don't already have tensorflow
 pip install matplotlib           # if you don't already have matplotlib
 cmake .
 make
-python game_example.py           # Plays a game using the lower level interface
+python2 game_example.py           # Plays a game using the lower level interface
 ```
 
-## Running our scripts
+## Usage
 
 ### Data collection and evaluation agents
 To run an arbitrary number of games between some of the existent agents and collect data you can use the script
 ```
-python run_simulations.py --agent_class <nameAgent>
+python2 run_simulations.py --agent_class <nameAgent>
 ```
 currently supports 9 classes:
 - `MCAgent`
@@ -62,7 +75,7 @@ The script will print out to screen an average score and average number of steps
 ### Policy prediction
 You can train a neural network to predict the policy by using
 ```
-python run_pred.py
+python2 run_pred.py
 ```
 There are several flags that you can currently use:
 ```
@@ -83,7 +96,7 @@ There are several flags that you can currently use:
 Make sure there is training data in the folder `experience_replay` before starting training, or you might incurr into errors.
 
 ## Experience
-We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent` and `SecondAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
+We provide 20k of experience for the agents `RainbowAgent`, `SimpleAgent`, `SecondAgent` and `ProbabilisticAgent`. They can be immediately used to train a predictor. All files are saved in .npy format and thus can be opened with numpy if necessary.
 
 The experience is managed by the class Experience, that is called during the simulations in `run_simulations.py` to save the observations, moves, and rewards. We call again the class in `run_pred.py` to access the experience memory.
 
@@ -92,7 +105,7 @@ We provide a script to train agents based on genetic algorithm to evolve CNN to 
 The development of this process is still undergoing development.
 
 ```
-python neuroEvo_train.py
+python2 neuroEvo_train.py
 ```
 You can use the following flags:
 ```
