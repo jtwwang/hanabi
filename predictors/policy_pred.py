@@ -25,11 +25,13 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 class policy_pred(object):
     def __init__(self, agent_class, model_type=None):
-        self.X = None  # nn input
-        self.y = None  # nn output
+        """
+        args:
+            agent_class (string): the class of agents that we are predicting
+            model_type (string): the string correspondent to the type of model
+        """
         self.input_dim = None
         self.action_space = None
-
         self.model = None
 
         # Create the directory for this particular model
@@ -43,7 +45,12 @@ class policy_pred(object):
         self.checkpoint_path = os.path.join(self.path, "checkpoints")
 
     def make_dir(self, path):
-        # Create the directory @path if it doesn't exist already
+        """ 
+        Create the directory @path if it doesn't exist already
+        
+        args:
+            path (string)
+        """
         if not os.path.exists(path):
             try:
                 os.makedirs(path)
@@ -62,7 +69,10 @@ class policy_pred(object):
     def fit(self, epochs=100, batch_size=64, learning_rate=0.01):
         """
         args:
-                val_split(float, between 0 and 1): Fraction of the data to be used as validation data
+            epochs (int): the number of epochs
+            batch_size (int): the size of the batch in training and testing
+            learning_rate (float): the relative size of the step taken in
+                                   the steepest descent direction
         """
         adam = optimizers.Adam(
             lr=learning_rate,
@@ -83,6 +93,7 @@ class policy_pred(object):
             self.y_train,
             batch_size=batch_size,
             epochs=epochs,
+            verbose=2,
             validation_data=(self.X_test, self.y_test),
             callbacks=[tensorboard],
             shuffle=True
@@ -102,14 +113,20 @@ class policy_pred(object):
         return pred
 
     def save(self, model_name="predictor.h5"):
-
+        """
+        args:
+            model_name (string): the name to give to the predictor
+        """
         self.make_dir(self.path)
         model_path = os.path.join(self.path, model_name)
         self.model.save(model_path)
 
     def load(self, model_name="predictor.h5"):
         """
-        function to load the saved model
+        Function to load the saved model
+
+        args:
+            model_name (string): the name of the predictor to load
         """
         model_path = os.path.join(self.path, model_name)
 
@@ -149,9 +166,9 @@ class policy_pred(object):
 
     def define_model_dim(self, input_dim, action_space):
         """
-        Args:
-            input_dim (int)
-            action_space (int)
+        args:
+            input_dim (int): the size of the input
+            action_space (int): the size of the output
         """
         self.input_dim = input_dim
         self.action_space = action_space
