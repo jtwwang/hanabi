@@ -35,16 +35,24 @@ class MultiHeadModel(object):
 
         with variable_scope("conv1"):
             relu1 = self.conv_relu(self.x, [5,1,16], stride = 2)
+            maxp1 = tf.nn.max_pool1d(relu1, 3, 2, 'SAME')
         with variable_scope("conv2"):
-            relu2 = self.conv_relu(relu1, [3,16,32], stride = 2)
+            relu2 = self.conv_relu(maxp1, [3,16,32], stride = 2)
+            maxp2 = tf.nn.max_pool1d(relu2, 2, 2, 'SAME')
         with variable_scope("conv3"):
-            relu3 = self.conv_relu(relu2, [3,32,64], stride = 2)
+            relu3 = self.conv_relu(maxp2, [3,32,64], stride = 2)
+            maxp3 = tf.nn.max_pool1d(relu3, 2, 2, 'SAME')
         with variable_scope("conv4"):
-            relu4 = self.conv_relu(relu3, [3,64,64], stride = 2)
+            relu4 = self.conv_relu(maxp3, [3,64,64], stride = 2)
+            maxp4 = tf.nn.max_pool1d(relu4, 2, 2, 'SAME')
         with variable_scope("flatten"):
             flattened = Flatten()(relu4)
-        with variable_scope("dense"):
-            self.y_pred = self.dense(flattened, self.action_space)
+        with variable_scope("dense1"):
+            dense1 = self.dense(flattened, 64)
+            relu5 = tf.nn.relu(dense1)
+            drop1 = tf.nn.dropout(relu5, rate = 0.2)
+        with variable_scope("dense2"):
+            self.y_pred = self.dense(drop1, self.action_space)
 
     def conv_relu(self, inputs, kernel_shape, stride):
         # Create variable named "weights"
@@ -57,7 +65,15 @@ class MultiHeadModel(object):
 
         conv = tf.nn.conv1d(inputs, weights,
                 stride=stride, padding='SAME')
-        return tf.nn.relu(conv + biases)
+
+        # batch normalization
+        mean, variance = tf.nn.moments(conv, axes=[0])
+        scale = tf.Variable(tf.ones([bias_shape]), name = "scale")
+        beta = tf.Variable(tf.zeros([bias_shape]), name = "beta")
+        epsilon = 1e-3
+        bn = tf.nn.batch_normalization(conv, mean, variance, scale, beta, epsilon)
+        
+        return tf.nn.relu(bn + biases)
 
     def dense(self, inputs, units):
         # Create vriable named "weights"
@@ -67,10 +83,6 @@ class MultiHeadModel(object):
         # Create variable named "baises"
         biases = get_variable("biases", [units],
                 initializer=tf.constant_initializer(0.0))
-
-        self.var_list.append(weights)
-        self.var_list.append(biases)
-
         y = tf.linalg.matmul(inputs,weights) + biases
         return y
 
@@ -95,10 +107,6 @@ class multihead_pred(policy_pred):
     def create_model(self):
         """ Create the model of the network in separate class """
         self.model = MultiHeadModel(self.action_space)
-
-        # Add ops to save and restore all the variables
-        self.saver = Saver(self.model.var_list)
-
         return self.model
 
     def load(self, model_path):
@@ -158,7 +166,7 @@ class multihead_pred(policy_pred):
 
         with tf.train.MonitoredTrainingSession(hooks=hooks) as sess:
             for e in range(epochs):
-                print("Epoch %i/%i" %(e, epochs))
+                print("Epoch %i/%i" %(e + 1, epochs))
                 start_time = time.time()
                 for i in range(steps_per_epoch):
                     # divide the data in batches
