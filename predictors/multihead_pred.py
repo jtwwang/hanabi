@@ -22,6 +22,8 @@ from tensorflow.compat.v1 import global_variables_initializer, variables_initial
 from tensorflow.compat.v1.losses import softmax_cross_entropy
 from tensorflow.compat.v1.layers import Flatten
 from tensorflow.compat.v1.summary import FileWriter
+import math
+import time
 
 class MultiHeadModel(object):
     def __init__(self, action_space):
@@ -114,7 +116,7 @@ class multihead_pred(policy_pred):
         # Add an additional dimension for filters
         X = np.reshape(X_raw, (X_raw.shape[0], X_raw.shape[1], 1))
         return X
-
+    
     def fit(self, epochs=100, batch_size=64, learning_rate=0.01):
         """
         Train the model using the data that has been loaded
@@ -125,17 +127,16 @@ class multihead_pred(policy_pred):
             learning rate: (float) the relative size of the training step
         """
         
-        # Batch Dataset
-        #dataset = self.dataset.batch(batch_size)
-        #dataset = dataset.repeat(epochs)
-        #iterator = dataset.make_one_shot_iterator()
-        #next_example, next_label = iterator.get_next()
+        steps_per_epoch = int(math.ceil(self.X_train.shape[0]/batch_size))
 
-        # Define the loss
-        loss = self.loss(self.model.y_pred, self.model.y)
+        loss = self.loss(self.model.y_pred, self.model.y) # define the loss
+        
+        # define accuracy
+        accuracy, _ = tf.metrics.accuracy(self.model.y, self.model.y_pred)
 
         with tf.name_scope('summaries'):
             tf.summary.scalar('loss', loss)
+            tf.summary.scalar('accuracy', accuracy)
         merged = tf.summary.merge_all()
         
         # Create an optimizer with the desired parameters
@@ -143,27 +144,46 @@ class multihead_pred(policy_pred):
         opt = AdamOptimizer(learning_rate = learning_rate)
         opt_op = opt.minimize(loss)
 
+        # Create hooks for the session
         saver_hook = tf.train.CheckpointSaverHook(
                 checkpoint_dir = self.path,
-                save_steps = 100)
+                save_steps = 10 * steps_per_epoch)
         summary_hook = tf.train.SummarySaverHook(
-                save_steps = 100,
+                save_steps = steps_per_epoch,
                 output_dir = self.path,
                 summary_op = merged)
-        stop_hook = tf.train.StopAtStepHook(last_step = 100)
-
-        hooks = [saver_hook, summary_hook, stop_hook]
+        hooks = [saver_hook, summary_hook]
 
         tf.train.create_global_step()
 
         with tf.train.MonitoredTrainingSession(hooks=hooks) as sess:
-            print("Start training session")
-            
-            while not sess.should_stop():
-                summ, _, _ = sess.run([loss, merged, opt_op], feed_dict={
-                                            self.model.x: self.X_train,
-                                            self.model.y: self.y_train})
-                print(summ)
+            for e in range(epochs):
+                print("Epoch %i/%i" %(e, epochs))
+                start_time = time.time()
+                for i in range(steps_per_epoch):
+                    # divide the data in batches
+                    start = i * batch_size
+                    end = min(self.X_train.shape[0], (i + 1) * batch_size)
+                    batch_x = self.X_train[start:end]
+                    batch_y = self.y_train[start:end]
+
+                    # run one training step
+                    sess.run(opt_op, feed_dict={
+                        self.model.x: batch_x,
+                        self.model.y: batch_y})
+
+                # compute loss and accuracy for both training and test set
+                loss_train, acc_train = sess.run([loss, accuracy], feed_dict={
+                    self.model.x: self.X_train,
+                    self.model.y: self.y_train})
+                loss_test, acc_test = sess.run([loss, accuracy], feed_dict={
+                    self.model.x: self.X_test,
+                    self.model.y: self.y_test})
+
+                elapsed_time = time.time() - start_time # compute elapsed time
+                print("steps: %i - %i s -loss: %f - accuracy: %f - val_loss: %f - val_accuracy: %f" 
+                        %(steps_per_epoch, elapsed_time,
+                            loss_train, acc_train, loss_test, acc_test))
 
     def extract_data(self, agent_class, val_split=0.3,
                      games=-1, balance=False):
