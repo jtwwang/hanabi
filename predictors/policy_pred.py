@@ -112,7 +112,9 @@ class policy_pred(object):
             epochs=epochs,
             verbose=2,
             validation_data=test_sequence,
+            validation_freq=5,
             callbacks=[tensorboard],
+            workers = 0,
             shuffle=True
         )
 
