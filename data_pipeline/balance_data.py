@@ -10,7 +10,6 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
-from experience import Experience
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,11 +18,6 @@ def remove_duplicates(class_data):
     for k in class_data.keys():
         class_data[k] = np.unique(class_data[k], axis=0)
     return class_data
-
-
-def plot_classes(class_count):
-    plt.bar(list(class_count.keys()), class_count.values(), color='blue')
-    plt.show()
 
 
 def undersample(data, target):
@@ -126,12 +120,26 @@ def balance_data(examples, labels, randomize=True):
 
 
 def main():
-    exp = Experience('RainbowAgent',
+    from experience import Experience
+    from visualization import hist_classes, scatter_classes
+
+    class_count_list = []
+    agents = ['RainbowAgent',
+            'SimpleAgent',
+            'SecondAgent',
+            'ProbabilisticAgent']
+
+    for agent in agents:
+
+        exp = Experience(agent,
                      load=True)
-    labels, _, examples, _ = exp.load()
-    new_examples, new_labels = balance_data(examples, labels)
-    class_count, class_data = divide_and_count(examples, labels)
-    plot_classes(class_count)
+        labels, _, examples, _ = exp.load()
+        class_count, _ = divide_and_count(examples, labels)
+        class_count_list.append(class_count)
+
+    scatter_classes(class_count_list, agents)
+    
+    
 
 
 if __name__ == "__main__":
