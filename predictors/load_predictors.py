@@ -14,6 +14,8 @@ def load_predictor(model_class):
     """
     mediator function that allows to load only the required network
     to save memory and loading time
+    args:
+        model_class (string): the type of model that we need to load
     """
 
     if model_class == 'conv':
