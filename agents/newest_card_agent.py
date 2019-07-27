@@ -15,148 +15,146 @@ from collections import Counter
 
 
 class NewestCardAgent(Agent):
-	"""Agent that applies a simple heuristic."""
+    """Agent that applies a simple heuristic."""
 
-	def __init__(self, config, *args, **kwargs):
-		"""Initialize the agent."""
-		self.config = config
-		# Extract max info tokens or set default to 8.
-		self.max_information_tokens = config.get('information_tokens', 8)
+    def __init__(self, config, *args, **kwargs):
+        """Initialize the agent."""
+        self.config = config
+        # Extract max info tokens or set default to 8.
+        self.max_information_tokens = config.get('information_tokens', 8)
 
-	@staticmethod
-	def playable_card(card, fireworks):
-		"""A card is playable if it can be placed on the fireworks pile."""
-		return card['rank'] == fireworks[card['color']]
+    @staticmethod
+    def playable_card(card, fireworks):
+        """A card is playable if it can be placed on the fireworks pile."""
+        return card['rank'] == fireworks[card['color']]
 
-	# @staticmethod
-	# def playable_card(card, fireworks):
-	# 	"""A card is playable if it can be placed on the fireworks pile."""
-	# 	if card['color'] == None and card['rank'] != None:
-	# 		for color in colors:
-	# 			if fireworks[color] == card['rank']:
-	# 				continue
-	# 			else:
-	# 				return False
-				
-	# 		return True
-	# 	elif card['color'] == None or card['rank'] == None:
-	# 		return False
-	# 	else:
-	# 		return card['rank'] == fireworks[card['color']]
+    # @staticmethod
+    # def playable_card(card, fireworks):
+    # 	"""A card is playable if it can be placed on the fireworks pile."""
+    # 	if card['color'] == None and card['rank'] != None:
+    # 		for color in colors:
+    # 			if fireworks[color] == card['rank']:
+    # 				continue
+    # 			else:
+    # 				return False
 
-	def get_recent_actions(self, action_hist, current_player):
-		"""Returns actions since the current agent last played. 
-		   Does not include current player's last action.
+    # 		return True
+    # 	elif card['color'] == None or card['rank'] == None:
+    # 		return False
+    # 	else:
+    # 		return card['rank'] == fireworks[card['color']]
 
-		Args:
-			action_hist (list): Nested list of all actions taken.
-				Dimensions: (players, moves)
-			current_player (int): absolute player id.
+    def get_recent_actions(self, action_hist, current_player):
+        """Returns actions since the current agent last played. 
+           Does not include current player's last action.
 
-		Returns:
-			recent_actions (list): Actions since the current agent last played. 
-				Most recent move first.
-				Dimensions: (players, move)
-				Returns 'action_type'
-		
-		TODO: Make history indexing relative and not absolute?
-		(e.g. index 0 will be previous player always)
-		"""
-		recent_actions = []
-		players = self.config['players']
-		# Get other player id's, from most recent to least recent
-		other_players = []
-		for i in range(players-1):
-			other_players.append((current_player - i - 1)%players)
-		for player_id in other_players:
-			# Player_id is absolute, not relative.
-			player_moves = action_hist[player_id] # History of a single player's moves.
-			if len(player_moves) > 0:
-				recent_actions.append(player_moves[-1])
-			else:
-				recent_actions.append({'action_type': 'None'}) # Did not make a move
-		return recent_actions
+        Args:
+                action_hist (list): Nested list of all actions taken.
+                        Dimensions: (players, moves)
+                current_player (int): absolute player id.
 
-	def check_hint_target(self, action, i):
-		# Checks if @action is a hint and if recipient is current player
-		"""
-		Args:
-			action (dict): Action type, rank/color hinted, index targeted, player offset
-			i (int): Corresponds to a player id.
+        Returns:
+                recent_actions (list): Actions since the current agent last played. 
+                        Most recent move first.
+                        Dimensions: (players, move)
+                        Returns 'action_type'
 
-		Returns:
-			True if hint target is current player.
-		"""
-		if action['action_type'].startswith('REVEAL'):
-			if action['target_offset'] == i+1:
-				return True
-		return False
+        TODO: Make history indexing relative and not absolute?
+        (e.g. index 0 will be previous player always)
+        """
+        recent_actions = []
+        players = self.config['players']
+        # Get other player id's, from most recent to least recent
+        other_players = []
+        for i in range(players-1):
+            other_players.append((current_player - i - 1) % players)
+        for player_id in other_players:
+            # Player_id is absolute, not relative.
+            # History of a single player's moves.
+            player_moves = action_hist[player_id]
+            if len(player_moves) > 0:
+                recent_actions.append(player_moves[-1])
+            else:
+                # Did not make a move
+                recent_actions.append({'action_type': 'None'})
+        return recent_actions
 
-	def act(self, observation):
-		"""Act based on an observation."""
-		if observation['current_player_offset'] != 0:
-			return None
+    def check_hint_target(self, action, i):
+        # Checks if @action is a hint and if recipient is current player
+        """
+        Args:
+                action (dict): Action type, rank/color hinted, index targeted, player offset
+                i (int): Corresponds to a player id.
 
+        Returns:
+                True if hint target is current player.
+        """
+        if action['action_type'].startswith('REVEAL'):
+            if action['target_offset'] == i+1:
+                return True
+        return False
 
-		# Check if there are any pending hints and play the card corresponding to
-		# the hint.
+    def act(self, observation):
+        """Act based on an observation."""
+        if observation['current_player_offset'] != 0:
+            return None
 
-		### DEBUGGING
-		# print("\nObserved Hands\n")
-		# print(observation['observed_hands'][1])
-		# print('\nCard Knowledge:\n')
-		# print(observation['card_knowledge'])
-		#ip.embed()
+        # Check if there are any pending hints and play the card corresponding to
+        # the hint.
 
+        # DEBUGGING
+        # print("\nObserved Hands\n")
+        # print(observation['observed_hands'][1])
+        # print('\nCard Knowledge:\n')
+        # print(observation['card_knowledge'])
+        # ip.embed()
 
-		# Play the newest card affected by a hint if a new hint was received since last turn
-		action_hist = observation['action_hist']
-		recent_actions = self.get_recent_actions(action_hist, observation['current_player'])
-		#ip.embed()
-		for i, action in enumerate(recent_actions):
-			if self.check_hint_target(action, i):
-				# Newest card affected by the hint
-				newest_card_index = max(action['indices_affected'])
-				return {'action_type': 'PLAY', 'card_index': newest_card_index}
-		
+        # Play the newest card affected by a hint if a new hint was received since last turn
+        action_hist = observation['action_hist']
+        recent_actions = self.get_recent_actions(
+            action_hist, observation['current_player'])
+        # ip.embed()
+        for i, action in enumerate(recent_actions):
+            if self.check_hint_target(action, i):
+                # Newest card affected by the hint
+                newest_card_index = max(action['indices_affected'])
+                return {'action_type': 'PLAY', 'card_index': newest_card_index}
 
-		# Hint the newest playable card
-		
+        # Hint the newest playable card
 
-		fireworks = observation['fireworks']
-		if observation['information_tokens'] > 0:
-			# Check if there are any playable cards in the hands of the opponents.
-			for player_offset in range(1, observation['num_players']):
-				already_hinted = Counter() # Check if the card is the newest card of this color
-				player_hand = observation['observed_hands'][player_offset]
-				player_hints = observation['card_knowledge'][player_offset]
-				# Check if the card in the hand of the opponent is playable and most recent of the color.
-				for card, hint in reversed(zip(player_hand, player_hints)):
-					color = card['color']
-					already_hinted[color] += 1 
-					rank = card['rank']
-					already_hinted[rank] += 1
-					if (
-						NewestCardAgent.playable_card(card, fireworks) and 
-						hint['color'] is None 
-					   ):
-						# print("HINTING: " + card['color'] + '\n')
-						if already_hinted[color] == 1:
-							return {
-								'action_type': 'REVEAL_COLOR',
-								'color': color,
-								'target_offset': player_offset
-							}
-						elif already_hinted[rank] == 1:
-							return{
-								'action_type': 'REVEAL_RANK',
-								'rank': rank,
-								'target_offset': player_offset
-							}
+        fireworks = observation['fireworks']
+        if observation['information_tokens'] > 0:
+            # Check if there are any playable cards in the hands of the opponents.
+            for player_offset in range(1, observation['num_players']):
+                already_hinted = Counter()  # Check if the card is the newest card of this color
+                player_hand = observation['observed_hands'][player_offset]
+                player_hints = observation['card_knowledge'][player_offset]
+                # Check if the card in the hand of the opponent is playable and most recent of the color.
+                for card, hint in reversed(zip(player_hand, player_hints)):
+                    color = card['color']
+                    already_hinted[color] += 1
+                    rank = card['rank']
+                    already_hinted[rank] += 1
+                    if (
+                        NewestCardAgent.playable_card(card, fireworks) and
+                        hint['color'] is None
+                    ):
+                        # print("HINTING: " + card['color'] + '\n')
+                        if already_hinted[color] == 1:
+                            return {
+                                'action_type': 'REVEAL_COLOR',
+                                'color': color,
+                                'target_offset': player_offset
+                            }
+                        elif already_hinted[rank] == 1:
+                            return{
+                                'action_type': 'REVEAL_RANK',
+                                'rank': rank,
+                                'target_offset': player_offset
+                            }
 
-
-		# If no card is hintable then discard or play oldest card.
-		if observation['information_tokens'] < self.max_information_tokens:
-			return {'action_type': 'DISCARD', 'card_index': 0}
-		else:
-			return {'action_type': 'PLAY', 'card_index': 0}
+        # If no card is hintable then discard or play oldest card.
+        if observation['information_tokens'] < self.max_information_tokens:
+            return {'action_type': 'DISCARD', 'card_index': 0}
+        else:
+            return {'action_type': 'PLAY', 'card_index': 0}
