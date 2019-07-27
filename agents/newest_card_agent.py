@@ -11,6 +11,7 @@ Ported by: Justin Wang
 from rl_env import Agent
 
 import IPython as ip
+from collections import Counter
 
 
 class NewestCardAgent(Agent):
@@ -120,20 +121,28 @@ class NewestCardAgent(Agent):
 		
 
 		# Hint the newest playable card
+		
+
 		fireworks = observation['fireworks']
 		if observation['information_tokens'] > 0:
 			# Check if there are any playable cards in the hands of the opponents.
 			for player_offset in range(1, observation['num_players']):
+				already_hinted = Counter() # Check if the card is the newest card of this color
 				player_hand = observation['observed_hands'][player_offset]
 				player_hints = observation['card_knowledge'][player_offset]
 				# Check if the card in the hand of the opponent is playable.
 				for card, hint in reversed(zip(player_hand, player_hints)):
-					if NewestCardAgent.playable_card(card,
-						fireworks) and hint['color'] is None:
+					color = card['color']
+					already_hinted[color] += 1 
+					if (
+						NewestCardAgent.playable_card(card, fireworks) and 
+						hint['color'] is None and
+						already_hinted[color] == 1
+					   ):
 						# print("HINTING: " + card['color'] + '\n')
 						return {
 							'action_type': 'REVEAL_COLOR',
-							'color': card['color'],
+							'color': color,
 							'target_offset': player_offset
 						}
 
