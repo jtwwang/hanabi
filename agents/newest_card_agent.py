@@ -130,21 +130,30 @@ class NewestCardAgent(Agent):
 				already_hinted = Counter() # Check if the card is the newest card of this color
 				player_hand = observation['observed_hands'][player_offset]
 				player_hints = observation['card_knowledge'][player_offset]
-				# Check if the card in the hand of the opponent is playable.
+				# Check if the card in the hand of the opponent is playable and most recent of the color.
 				for card, hint in reversed(zip(player_hand, player_hints)):
 					color = card['color']
 					already_hinted[color] += 1 
+					rank = card['rank']
+					already_hinted[rank] += 1
 					if (
 						NewestCardAgent.playable_card(card, fireworks) and 
-						hint['color'] is None and
-						already_hinted[color] == 1
+						hint['color'] is None 
 					   ):
 						# print("HINTING: " + card['color'] + '\n')
-						return {
-							'action_type': 'REVEAL_COLOR',
-							'color': color,
-							'target_offset': player_offset
-						}
+						if already_hinted[color] == 1:
+							return {
+								'action_type': 'REVEAL_COLOR',
+								'color': color,
+								'target_offset': player_offset
+							}
+						elif already_hinted[rank] == 1:
+							return{
+								'action_type': 'REVEAL_RANK',
+								'rank': rank,
+								'target_offset': player_offset
+							}
+
 
 		# If no card is hintable then discard or play oldest card.
 		if observation['information_tokens'] < self.max_information_tokens:
