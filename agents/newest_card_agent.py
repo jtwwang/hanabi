@@ -5,7 +5,7 @@ Plays newest hinted cards if receives a hint.
 Otherwise, gives hints about playable cards if the newest card affected is playable.
 Otherwise, discards oldest card.
 
-Source: https://github.com/chikinn/hanabi/blob/master/players/newest_card_player.py
+Idea source: https://github.com/chikinn/hanabi/blob/master/players/newest_card_player.py
 Ported by: Justin Wang
 """
 from rl_env import Agent
@@ -22,26 +22,26 @@ class NewestCardAgent(Agent):
 		# Extract max info tokens or set default to 8.
 		self.max_information_tokens = config.get('information_tokens', 8)
 
-	# @staticmethod
-	# def playable_card(card, fireworks):
-	# 	"""A card is playable if it can be placed on the fireworks pile."""
-	# 	return card['rank'] == fireworks[card['color']]
-
 	@staticmethod
 	def playable_card(card, fireworks):
 		"""A card is playable if it can be placed on the fireworks pile."""
-		if card['color'] == None and card['rank'] != None:
-			for color in colors:
-				if fireworks[color] == card['rank']:
-					continue
-				else:
-					return False
+		return card['rank'] == fireworks[card['color']]
+
+	# @staticmethod
+	# def playable_card(card, fireworks):
+	# 	"""A card is playable if it can be placed on the fireworks pile."""
+	# 	if card['color'] == None and card['rank'] != None:
+	# 		for color in colors:
+	# 			if fireworks[color] == card['rank']:
+	# 				continue
+	# 			else:
+	# 				return False
 				
-			return True
-		elif card['color'] == None or card['rank'] == None:
-			return False
-		else:
-			return card['rank'] == fireworks[card['color']]
+	# 		return True
+	# 	elif card['color'] == None or card['rank'] == None:
+	# 		return False
+	# 	else:
+	# 		return card['rank'] == fireworks[card['color']]
 
 	def get_recent_actions(self, action_hist, current_player):
 		"""Returns actions since the current agent last played. 
