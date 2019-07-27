@@ -10,8 +10,11 @@ Ported by: Justin Wang
 """
 from rl_env import Agent
 
-import IPython as ip
+#import IPython as ip
 from collections import Counter
+
+global colors
+colors = ['Y','B','W','R','G']
 
 
 class NewestCardAgent(Agent):
@@ -28,6 +31,7 @@ class NewestCardAgent(Agent):
         """A card is playable if it can be placed on the fireworks pile."""
         return card['rank'] == fireworks[card['color']]
 
+    """ Not necessary as this agent does not check if own hand is playable. """
     # @staticmethod
     # def playable_card(card, fireworks):
     # 	"""A card is playable if it can be placed on the fireworks pile."""
@@ -135,23 +139,20 @@ class NewestCardAgent(Agent):
                     already_hinted[color] += 1
                     rank = card['rank']
                     already_hinted[rank] += 1
-                    if (
-                        NewestCardAgent.playable_card(card, fireworks) and
-                        hint['color'] is None
-                    ):
+                    if NewestCardAgent.playable_card(card, fireworks):
                         # print("HINTING: " + card['color'] + '\n')
-                        if already_hinted[color] == 1:
+                        if already_hinted[color] == 1 and hint['color'] is None:
                             return {
                                 'action_type': 'REVEAL_COLOR',
                                 'color': color,
                                 'target_offset': player_offset
                             }
-                        elif already_hinted[rank] == 1:
+                        elif already_hinted[rank] == 1 and hint['rank'] is None:
                             return{
                                 'action_type': 'REVEAL_RANK',
                                 'rank': rank,
                                 'target_offset': player_offset
-                            }
+                            } 
 
         # If no card is hintable then discard or play oldest card.
         if observation['information_tokens'] < self.max_information_tokens:
