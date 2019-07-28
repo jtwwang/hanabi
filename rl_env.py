@@ -170,7 +170,6 @@ class HanabiEnv(Environment):
 
   # END HISTORY FUNCTIONS
 
-
   def reset(self):
     r"""Resets the environment for a new game.
 
@@ -439,6 +438,7 @@ class HanabiEnv(Environment):
     player_observations = [self._extract_dict_from_backend(
         player_id, self.state.observation(player_id))
         for player_id in range(self.players)]  # pylint: disable=bad-continuation
+        
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
     obs["action_hist"] = self.hist
