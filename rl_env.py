@@ -24,8 +24,6 @@ from __future__ import division
 import pyhanabi
 from pyhanabi import color_char_to_idx
 
-import IPython as ip
-
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
 
 #-------------------------------------------------------------------------------
@@ -441,12 +439,6 @@ class HanabiEnv(Environment):
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
 
-    # Give each player access to action history
-    # for player_id in range(self.players):
-    #   obs["player_observations"][player_id]["action_hist"] = self.hist
-
-    # Give current player access to action history
-    # obs["player_observations"][0]["action_hist"] = self.hist
     return obs
 
   def _extract_dict_from_backend(self, player_id, observation):
