@@ -134,6 +134,8 @@ class multihead_pred(policy_pred):
             batch_size: (int) size of the mini-batch that we're using
             learning rate: (float) the relative size of the training step
         """
+
+        global_step = tf.train.get_or_create_global_step()
         
         steps_per_epoch = int(math.ceil(self.X_train.shape[0]/batch_size))
 
@@ -150,21 +152,13 @@ class multihead_pred(policy_pred):
         # Create an optimizer with the desired parameters
         variables = self.model.var_list
         opt = AdamOptimizer(learning_rate = learning_rate)
-        opt_op = opt.minimize(loss)
+        opt_op = opt.minimize(loss, global_step = global_step)
 
-        # Create hooks for the session
-        saver_hook = tf.train.CheckpointSaverHook(
-                checkpoint_dir = self.path,
-                save_steps = 10 * steps_per_epoch)
-        summary_hook = tf.train.SummarySaverHook(
-                save_steps = steps_per_epoch,
-                output_dir = self.path,
-                summary_op = merged)
-        hooks = [saver_hook, summary_hook]
-
-        tf.train.create_global_step()
-
-        with tf.train.MonitoredTrainingSession(hooks=hooks) as sess:
+        with tf.train.MonitoredTrainingSession(
+                checkpoint_dir=self.path,
+                summary_dir=self.path,
+                save_checkpoint_steps=10 * steps_per_epoch,
+                save_summaries_steps=steps_per_epoch) as sess:
             for e in range(epochs):
                 print("Epoch %i/%i" %(e + 1, epochs))
                 start_time = time.time()
