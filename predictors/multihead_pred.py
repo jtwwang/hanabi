@@ -130,22 +130,37 @@ class multihead_pred(policy_pred):
             batch_size: (int) size of the mini-batch that we're using
             learning rate: (float) the relative size of the training step
         """
-
-        self.train_dataset = self.train_dataset.batch(batch_size=batch_size)
-        iterator = self.train_dataset.make_one_shot_iterator()
+    
+        # setup the training dataset
+        dataset = self.train_dataset.repeat(epochs)
+        dataset = dataset.batch(batch_size=batch_size)
+        iterator = dataset.make_one_shot_iterator()
         next_example, next_label = iterator.get_next()
 
+        # setup the test dataset
+        test_dataset = self.test_dataset.repeat(epochs)
+        test_dataset = test_dataset.batch(batch_size=batch_size)
+        test_iterator = test_dataset.make_one_shot_iterator()
+        next_test_example, next_test_label = test_iterator.get_next()
+
+        # create global step (required by MonitoredTrainingSession)
         global_step = tf.train.get_or_create_global_step()
 
         steps_per_epoch = int(math.ceil(self.X_train.shape[0]/batch_size))
 
         loss = self.loss(self.model(next_example),
                          next_label)  # define the loss
+        test_loss = self.loss(self.model(next_test_example),
+                next_test_label) # define test loss
 
         # define accuracy
         accuracy, _ = tf.metrics.accuracy(
             labels=tf.argmax(next_label, 1),
             predictions=tf.argmax(self.model(next_example), 1))
+        # define test accuracy
+        test_accuracy, _ = tf.metrics.accuracy(
+            labels=tf.argmax(next_test_label, 1),
+            predictions=tf.argmax(self.model(next_test_example), 1))
 
         with tf.name_scope('summaries'):
             tf.summary.scalar('loss', loss)
@@ -207,7 +222,7 @@ class multihead_pred(policy_pred):
             (self.X_train, self.y_train))
 
         # shuffle the data
-        self.train_dataset.shuffle(
+        self.train_dataset = self.train_dataset.shuffle(
             buffer_size=self.X_train.shape[0],
             reshuffle_each_iteration=True)
 
