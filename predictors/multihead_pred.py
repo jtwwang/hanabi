@@ -16,79 +16,75 @@ from .policy_pred import policy_pred
 import os
 import numpy as np
 import tensorflow as tf
-from tensorflow.compat.v1.train import AdamOptimizer, Saver
-from tensorflow.compat.v1 import variable_scope, get_variable, placeholder, reset_default_graph
-from tensorflow.compat.v1 import global_variables_initializer, variables_initializer
+from tensorflow.compat.v1.train import AdamOptimizer
+from tensorflow.compat.v1 import variable_scope, get_variable, reset_default_graph
 from tensorflow.compat.v1.losses import softmax_cross_entropy
 from tensorflow.compat.v1.layers import Flatten
-from tensorflow.compat.v1.summary import FileWriter
 import math
 import time
 
+
 class MultiHeadModel(object):
     def __init__(self, action_space):
-        self.var_list = []
         self.action_space = action_space
-
-        self.x = placeholder(tf.float32, shape=(None, 658, 1))
-        self.y = placeholder(tf.float32, shape=(None, 20))
-
-        with variable_scope("conv1"):
-            relu1 = self.conv_relu(self.x, [5,1,16], stride = 2)
-            maxp1 = tf.nn.max_pool1d(relu1, 3, 2, 'SAME')
-        with variable_scope("conv2"):
-            relu2 = self.conv_relu(maxp1, [3,16,32], stride = 2)
-            maxp2 = tf.nn.max_pool1d(relu2, 2, 2, 'SAME')
-        with variable_scope("conv3"):
-            relu3 = self.conv_relu(maxp2, [3,32,64], stride = 2)
-            maxp3 = tf.nn.max_pool1d(relu3, 2, 2, 'SAME')
-        with variable_scope("conv4"):
-            relu4 = self.conv_relu(maxp3, [3,64,64], stride = 2)
-            maxp4 = tf.nn.max_pool1d(relu4, 2, 2, 'SAME')
-        with variable_scope("flatten"):
-            flattened = Flatten()(relu4)
-        with variable_scope("dense1"):
-            dense1 = self.dense(flattened, 64)
-            relu5 = tf.nn.relu(dense1)
-            drop1 = tf.nn.dropout(relu5, rate = 0.2)
-        with variable_scope("dense2"):
-            self.y_pred = self.dense(drop1, self.action_space)
 
     def conv_relu(self, inputs, kernel_shape, stride):
         # Create variable named "weights"
         weights = get_variable("weights", kernel_shape,
-                initializer = tf.random_normal_initializer())
+                               initializer=tf.random_normal_initializer())
         # Create variable named "biases"
         bias_shape = kernel_shape[-1]
         biases = get_variable("biases", [bias_shape],
-                initializer=tf.constant_initializer(0.0))
+                              initializer=tf.constant_initializer(0.0))
 
         conv = tf.nn.conv1d(inputs, weights,
-                stride=stride, padding='SAME')
+                            stride=stride, padding='SAME')
 
         # batch normalization
         mean, variance = tf.nn.moments(conv, axes=[0])
-        scale = tf.Variable(tf.ones([bias_shape]), name = "scale")
-        beta = tf.Variable(tf.zeros([bias_shape]), name = "beta")
+        scale = tf.Variable(tf.ones([bias_shape]), name="scale")
+        beta = tf.Variable(tf.zeros([bias_shape]), name="beta")
         epsilon = 1e-3
-        bn = tf.nn.batch_normalization(conv, mean, variance, scale, beta, epsilon)
-        
+        bn = tf.nn.batch_normalization(
+            conv, mean, variance, scale, beta, epsilon)
+
         return tf.nn.relu(bn + biases)
 
     def dense(self, inputs, units):
         # Create vriable named "weights"
         dense_shape = [inputs.shape[-1], units]
         weights = get_variable("weights", dense_shape,
-                initializer = tf.random_normal_initializer())
+                               initializer=tf.random_normal_initializer())
         # Create variable named "baises"
         biases = get_variable("biases", [units],
-                initializer=tf.constant_initializer(0.0))
-        y = tf.linalg.matmul(inputs,weights) + biases
+                              initializer=tf.constant_initializer(0.0))
+        y = tf.linalg.matmul(inputs, weights) + biases
         return y
 
     def __call__(self, x):
-        
-        return self.y_pred
+
+        with variable_scope("conv1", reuse=tf.AUTO_REUSE):
+            relu1 = self.conv_relu(x, [5, 1, 16], stride=2)
+            maxp1 = tf.nn.max_pool1d(relu1, 3, 2, 'SAME')
+        with variable_scope("conv2", reuse=tf.AUTO_REUSE):
+            relu2 = self.conv_relu(maxp1, [3, 16, 32], stride=2)
+            maxp2 = tf.nn.max_pool1d(relu2, 2, 2, 'SAME')
+        with variable_scope("conv3", reuse=tf.AUTO_REUSE):
+            relu3 = self.conv_relu(maxp2, [3, 32, 64], stride=2)
+            maxp3 = tf.nn.max_pool1d(relu3, 2, 2, 'SAME')
+        with variable_scope("conv4", reuse=tf.AUTO_REUSE):
+            relu4 = self.conv_relu(maxp3, [3, 64, 64], stride=2)
+            maxp4 = tf.nn.max_pool1d(relu4, 2, 2, 'SAME')
+        with variable_scope("flatten"):
+            flattened = Flatten()(maxp4)
+        with variable_scope("dense1", reuse=tf.AUTO_REUSE):
+            dense1 = self.dense(flattened, 64)
+            relu5 = tf.nn.relu(dense1)
+            drop1 = tf.nn.dropout(relu5, rate=0.2)
+        with variable_scope("dense2", reuse=tf.AUTO_REUSE):
+            y_pred = self.dense(drop1, self.action_space)
+
+        return y_pred
 
     def save(self, model_path):
         """ 
@@ -124,7 +120,7 @@ class multihead_pred(policy_pred):
         # Add an additional dimension for filters
         X = np.reshape(X_raw, (X_raw.shape[0], X_raw.shape[1], 1))
         return X
-    
+
     def fit(self, epochs=100, batch_size=64, learning_rate=0.01):
         """
         Train the model using the data that has been loaded
@@ -135,57 +131,51 @@ class multihead_pred(policy_pred):
             learning rate: (float) the relative size of the training step
         """
 
+        self.train_dataset = self.train_dataset.batch(batch_size=batch_size)
+        iterator = self.train_dataset.make_one_shot_iterator()
+        next_example, next_label = iterator.get_next()
+
         global_step = tf.train.get_or_create_global_step()
-        
+
         steps_per_epoch = int(math.ceil(self.X_train.shape[0]/batch_size))
 
-        loss = self.loss(self.model.y_pred, self.model.y) # define the loss
-        
+        loss = self.loss(self.model(next_example),
+                         next_label)  # define the loss
+
         # define accuracy
-        accuracy, _ = tf.metrics.accuracy(self.model.y, self.model.y_pred)
+        accuracy, _ = tf.metrics.accuracy(
+            labels=tf.argmax(next_label, 1),
+            predictions=tf.argmax(self.model(next_example), 1))
 
         with tf.name_scope('summaries'):
             tf.summary.scalar('loss', loss)
             tf.summary.scalar('accuracy', accuracy)
-        merged = tf.summary.merge_all()
-        
+
         # Create an optimizer with the desired parameters
-        variables = self.model.var_list
-        opt = AdamOptimizer(learning_rate = learning_rate)
-        opt_op = opt.minimize(loss, global_step = global_step)
+        opt = AdamOptimizer(learning_rate=learning_rate)
+        opt_op = opt.minimize(loss, global_step=global_step)
 
         with tf.train.MonitoredTrainingSession(
                 checkpoint_dir=self.path,
                 summary_dir=self.path,
                 save_checkpoint_steps=10 * steps_per_epoch,
                 save_summaries_steps=steps_per_epoch) as sess:
+
             for e in range(epochs):
-                print("Epoch %i/%i" %(e + 1, epochs))
+                print("Epoch %i/%i" % (e + 1, epochs))
                 start_time = time.time()
                 for i in range(steps_per_epoch):
-                    # divide the data in batches
-                    start = i * batch_size
-                    end = min(self.X_train.shape[0], (i + 1) * batch_size)
-                    batch_x = self.X_train[start:end]
-                    batch_y = self.y_train[start:end]
-
                     # run one training step
-                    sess.run(opt_op, feed_dict={
-                        self.model.x: batch_x,
-                        self.model.y: batch_y})
+                    sess.run(opt_op)
 
                 # compute loss and accuracy for both training and test set
-                loss_train, acc_train = sess.run([loss, accuracy], feed_dict={
-                    self.model.x: self.X_train,
-                    self.model.y: self.y_train})
-                loss_test, acc_test = sess.run([loss, accuracy], feed_dict={
-                    self.model.x: self.X_test,
-                    self.model.y: self.y_test})
+                loss_train, acc_train = sess.run([loss, accuracy])
+                loss_test, acc_test = sess.run([loss, accuracy])
 
-                elapsed_time = time.time() - start_time # compute elapsed time
-                print("steps: %i - %i s -loss: %f - accuracy: %f - val_loss: %f - val_accuracy: %f" 
-                        %(steps_per_epoch, elapsed_time,
-                            loss_train, acc_train, loss_test, acc_test))
+                elapsed_time = time.time() - start_time  # compute elapsed time
+                print("steps: %i - %i s -loss: %f - accuracy: %f - val_loss: %f - val_accuracy: %f"
+                      % (steps_per_epoch, elapsed_time,
+                         loss_train, acc_train, loss_test, acc_test))
 
     def extract_data(self, agent_class, val_split=0.3,
                      games=-1, balance=False):
@@ -196,21 +186,30 @@ class multihead_pred(policy_pred):
                 games (int)
         """
         obs, actions, _ = super(multihead_pred, self).extract_data(agent_class,
-                                                              val_split, games=games, balance=balance)
+                                                                   val_split, games=games, balance=balance)
 
         # change the type to float32
         self.X_train = self.X_train.astype('float32')
         self.y_train = self.y_train.astype('float32')
+        self.X_test = self.X_test.astype('float32')
+        self.y_test = self.y_test.astype('float32')
 
         # reshape the data
         self.X_train = self.reshape_data(self.X_train)
         self.X_test = self.reshape_data(self.X_test)
 
-        self.input_dim = self.X_train.shape[1]
         self.action_space = self.y_train.shape[1]
 
-        self.dataset = tf.data.Dataset.from_tensor_slices((self.X_train, self.y_train))
+        # Define training and validation datasets with the same structure
+        self.train_dataset = tf.data.Dataset.from_tensor_slices(
+            (self.X_train, self.y_train))
+        self.test_dataset = tf.data.Dataset.from_tensor_slices(
+            (self.X_train, self.y_train))
+
+        # shuffle the data
+        self.train_dataset.shuffle(
+            buffer_size=self.X_train.shape[0],
+            reshuffle_each_iteration=True)
 
         # Create the model
         self.model = self.create_model()
-
