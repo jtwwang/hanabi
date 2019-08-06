@@ -61,9 +61,9 @@ class policy_pred(object):
         self.checkpoint_path = os.path.join(self.path, "checkpoints")
 
     def make_dir(self, path):
-        """ 
+        """
         Create the directory @path if it doesn't exist already
-        
+
         args:
             path (string)
         """
@@ -160,14 +160,16 @@ class policy_pred(object):
                 agent_class (string): "SimpleAgent", "RainbowAgent"
                 val_split (float): the split between training and test set
                 games (int): how many games we want to load
-                balanec (bool)
+                balance (bool)
         """
         print("Loading Data...", end='')
         replay = Experience(agent_class, load=True)
         moves, _, obs, eps = replay.load(games=games)
 
         # split dataset here
-        X_train, y_train, X_test, y_test = split_dataset(obs, moves, val_split)
+        training_set, test_set = split_dataset([obs, moves], val_split)
+        X_train, X_test = training_set[0], test_set[0]
+        y_train, y_test = training_set[1], test_set[1]
 
         if balance:
             # make class balanced

@@ -28,7 +28,10 @@ def load_predictor(model_class):
         from lstm_pred import lstm_pred
         return lstm_pred
     elif model_class == 'multihead':
-        from multihead_pred import multihead_pred
-        return multihead_pred
+        from multihead_pred import multihead
+        return multihead
+    elif model_class == 'conv_tf':
+        from conv_tf import conv_pred
+        return conv_pred
     else:
         raise ValueError("model class not recognized")
