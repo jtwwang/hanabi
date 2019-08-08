@@ -22,23 +22,15 @@ from tensorflow.keras.layers import Activation, Dropout
 from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras import optimizers
 
+from .blocks import conv_block
+
 import numpy as np
 
 
 class multihead(policy_pred):
     def __init__(self, agent_class):
-        self.model_type = "conv"
+        self.model_type = "multihead"
         super(multihead, self).__init__(agent_class, self.model_type)
-
-    @staticmethod
-    def conv_block(inputs, filters, kernel_size, strides,
-        pool_size, pool_strides):
-        x = Conv1D(filters=filters, kernel_size=kernel_size, strides=strides,
-                     padding="same", activation=None)(inputs)
-        x = BatchNormalization()(x)
-        x = Activation("relu")(x)
-        x = MaxPooling1D(pool_size=pool_size, strides=pool_strides)(x)
-        return x
 
     @staticmethod
     def policy_head(inputs, action_space):
@@ -67,10 +59,10 @@ class multihead(policy_pred):
         Function to create the model
         """
         inputs = Input(shape=(self.input_dim,1))
-        x = multihead.conv_block(inputs, 16, 5, 2, 3, 2)
-        x = multihead.conv_block(x, 32, 3, 2, 2, 2)
-        x = multihead.conv_block(x, 64, 3, 2, 2, 2)
-        x = multihead.conv_block(x, 64, 3, 2, 2, 2)
+        x = conv_block(inputs, 16, 5, 2, 3, 2)
+        x = conv_block(x, 32, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
         x = Flatten()(x)
 
         policy_head = multihead.policy_head(x, self.action_space)
@@ -79,6 +71,7 @@ class multihead(policy_pred):
         self.model = Model(inputs = inputs,
                            outputs=[policy_head, value_head],
                            name="multihead")
+        return self.model
 
     def reshape_data(self, X_raw):
         if X_raw.shape == (self.action_space,):  # If only one sample is put in
@@ -104,7 +97,8 @@ class multihead(policy_pred):
             decay=0.0,
             amsgrad=False)
 
-        self.create_model()
+        if self.model == None:
+            self.create_model()
 
         losses={'policy_output': "categorical_crossentropy",
                 'value_output': "mean_squared_error"}
@@ -162,3 +156,4 @@ class multihead(policy_pred):
 
         self.input_dim = self.X_train.shape[1]
         self.action_space = self.moves_train.shape[1]
+        print("DONE")

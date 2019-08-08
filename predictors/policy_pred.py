@@ -90,6 +90,11 @@ class policy_pred(object):
             learning_rate (float): the relative size of the step taken in
                                    the steepest descent direction
         """
+
+        # reshape the data
+        self.X_train = self.reshape_data(self.X_train)
+        self.X_test = self.reshape_data(self.X_test)
+
         adam = optimizers.Adam(
             lr=learning_rate,
             beta_1=0.9,
@@ -98,7 +103,9 @@ class policy_pred(object):
             decay=0.0,
             amsgrad=False)
 
-        self.create_model()
+        if self.model is None:
+            self.create_model() # create the model if not already loaded
+
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=adam, metrics=['accuracy'])
 
@@ -182,7 +189,10 @@ class policy_pred(object):
         self.X_train = X_train
         self.X_test = X_test
 
-        print("Experience Loaded!")
+        # define model parameters
+        self.define_model_dim(self.X_train.shape[1], self.y_train.shape[1])
+
+        print("DONE")
         return X_train, y_train, eps
 
     def define_model_dim(self, input_dim, action_space):

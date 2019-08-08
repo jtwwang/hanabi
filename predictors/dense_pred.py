@@ -33,20 +33,6 @@ class dense_pred(policy_pred):
         self.model = x
         return x
 
-    def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
-        """
-        args:
-                agent_class (string)
-                num_player (int)
-        """
-        super(dense_pred, self).extract_data(agent_class,
-                                             val_split,
-                                             games=games,
-                                             balance=balance)
-
-        self.input_dim = self.X_train.shape[1]
-        self.action_space = self.y_train.shape[1]
-
     def reshape_data(self, X):
         if X.shape == (self.action_space,):  # Only one sample inputted
             X = np.reshape(X, (1, X))

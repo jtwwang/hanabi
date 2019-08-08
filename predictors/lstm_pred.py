@@ -77,8 +77,10 @@ class lstm_pred(policy_pred):
         X, y = self.seperate_games(obs, moves, eps)
 
         # split dataset here
-        X_train, y_train, X_test, y_test = split_dataset(X, y, val_split)
-        
+        training_set, test_set = split_dataset([X, y], val_split)
+        X_train, X_test = training_set[0], test_set[0]
+        y_train, y_test = training_set[1], test_set[1]
+
         # convert to one-hot encoded tensor
         self.y_train = one_hot_list(y_train, replay.n_moves)
         self.y_test = one_hot_list(y_test, replay.n_moves)
