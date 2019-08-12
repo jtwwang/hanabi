@@ -152,7 +152,7 @@ class policy_pred(object):
         try:
             self.model = load_model(model_path)
         except IOError:
-            print("Create new model.")
+            print("Create a new model.")
 
     def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
         """
