@@ -23,6 +23,8 @@ from tensorflow.compat.v1.layers import Flatten
 import math
 import time
 
+import IPython as ip
+
 
 class MultiHeadModel(object):
     def __init__(self, action_space):
@@ -40,14 +42,14 @@ class MultiHeadModel(object):
         conv = tf.nn.conv1d(inputs, weights,
                             stride=stride, padding='SAME')
 
-        # batch normalization
+        # batch normalization TODO: seperate into func
         mean, variance = tf.nn.moments(conv, axes=[0])
         scale = tf.Variable(tf.ones([bias_shape]), name="scale")
         beta = tf.Variable(tf.zeros([bias_shape]), name="beta")
         epsilon = 1e-3
         bn = tf.nn.batch_normalization(
             conv, mean, variance, scale, beta, epsilon)
-
+        #ip.embed()
         return tf.nn.relu(bn + biases)
 
     def dense(self, inputs, units):
@@ -153,14 +155,18 @@ class multihead_pred(policy_pred):
         test_loss = self.loss(self.model(next_test_example),
                 next_test_label) # define test loss
 
-        # define accuracy
-        accuracy, _ = tf.metrics.accuracy(
-            labels=tf.argmax(next_label, 1),
-            predictions=tf.argmax(self.model(next_example), 1))
-        # define test accuracy
-        test_accuracy, _ = tf.metrics.accuracy(
-            labels=tf.argmax(next_test_label, 1),
-            predictions=tf.argmax(self.model(next_test_example), 1))
+        # # define accuracy
+        # accuracy, _ = tf.metrics.accuracy(
+        #     labels=tf.argmax(next_label, 1),
+        #     predictions=tf.argmax(self.model(next_example), 1))
+        # # define test accuracy
+        # test_accuracy, _ = tf.metrics.accuracy(
+        #     labels=tf.argmax(next_test_label, 1),
+        #     predictions=tf.argmax(self.model(next_test_example), 1))
+        accuracy = tf.reduce_sum(tf.cast(tf.equal(
+            next_label, self.model(next_example)), tf.float32))
+        test_accuracy = tf.reduce_sum(tf.cast(tf.equal(
+            next_test_label, self.model(next_test_example)), tf.float32))
 
         with tf.name_scope('summaries'):
             tf.summary.scalar('loss', loss)
