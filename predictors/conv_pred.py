@@ -12,7 +12,6 @@
 
 from .policy_pred import policy_pred
 
-<<<<<<< HEAD
 from tensorflow.keras.models import Sequential, Model
 from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalization, concatenate
 from tensorflow.keras.layers import Activation, Dropout, Input
