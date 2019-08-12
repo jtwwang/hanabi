@@ -80,7 +80,7 @@ class conv_pred(policy_pred):
 
         return x
 
-    def create_model(self, img_path='network_image.png'):
+    def create_model_long(self, img_path='multihead_conv_long.png'):
         input_shape = (self.input_dim,1)
         inputs = Input(shape=input_shape)
         activation=None
@@ -128,6 +128,43 @@ class conv_pred(policy_pred):
 
         out = Dense(128, activation='relu')(merged)
         out = Dense(self.action_space, activation='softmax')(out)
+
+        model = Model(inputs, out)
+        plot_model(model, to_file=img_path)
+        self.model = model
+        return model
+
+    def create_model(self, img_path='multihead_conv.png'):
+        input_shape = (self.input_dim,1)
+        inputs = Input(shape=input_shape)
+        activation=None
+        # TOWER 1
+        tower_1 = Conv1D(filters=32, kernel_size=7, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_1 = MaxPooling1D(pool_size=3, strides=2) (tower_1)
+        tower_1 = BatchNormalization()(tower_1)
+        tower_1 = Activation("relu")(tower_1)
+
+        # TOWER 2
+        tower_2 = Conv1D(filters=32, kernel_size=5, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_2 = MaxPooling1D(pool_size=3, strides=2)(tower_2)
+        tower_2 = BatchNormalization()(tower_2)
+        tower_2 = Activation("relu")(tower_2)
+
+        # TOWER 3
+        tower_3 = Conv1D(filters=32, kernel_size=3, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_3 = MaxPooling1D(pool_size=3, strides=2)(tower_3)
+        tower_3 = BatchNormalization()(tower_3)
+        tower_3 = Activation("relu")(tower_3)
+
+        merged = concatenate([tower_1, tower_2, tower_3], axis=1)
+        merged = Flatten()(merged)
+
+        out = Dense(128, activation='relu')(merged)
+        out = Dense(self.action_space, activation='softmax')(out)
+        out = Dropout(0.2)(out)
 
         model = Model(inputs, out)
         plot_model(model, to_file=img_path)
