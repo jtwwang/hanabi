@@ -12,9 +12,11 @@
 
 from .policy_pred import policy_pred
 
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalization
-from tensorflow.keras.layers import Activation, Dropout
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalization, Input
+from tensorflow.keras.layers import Activation, Dropout, concatenate
+
+from tensorflow.keras.utils import plot_model
 
 import numpy as np
 
@@ -24,7 +26,7 @@ class conv_pred(policy_pred):
         self.model_type = "conv"
         super(conv_pred, self).__init__(agent_class, self.model_type)
 
-    def create_model(self):
+    def create_model_old(self):
         activation = None
         x = Sequential()
         x.add(Conv1D(filters=16, kernel_size=5, strides=2,
@@ -59,6 +61,61 @@ class conv_pred(policy_pred):
 
         self.model = x
         return x
+
+    def create_model(self, img_path='network_image.png'):
+        input_shape = (self.input_dim,1)
+        inputs = Input(shape=input_shape)
+        activation=None
+        # TOWER 1
+        tower_1 = Conv1D(filters=16, kernel_size=7, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_1 = MaxPooling1D(pool_size=3, strides=2) (tower_1)
+        tower_1 = BatchNormalization()(tower_1)
+        tower_1 = Activation("relu")(tower_1)
+
+        tower_1 = Conv1D(filters=32, kernel_size=3, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_1 = MaxPooling1D(pool_size=3, strides=2) (tower_1)
+        tower_1 = BatchNormalization()(tower_1)
+        tower_1 = Activation("relu")(tower_1)
+
+        # TOWER 2
+        tower_2 = Conv1D(filters=16, kernel_size=5, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_2 = MaxPooling1D(pool_size=3, strides=2)(tower_2)
+        tower_2 = BatchNormalization()(tower_2)
+        tower_2 = Activation("relu")(tower_2)
+
+        tower_2 = Conv1D(filters=32, kernel_size=3, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_2 = MaxPooling1D(pool_size=3, strides=2) (tower_2)
+        tower_2 = BatchNormalization()(tower_2)
+        tower_2 = Activation("relu")(tower_2)
+
+        # TOWER 3
+        tower_3 = Conv1D(filters=16, kernel_size=3, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_3 = MaxPooling1D(pool_size=3, strides=2)(tower_3)
+        tower_3 = BatchNormalization()(tower_3)
+        tower_3 = Activation("relu")(tower_3)
+
+        tower_3 = Conv1D(filters=32, kernel_size=3, strides=2,
+            padding="same", activation=activation)(inputs)
+        tower_3 = MaxPooling1D(pool_size=3, strides=2) (tower_3)
+        tower_3 = BatchNormalization()(tower_3)
+        tower_3 = Activation("relu")(tower_3)
+
+        merged = concatenate([tower_1, tower_2, tower_3], axis=1)
+        merged = Flatten()(merged)
+
+        out = Dense(128, activation='relu')(merged)
+        out = Dense(self.action_space, activation='softmax')(out)
+
+        model = Model(inputs, out)
+        plot_model(model, to_file=img_path)
+        self.model = model
+        return model
+
 
     def reshape_data(self, X_raw):
         if X_raw.shape == (self.action_space,):  # If only one sample is put in
