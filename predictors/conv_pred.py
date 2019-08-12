@@ -12,11 +12,14 @@
 
 from .policy_pred import policy_pred
 
+<<<<<<< HEAD
 from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalization, Input
-from tensorflow.keras.layers import Activation, Dropout, concatenate
+from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D, BatchNormalization, concatenate
+from tensorflow.keras.layers import Activation, Dropout, Input
 
 from tensorflow.keras.utils import plot_model
+
+from .blocks import conv_block
 
 import numpy as np
 
@@ -25,6 +28,7 @@ class conv_pred(policy_pred):
     def __init__(self, agent_class):
         self.model_type = "conv"
         super(conv_pred, self).__init__(agent_class, self.model_type)
+
 
     def create_model_old(self):
         activation = None
@@ -57,9 +61,24 @@ class conv_pred(policy_pred):
         x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.2))
 
-        x.add(Dense(self.action_space, activation='softmax'))
+    def create_model_conv_block(self):
+        inputs = Input(shape=(self.input_dim,1))
+        x = conv_block(inputs, 16, 5, 2, 3, 2)
+        x = conv_block(x, 32, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
+        x = Flatten()(x)
+        x = Dense(64, activation='relu')(x)
+        x = Dropout(0.2)(x)
+        output = Dense(self.action_space, activation='softmax')(x)
 
-        self.model = x
+        # create the model
+        self.model = Model(
+            inputs=inputs,
+            outputs=output,
+            name="big_conv"
+        )
+
         return x
 
     def create_model(self, img_path='network_image.png'):
@@ -124,20 +143,3 @@ class conv_pred(policy_pred):
         # Add an additional dimension for filters
         X = np.reshape(X_raw, (X_raw.shape[0], X_raw.shape[1], 1))
         return X
-
-    def extract_data(self, agent_class, val_split=0.3,
-                     games=-1, balance=False):
-        """
-        args:
-                agent_class (string)
-                val_split (float)
-                games (int)
-        """
-        obs, actions, _ = super(conv_pred, self).extract_data(agent_class,
-                                                              val_split, games=games, balance=balance)
-
-        self.X_train = self.reshape_data(self.X_train)
-        self.X_test = self.reshape_data(self.X_test)
-
-        self.input_dim = self.X_train.shape[1]
-        self.action_space = self.y_train.shape[1]
