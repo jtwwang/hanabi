@@ -152,8 +152,9 @@ class Experience():
         np.save(os.path.join(self.path, "eps"), self.eps[:index])
 
         # pickle the configurations
-        pickle.dump(self.config, open(
-            os.path.join(self.path, "config.pickle"), "wb"))
+        out = open(os.path.join(self.path, "config.pickle"), "wb")
+        pickle.dump(self.config, out)
+        out.close()
 
     def load(self, games=-1):
         """
