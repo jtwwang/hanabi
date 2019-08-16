@@ -25,6 +25,82 @@ from .blocks import conv_block
 
 import numpy as np
 
+import tensorflow as tf
+from tensorflow.compat.v1.train import AdamOptimizer
+from tensorflow.compat.v1 import variable_scope, get_variable, reset_default_graph
+from tensorflow.compat.v1.losses import softmax_cross_entropy
+from tensorflow.compat.v1.layers import Flatten
+import math
+import time
+
+
+class MultiHeadModel(object):
+    def __init__(self, action_space):
+        self.action_space = action_space
+
+    def conv_relu(self, inputs, kernel_shape, stride):
+        # Create variable named "weights"
+        weights = get_variable("weights", kernel_shape,
+                               initializer=tf.random_normal_initializer())
+        # Create variable named "biases"
+        bias_shape = kernel_shape[-1]
+        biases = get_variable("biases", [bias_shape],
+                              initializer=tf.constant_initializer(0.0))
+
+        conv = tf.nn.conv1d(inputs, weights,
+                            stride=stride, padding='SAME')
+
+        # batch normalization TODO: seperate into func
+        mean, variance = tf.nn.moments(conv, axes=[0])
+        scale = tf.Variable(tf.ones([bias_shape]), name="scale")
+        beta = tf.Variable(tf.zeros([bias_shape]), name="beta")
+        epsilon = 1e-3
+        bn = tf.nn.batch_normalization(
+            conv, mean, variance, scale, beta, epsilon)
+        return tf.nn.relu(bn + biases)
+
+    def dense(self, inputs, units):
+        # Create vriable named "weights"
+        dense_shape = [inputs.shape[-1], units]
+        weights = get_variable("weights", dense_shape,
+                               initializer=tf.random_normal_initializer())
+        # Create variable named "baises"
+        biases = get_variable("biases", [units],
+                              initializer=tf.constant_initializer(0.0))
+        y = tf.linalg.matmul(inputs, weights) + biases
+        return y
+
+    def __call__(self, x):
+
+        with variable_scope("conv1", reuse=tf.AUTO_REUSE):
+            relu1 = self.conv_relu(x, [5, 1, 16], stride=2)
+            maxp1 = tf.nn.max_pool1d(relu1, 3, 2, 'SAME')
+        with variable_scope("conv2", reuse=tf.AUTO_REUSE):
+            relu2 = self.conv_relu(maxp1, [3, 16, 32], stride=2)
+            maxp2 = tf.nn.max_pool1d(relu2, 2, 2, 'SAME')
+        with variable_scope("conv3", reuse=tf.AUTO_REUSE):
+            relu3 = self.conv_relu(maxp2, [3, 32, 64], stride=2)
+            maxp3 = tf.nn.max_pool1d(relu3, 2, 2, 'SAME')
+        with variable_scope("conv4", reuse=tf.AUTO_REUSE):
+            relu4 = self.conv_relu(maxp3, [3, 64, 64], stride=2)
+            maxp4 = tf.nn.max_pool1d(relu4, 2, 2, 'SAME')
+        with variable_scope("flatten"):
+            flattened = Flatten()(maxp4)
+        with variable_scope("dense1", reuse=tf.AUTO_REUSE):
+            dense1 = self.dense(flattened, 64)
+            relu5 = tf.nn.relu(dense1)
+            drop1 = tf.nn.dropout(relu5, rate=0.2)
+        with variable_scope("dense2", reuse=tf.AUTO_REUSE):
+            y_pred = self.dense(drop1, self.action_space)
+
+        return y_pred
+
+    def save(self, model_path):
+        """ 
+        save is not implemented cause it's saving automatically during training
+        """
+        pass
+
 
 class multihead(policy_pred):
     def __init__(self, agent_class):
@@ -88,6 +164,72 @@ class multihead(policy_pred):
             learning_rate (float): the relative size of the step taken in
                                    the steepest descent direction
         """
+    
+        # setup the training dataset
+        dataset = self.train_dataset.repeat(epochs)
+        dataset = dataset.batch(batch_size=batch_size)
+        iterator = dataset.make_one_shot_iterator()
+        next_example, next_label = iterator.get_next()
+
+        # setup the test dataset
+        test_dataset = self.test_dataset.repeat(epochs)
+        test_dataset = test_dataset.batch(batch_size=batch_size)
+        test_iterator = test_dataset.make_one_shot_iterator()
+        next_test_example, next_test_label = test_iterator.get_next()
+
+        # create global step (required by MonitoredTrainingSession)
+        global_step = tf.train.get_or_create_global_step()
+
+        steps_per_epoch = int(math.ceil(self.X_train.shape[0]/batch_size))
+
+        loss = self.loss(self.model(next_example),
+                         next_label)  # define the loss
+        test_loss = self.loss(self.model(next_test_example),
+                next_test_label) # define test loss
+
+        # # define accuracy
+        # accuracy, _ = tf.metrics.accuracy(
+        #     labels=tf.argmax(next_label, 1),
+        #     predictions=tf.argmax(self.model(next_example), 1))
+        # # define test accuracy
+        # test_accuracy, _ = tf.metrics.accuracy(
+        #     labels=tf.argmax(next_test_label, 1),
+        #     predictions=tf.argmax(self.model(next_test_example), 1))
+        accuracy = tf.reduce_sum(tf.cast(tf.equal(
+            next_label, self.model(next_example)), tf.float32))
+        test_accuracy = tf.reduce_sum(tf.cast(tf.equal(
+            next_test_label, self.model(next_test_example)), tf.float32))
+
+        with tf.name_scope('summaries'):
+            tf.summary.scalar('loss', loss)
+            tf.summary.scalar('accuracy', accuracy)
+
+        # Create an optimizer with the desired parameters
+        opt = AdamOptimizer(learning_rate=learning_rate)
+        opt_op = opt.minimize(loss, global_step=global_step)
+
+        with tf.train.MonitoredTrainingSession(
+                checkpoint_dir=self.path,
+                summary_dir=self.path,
+                save_checkpoint_steps=10 * steps_per_epoch,
+                save_summaries_steps=steps_per_epoch) as sess:
+
+            for e in range(epochs):
+                print("Epoch %i/%i" % (e + 1, epochs))
+                start_time = time.time()
+                for i in range(steps_per_epoch):
+                    # run one training step
+                    sess.run(opt_op)
+
+                # compute loss and accuracy for both training and test set
+                loss_train, acc_train = sess.run([loss, accuracy])
+                loss_test, acc_test = sess.run([loss, accuracy])
+
+                elapsed_time = time.time() - start_time  # compute elapsed time
+                print("steps: %i - %i s -loss: %f - accuracy: %f - val_loss: %f - val_accuracy: %f"
+                      % (steps_per_epoch, elapsed_time,
+                         loss_train, acc_train, loss_test, acc_test))
+
         adam = optimizers.Adam(
             lr=learning_rate,
             beta_1=0.9,
@@ -122,7 +264,6 @@ class multihead(policy_pred):
             shuffle=True,
             verbose = 2
         )
-
 
     def extract_data(self, agent_class, val_split=0.3,
                      games=-1, balance=False):
