@@ -24,6 +24,7 @@ import math
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+
 class HanabiSequence(Sequence):
 
     def __init__(self, x_set, y_set, batch_size):
@@ -38,6 +39,7 @@ class HanabiSequence(Sequence):
         batch_y = self.y[idx * self.batch_size:(idx + 1) * self.batch_size]
 
         return batch_x, batch_y
+
 
 class policy_pred(object):
     def __init__(self, agent_class, model_type=None):
@@ -59,6 +61,9 @@ class policy_pred(object):
         else:
             print(self.path, "already exists. Writing to it.")
         self.checkpoint_path = os.path.join(self.path, "checkpoints")
+
+        # create callbacks for tensorboard
+        self.tensorboard = TensorBoard(log_dir=self.path)
 
     def make_dir(self, path):
         """
@@ -104,12 +109,10 @@ class policy_pred(object):
             amsgrad=False)
 
         if self.model is None:
-            self.create_model() # create the model if not already loaded
+            self.create_model()  # create the model if not already loaded
 
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=adam, metrics=['accuracy'])
-
-        tensorboard = TensorBoard(log_dir=self.path)
 
         train_sequence = HanabiSequence(self.X_train, self.y_train, batch_size)
         test_sequence = HanabiSequence(self.X_test, self.y_test, batch_size)
@@ -120,8 +123,8 @@ class policy_pred(object):
             verbose=2,
             validation_data=test_sequence,
             validation_freq=5,
-            callbacks=[tensorboard],
-            workers = 0,
+            callbacks=[self.tensorboard],
+            workers=0,
             shuffle=True
         )
 
@@ -193,7 +196,7 @@ class policy_pred(object):
         self.define_model_dim(self.X_train.shape[1], self.y_train.shape[1])
 
         print("DONE")
-        return X_train, y_train, eps
+        return X_train, self.y_train, X_test, self.y_test, eps
 
     def define_model_dim(self, input_dim, action_space):
         """

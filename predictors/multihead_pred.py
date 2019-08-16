@@ -19,7 +19,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Conv1D, Flatten, MaxPooling1D
 from tensorflow.keras.layers import Input, BatchNormalization
 from tensorflow.keras.layers import Activation, Dropout
-from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras import optimizers
 
 from .blocks import conv_block
@@ -109,7 +108,6 @@ class multihead(policy_pred):
                            loss_weights=loss_weights,
                            optimizer=adam,
                            metrics=['accuracy'])
-        tensorboard = TensorBoard(log_dir=self.path)
 
         self.model.fit(
             self.X_train,
@@ -120,7 +118,7 @@ class multihead(policy_pred):
             validation_data=[self.X_test,
             {'policy_output': self.moves_test,
             'value_output': self.rewards_test}],
-            callbacks=[tensorboard],
+            callbacks=[self.tensorboard],
             shuffle=True,
             verbose = 2
         )
