@@ -27,7 +27,7 @@ if __name__ == "__main__":
              'summary': False,
              'games': -1,
              'balance': False,
-             'model_name': "predictor.h5"}
+             'predictor_name': "predictor"}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['model_class=',
@@ -41,7 +41,7 @@ if __name__ == "__main__":
                                         'summary=',
                                         'games=',
                                         'balance=',
-                                        'model_name='])
+                                        'predictor_name='])
     if arguments:
         sys.exit()
     for flag, value in options:
@@ -49,15 +49,16 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
     agent_class = flags['agent_class']
+    predictor_name = flags['predictor_name']
 
-    pp = load_predictor(flags['model_class'])(agent_class)
+    pp = load_predictor(flags['model_class'])(agent_class,predictor_name=predictor_name)
     pp.extract_data(agent_class,
                     val_split=flags['val_split'],
                     games=flags['games'],
                     balance=flags['balance'])
 
     if flags['load']:
-        pp.load(flags['model_name'])
+        pp.load(predictor_name)
 
     if flags['summary']:
         print(pp.model.summary())
@@ -65,4 +66,4 @@ if __name__ == "__main__":
     pp.fit(epochs=flags['epochs'],
            batch_size=flags['batch_size'],
            learning_rate=flags['lr'])
-    pp.save(flags['model_name'])
+    pp.save()

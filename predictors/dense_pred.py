@@ -19,9 +19,11 @@ import numpy as np
 
 
 class dense_pred(policy_pred):
-    def __init__(self, agent_class):
+    def __init__(self, agent_class,predictor_name='predictor'):
         self.model_type = "dense"
-        super(dense_pred, self).__init__(agent_class, self.model_type)
+        super(dense_pred, self).__init__(agent_class, 
+            model_type=self.model_type,
+            predictor_name=predictor_name)
 
     def create_model(self):
         x = Sequential()

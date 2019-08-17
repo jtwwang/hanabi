@@ -24,9 +24,11 @@ import numpy as np
 
 
 class conv_pred(policy_pred):
-    def __init__(self, agent_class):
+    def __init__(self, agent_class, predictor_name='predictor'):
         self.model_type = "conv"
-        super(conv_pred, self).__init__(agent_class, self.model_type)
+        super(conv_pred, self).__init__(agent_class, 
+            model_type=self.model_type, 
+            predictor_name=predictor_name)
 
 
     def create_model_old(self):
@@ -59,6 +61,7 @@ class conv_pred(policy_pred):
         x.add(Flatten())
         x.add(Dense(64, activation='relu'))
         x.add(Dropout(0.2))
+        return x
 
     def create_model_conv_block(self):
         inputs = Input(shape=(self.input_dim,1))

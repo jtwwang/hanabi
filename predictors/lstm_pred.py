@@ -27,9 +27,11 @@ import os
 
 
 class lstm_pred(policy_pred):
-    def __init__(self, agent_class):
+    def __init__(self, agent_class,predictor_name='predictor'):
         self.model_type = "lstm"
-        super(lstm_pred, self).__init__(agent_class, self.model_type)
+        super(lstm_pred, self).__init__(agent_class, 
+            model_type=self.model_type,
+            predictor_name=predictor_name)
 
     def create_model(self):
         x = Sequential()
