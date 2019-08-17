@@ -56,11 +56,13 @@ if __name__ == "__main__":
                     val_split=flags['val_split'],
                     games=flags['games'],
                     balance=flags['balance'])
-
+    
     if flags['load']:
         pp.load(predictor_name)
 
     if flags['summary']:
+        if pp.model == None:
+            pp.create_model()
         print(pp.model.summary())
 
     pp.fit(epochs=flags['epochs'],
