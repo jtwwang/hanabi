@@ -60,6 +60,8 @@ if __name__ == "__main__":
         pp.load(flags['model_name'])
 
     if flags['summary']:
+        if pp.model is None:
+            pp.create_model()
         print(pp.model.summary())
 
     pp.fit(epochs=flags['epochs'],
