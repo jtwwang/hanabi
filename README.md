@@ -31,6 +31,8 @@ sudo apt-get install python-pip  # if you don't already have pip
 pip install cffi                 # if you don't already have cffi
 pip install tensorflow           # if you don't already have tensorflow
 pip install matplotlib           # if you don't already have matplotlib
+pip install pydot                # to visualize models
+sudo apt-get install graphviz    # to visualize models
 cmake .
 make
 python2 game_example.py           # Plays a game using the lower level interface
