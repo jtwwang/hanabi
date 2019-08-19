@@ -10,43 +10,33 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
-from agents.second_agent import SecondAgent
 from agents.mc_agent import MCAgent
-from agents.rainbow_agent_rl import RainbowAgent
-from agents.simple_agent import SimpleAgent
-from agents.random_agent import RandomAgent
 import data_pipeline.experience as exp
-import rl_env
-import numpy as np
-import getopt
-from state_transition import state_tr
 from data_pipeline.state_translate import state_translator
+from state_transition import state_tr
+from run_simulations import Runner, cross_play
+import getopt
 
 import os
 import sys
+import numpy as np
+
 # To find local modules
 sys.path.insert(0, os.path.join(os.getcwd(), 'agents'))
 
 
-AGENT_CLASSES = {
-    'SimpleAgent':  SimpleAgent,
-    'SecondAgent': SecondAgent,
-    'RandomAgent':  RandomAgent,
-    'RainbowAgent': RainbowAgent,
-    'MCAgent': MCAgent}
-
-"""
-function to check if the one-hot encoded is contemplated by the probabilistic
-representation of the state
-
-Args:
-    prob: a list with probabilities
-    exp: a one-hot encoded list
-return
-    boolean (True/False): whether the probability can possibly represent
-    the one-hot encoded list
-"""
 def isWithinProb(prob, exp):
+    """
+    function to check if the one-hot encoded is contemplated by the probabilistic
+    representation of the state
+
+    args:
+        prob: a list with probabilities
+        exp: a one-hot encoded list
+    return
+        boolean (True/False): whether the probability can possibly represent
+        the one-hot encoded list
+    """
     if np.sum(np.multiply(prob, exp)) == 0:
         if np.sum(exp) == 0:
             return True
@@ -54,13 +44,15 @@ def isWithinProb(prob, exp):
             return False
     else:
         return True
-    
-"""
-Function to compare two vectors to find out whether the prediciton is correct
-"""
+
+
 def compareVectors(pred, expected, players):
+    """
+    Function to compare two vectors to find out whether the prediciton
+    is correct
+    """
     transPred = state_translator(pred, players)
-    transExp =  state_translator(expected, players)
+    transExp = state_translator(expected, players)
 
     if transPred.handSpace != transExp.handSpace:
         failed = False
@@ -89,7 +81,7 @@ def compareVectors(pred, expected, players):
     if transPred.lifeTokens != transExp.lifeTokens:
         failed = False
         for i in range(3):
-            if transExp.lifeTokens[i] == 1 and transPred.lifeTokens[i] < 0.0001:
+            if transExp.lifeTokens[i] == 1 and transPred.lifeTokens[i] < 10e-4:
                 failed = True
                 break
         if failed:
@@ -141,7 +133,7 @@ def compareVectors(pred, expected, players):
         elif not isWithinProb(transPred.cardPlayed, transExp.cardPlayed):
             print("cardPlayed FAILED - probability not contained")
             failed = True
-        
+
         if failed:
             print(transPred.cardPlayed)
             print(transExp.cardPlayed)
@@ -162,81 +154,38 @@ def compareVectors(pred, expected, players):
             print(transExp.cardKnowledge)
 
 
-class Runner(object):
+class TestRunner(Runner):
     """Runner class."""
-
-    def __init__(self, flags):
-        """Initialize runner."""
-        self.flags = flags
-        self.env = rl_env.make('Hanabi-Full', num_players=flags['players'])
-        self.agent_config = {
-            'players': flags['players'],
-            'num_moves': self.env.num_moves(),
-            'observation_size': self.env.vectorized_observation_shape()[0]}
-        self.agent_class = AGENT_CLASSES[flags['agent_class']]
-
-    def moves_lookup(self, move, ob):
-        """returns the int given the dictionary form"""
-
-        int_obs = ob['legal_moves_as_int']
-
-        for i in int_obs:
-            isEqual = True
-            dict_move = self.env.game.get_move(i).to_dict()
-
-            for d in dict_move.keys():
-                if d not in move.keys():
-                    isEqual = False
-                    break
-                elif not move[d] == dict_move[d]:
-                    isEqual = False
-                    break
-
-            if isEqual:
-                return i
-
-        print("ERROR")
-        return -1
 
     def run(self):
 
-        global replay
-
-        rewards = []
-
-        if self.flags['agent_class'] == 'RainbowAgent':
-            # put 2-5 copies of the same agent in a list, because loading
-            # the same tensorflow checkpoint more than once in a session fails
-            agent = self.agent_class(self.agent_config)
-            agents = [agent for _ in range(self.flags['players'])]
-        else:
-            agents = [self.agent_class(self.agent_config)
-                      for _ in range(self.flags['players'])]
-            if self.flags['agent_class'] == 'MCAgent':
-                for agent in range(len(agents)):
-                    agents[agent].player_id = agent
+        agents = self.generate_pool()
 
         avg_steps = 0
+        avg_reward = 0
 
         for eps in range(flags['num_episodes']):
+
             print('Running episode: %d' % eps)
 
             obs = self.env.reset()  # Observation of all players
             done = False
-            eps_reward = 0
-            n_steps = 0
 
             while not done:
                 for agent_id, agent in enumerate(agents):
                     ob = obs['player_observations'][agent_id]
-                    action = agent.act(ob)
+                    if type(agent) == MCAgent:
+                        action = agent.act(ob, self.env)
+                    else:
+                        action = agent.act(ob)
 
                     vec = obs['player_observations'][0]['vectorized']
 
                     move = self.moves_lookup(action, ob)
-                    n_steps += 1
+                    avg_steps += 1
 
-                    new_obs = state_tr(vec, action, self.flags['players']) #state transition
+                    # state transition
+                    new_obs = state_tr(vec, action, self.flags['players'])
 
                     # for debugging purpose
                     if flags['debug']:
@@ -252,17 +201,17 @@ class Runner(object):
 
                     # add the move to the memory
                     replay.add(ob, reward, move, eps)
-                    
-                    eps_reward += reward
+
+                    avg_reward += reward
 
                     if done:
                         break
-            rewards.append(eps_reward)
-            avg_steps += n_steps
 
         n_eps = float(flags['num_episodes'])
-        print('Average Reward: %.3f' % (sum(rewards)/n_eps))
-        print('Average steps: %.2f' % (avg_steps/float(n_eps)))
+        avg_reward /= n_eps
+        avg_steps /= n_eps
+        print('Average Reward: %.3f' % avg_reward)
+        print('Average steps: %.2f' % avg_steps)
 
 
 if __name__ == "__main__":
@@ -270,27 +219,74 @@ if __name__ == "__main__":
     flags = {'players': 2,
              'num_episodes': 1000,
              'agent_class': 'SimpleAgent',
-             'debug': False}
+             'agent2_class': "",
+             'debug': False,
+             'agent_predicted': "",
+             'agent_predicted2': "",
+             'model_class': "",
+             'model_class2': "",
+             'model_name': "predictor.h5",
+             'model_name2': "predictor.h5",
+             'checkpoint_dir': "",
+             'checkpoint_dir2': "",
+             'cross_play': False}
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['players=',
                                         'num_episodes=',
                                         'agent_class=',
-                                        'debug='])
+                                        'agent2_class=',
+                                        'debug=',
+                                        'agent_predicted=',
+                                        'agent_predicted2=',
+                                        'model_class=',
+                                        'model_class2=',
+                                        'model_name=',
+                                        'model_name2=',
+                                        'checkpoint_dir=',
+                                        'checkpoint_dir2=',
+                                        'cross_play='])
     if arguments:
-        sys.exit('usage: customAgent.py [options]\n'
-                 '--players       number of players in the game.\n'
-                 '--num_episodes  number of game episodes to run.\n'
-                 '--agent_class   {}'.format(' or '.join(AGENT_CLASSES.keys())))
+        sys.exit(
+            'usage: customAgent.py [options]\n'
+            '--players                 number of players in the game.\n'
+            '--num_episodes            number of game episodes to run.\n'
+            '--agent_class             the agent that you want to use.\n'
+            '--agent_predicted <str>   necessary if using MCAgent or NNAgent.'
+            'Use one of the other classes as string.\n'
+            '--model_class <str>       network type ["dense", "conv", "lstm"].\n'
+            '--model_name <str>        model name of a pre-trained model.\n'
+            '--agent2_class <str>      to play \'ad hoc\' against another agent.\n'
+            '--checkpoint_dir <str>    path to the checkpoints for RainbowAgent.\n'
+            '--checkpoint_dir2 <str>   path to the checkpoints for RainbowAgent as agent2.\n'
+            '--cross_play <True/False> cross_play between all agents.\n')
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
         flags[flag] = type(flags[flag])(value)
 
-    # initialize the replay memory
-    replay = exp.Experience(flags['agent_class'], numAgents=flags['players'])
+        # initialize the replay memory
+    if flags['agent2_class'] == "":
+        nameDir = flags['agent_class']
+    else:
+        nameDir = flags['agent_class'] + flags['agent2_class']
 
-    # run the episodes
-    runner = Runner(flags)
-    runner.run()
+    global replay
+    replay = exp.Experience(nameDir, numAgents=flags['players'])
 
-    # save the memory to file
-    replay.save()
+    # create the agents
+    if flags['agent2_class'] == "":
+        flags['agent2_class'] = flags['agent_class']
+        flags['model_name2'] = flags['model_name']
+        flags['checkpoint_dir2'] = flags['checkpoint_dir']
+        flags['model_class2'] = flags['model_class']
+        flags['agent_predicted2'] = flags['agent_predicted']
+
+    if flags['cross_play']:
+        cross_play(flags)
+    else:
+
+        # run the episodes
+        runner = TestRunner(flags)
+        runner.run()
+
+        # save the memory to file
+        replay.save()
