@@ -199,9 +199,6 @@ class TestRunner(Runner):
                         vec = obs['player_observations'][0]['vectorized']
                         compareVectors(new_obs, vec, self.flags['players'])
 
-                    # add the move to the memory
-                    replay.add(ob, reward, move, eps)
-
                     avg_reward += reward
 
                     if done:
@@ -269,9 +266,6 @@ if __name__ == "__main__":
     else:
         nameDir = flags['agent_class'] + flags['agent2_class']
 
-    global replay
-    replay = exp.Experience(nameDir, numAgents=flags['players'])
-
     # create the agents
     if flags['agent2_class'] == "":
         flags['agent2_class'] = flags['agent_class']
@@ -287,6 +281,3 @@ if __name__ == "__main__":
         # run the episodes
         runner = TestRunner(flags)
         runner.run()
-
-        # save the memory to file
-        replay.save()
