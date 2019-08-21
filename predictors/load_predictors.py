@@ -10,6 +10,7 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
+
 def load_predictor(model_class):
     """
     mediator function that allows to load only the required network
@@ -36,5 +37,11 @@ def load_predictor(model_class):
     elif model_class == 'conv_tf':
         from conv_tf import conv_pred
         return conv_pred
+    elif model_class == 'encoder_pred':
+        from encoder_pred import encoder_pred
+        return encoder_pred
+    elif model_class == 'autoencoder':
+        from autoencoder import autoencoder
+        return autoencoder
     else:
         raise ValueError("model class not recognized")

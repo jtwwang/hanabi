@@ -79,7 +79,7 @@ class conv_pred(policy_pred):
         self.model = Model(
             inputs=inputs,
             outputs=output,
-            name="big_conv"
+            name="conv"
         )
 
         return self.model

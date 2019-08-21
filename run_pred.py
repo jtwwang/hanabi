@@ -61,7 +61,7 @@ if __name__ == "__main__":
         pp.load(predictor_name)
 
     if flags['summary']:
-        if pp.model == None:
+        if pp.model is None:
             pp.create_model()
         print(pp.model.summary())
 

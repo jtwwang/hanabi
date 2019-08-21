@@ -19,7 +19,7 @@ from data_pipeline.balance_data import balance_data
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, TimeDistributed
 from tensorflow.keras import optimizers
-from tensorflow.keras.callbacks import ModelCheckpoint, TensorBoard
+from tensorflow.keras.callbacks import ModelCheckpoint
 
 import math
 import numpy as np
@@ -148,7 +148,10 @@ class lstm_pred(policy_pred):
             decay=0.0,
             amsgrad=False)
 
-        self.create_model()
+        # create the model if necessary
+        if model is None:
+            self.create_model()
+
         self.model.compile(loss='categorical_crossentropy',
                            optimizer=adam, metrics=['accuracy'])
 
@@ -163,7 +166,6 @@ class lstm_pred(policy_pred):
         checkpoints = ModelCheckpoint(
             os.path.join(self.checkpoint_path, 'weights{epoch:08d}.h5'),
             save_weights_only=True, period=50)
-        tensorboard = TensorBoard(log_dir="./logs")
 
         self.model.fit_generator(
             self.generate(self.X_train, self.y_train),
@@ -172,7 +174,7 @@ class lstm_pred(policy_pred):
             verbose=2,
             validation_data=self.generate(self.X_test, self.y_test),
             validation_steps=self.X_test.shape[0]/batch_size,
-            callbacks=[checkpoints, tensorboard])
+            callbacks=[checkpoints, self.tensorboard])
 
     # CURRENTLY UNUSED. TODO: REWRITE
     def perform_lstm_cross_validation(self, k, max_ep):
