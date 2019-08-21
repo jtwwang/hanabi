@@ -14,57 +14,96 @@ import numpy as np
 from data_pipeline.state_translate import state_translator
 from data_pipeline.bayes import Belief
 
-"""
-function to map the letter of the color to a corresponding number
 
-Args:
-    ColorLetter (string): the letter of the color
-        valid letters: 'R', 'Y', 'G', 'W', 'B'
+Color2Num = {'R': 0, 'Y': 1, 'G': 2, 'W': 3, 'B': 4}
 
-Returns:
-    the correspondent number (int)
-"""
-def Color2Num(ColorLetter):
-    if ColorLetter == 'R':
-        return 0
-    elif ColorLetter == 'Y':
-        return 1
-    elif ColorLetter =='G':
-        return 2
-    elif ColorLetter =='W':
-        return 3
-    else:
-        return 4
 
-"""
-Function to convert a 25 bit representation to a 50 bit representation.
-In a 50 bit representation, duplicates are represented
-
-Args:
-    card: a list or numpy array of size 25
-"""
 def convert_25to50(card):
+    """
+    Function to convert a 25 bit representation to a 50 bit representation.
+    In a 50 bit representation, duplicates are represented
 
-    # emtpy 50 bits card
-    new_card = [0 for _ in range(50)]
+    args:
+        card: a list or numpy array of size 25
+    """
+
+    new_card = [0 for _ in range(50)]  # emtpy 50 bits card
 
     for color in range(5):
-        for bit in new_card[color*10:(color*10) + 3]:
-            bit = card[color*5:color*5 + 1]
-        for bit in new_card[color*10 + 3:(color*10) + 5]:
-            bit = card[color*5 + 1:color*5 + 2]
-        for bit in new_card[color*10 + 5:(color*10) + 7]:
-            bit = card[color*5 + 2:color*5 + 3]
-        for bit in new_card[color*10 + 7:(color*10) + 9]:
-            bit = card[color*5 + 3:color*5 + 4]
-        new_card[color*10 + 9:(color*10) + 10] = card[color*5 + 4:color*5 + 5]
+        for bit in range(color*10, (color*10) + 3):
+            new_card[bit] = card[color*5]
+        for bit in range(color*10 + 3, (color*10) + 5):
+            new_card[bit] = card[color*5 + 1]
+        for bit in range(color*10 + 5, (color*10) + 7):
+            new_card[bit] = card[color*5 + 2]
+        for bit in range(color*10 + 7, (color*10) + 9):
+            new_card[bit] = card[color*5 + 3]
+        new_card[color*10 + 9] = card[color*5 + 4]
 
     return new_card
 
 
-def state_tr(obs, move, players):
+def update_discard(discardSpace, card):
+    # step 1: select the spaces where possibly the discard can go
+    dubDiscard = [0 for _ in discardSpace]
+    for color in range(5):
+        oneColor = discardSpace[color*10:(color + 1)*10]
+        dubOneColor = [0 for _ in range(10)]
+        oneApp = 0  # appearance of number 1
+        for i in range(0, 3):
+            if oneColor[i] == 1:
+                oneApp = i + 1
+        if oneApp < 3:
+            dubOneColor[oneApp] = 1
+        # for the three colors that have 2 cards each
+        for z in range(3):
+            twoApp = 3 + 2 * z
+            for i in range(3 + (2 * z), 5 + (2 * z)):
+                if oneColor[i] == 1:
+                    twoApp = i + 1
+                else:
+                    break
+            if twoApp < 5 + (2 * z):
+                dubOneColor[twoApp] = 1
+        # for fives
+        if oneColor[9] < 1:
+            dubOneColor[9] = 1
 
-    print(move)
+        # update the discard copy
+        dubDiscard[color * 10:(color + 1)*10] = dubOneColor
+
+    # step 2: convert the representation from 25 bits to 50 bits encoding
+    newCardDiscard = convert_25to50(card)
+
+    # step 3: sum the possibly discarded card to the existent discardSpace
+    selectedDiscard = np.multiply(dubDiscard, newCardDiscard)
+    discardSpace = (selectedDiscard + np.asarray(discardSpace)).tolist()
+
+    # variable to control whether the bits overflow or not
+    overFlow = True
+
+    # if any bit has sum over 1, it moves the remainder to the following
+    # spot
+    for color in range(5):
+        oneColor = discardSpace[color*10:(color+1)*10]
+        if oneColor[0] > 1:
+            oneColor[1] += (oneColor[0] - 1)
+        if oneColor[1] > 1:
+            oneColor[2] += (oneColor[1] - 1)
+        if oneColor[2] > 1:
+            overFlow = True
+        for z in range(3):
+            if oneColor[3 + 2*z] > 1:
+                oneColor[4 + 2*z] = oneColor[3 + 2*z]
+            if oneColor[4+2*z] > 1:
+                overFlow = True
+        if oneColor[9] > 1:
+            overFlow = True
+
+    return discardSpace, overFlow
+
+
+def state_tr(obs, move, players):
 
     tr = state_translator(obs, players)
 
@@ -85,22 +124,23 @@ def state_tr(obs, move, players):
     if move['action_type'] == 'PLAY':
         # index of the card played
         ix = move['card_index']
-      
-        # handSpace NOT CHANGE
-               
+
+        # handSpace NOT CHANGED
+
+        # playerMissingCards DONE
+        if tr.currentDeck[0] == 0:
+            tr.playerMissingCards[0] = 1
+
         # currentDeck DONE
         tr.currentDeck = tr.currentDeck[1:] + [0]
 
-         # playerMissingCards DONE
-        if tr.currentDeck[0] == 0:
-             tr.playerMissingCards[0] = 1
-        
         """                         **** BoardSpace ****
-        The probability of extracting the next piece is updated with the probability
-        of the card that we might have in our hand, according to the hints
+        The probability of extracting the next piece is updated with the
+        probability of the card that we might have in our hand,
+        according to the hints
         """
         cardKnowledge = tr.cardKnowledge
-        hints = cardKnowledge[ix*35 : ix*35+25]
+        hints = cardKnowledge[ix*35: ix*35+25]
 
         # calculate the probability
         card_prob = belief.prob(hints)
@@ -121,19 +161,20 @@ def state_tr(obs, move, players):
             for rank in range(5):
                 fire = firework[rank]
                 # update the probability with the possible extraction
-                tr.boardSpace[color * 5 + rank] += fire * card_prob[color * 5 + rank]
+                tr.boardSpace[color * 5 + rank] += fire * \
+                    card_prob[color * 5 + rank]
                 if rank > 0:
                     # and update the existing firework piece
-                    tr.boardSpace[color * 5 + rank - 1] += fire * (1 - card_prob[color * 5 + rank])
-
-        # infoTokens NOT CHANGE
+                    tr.boardSpace[color * 5 + rank - 1] += fire * \
+                        (1 - card_prob[color * 5 + rank])
 
         # lifeTokens DONE
         # TODO: test two transitions consecutively, to see if it computes right
         chanceToExplode = 1 - (np.multiply(future_firework, card_prob)).sum()
         remaining_prob = 1
-        for life in range(2,-1,-1):
-            probableLife = tr.lifeTokens[life] - (tr.lifeTokens[life] * chanceToExplode)
+        for life in range(2, -1, -1):
+            probableLife = tr.lifeTokens[life] - \
+                (tr.lifeTokens[life] * chanceToExplode)
             remaining_prob -= tr.lifeTokens[life]
             if life > 0:
                 if tr.lifeTokens[life - 1] == 1:
@@ -142,58 +183,27 @@ def state_tr(obs, move, players):
                         break
                     else:
                         tr.lifeTokens[life] = probableLife
-                        tr.lifeTokens[life-1] = 1 - (remaining_prob * chanceToExplode)
+                        tr.lifeTokens[life-1] = 1 - \
+                            (remaining_prob * chanceToExplode)
                         break
                 else:
                     tr.lifeTokens[life] = probableLife
 
         # discardSpace TODO: elinate possibilities accordingly to boardSpace
+        tr.discardSpace, overFlow = update_discard(tr.discardSpace, card_prob)
 
-        # step 1: select the spaces where possibly the discard can go
-        dubDiscard = [0 for _ in tr.discardSpace]
-        for color in range(5):
-            oneColor = tr.discardSpace[color*10:(color + 1)*10]
-            dubOneColor = dubDiscard[color * 10:(color + 1)*10]
-            oneApp = 0 #appearance of number 1
-            for i in range(0,3):
-                if oneColor[i] > 0:
-                    oneApp = i + 1
-            if oneApp < 3:
-                dubOneColor[oneApp] = 1
-            # for the three colors that have 2 cards each
-            for z in range(3):
-                twoApp = 3 + 2 * z
-                for i in range(3 + 2 * z,5 + 2 * z):
-                    if oneColor[i] > 0:
-                        twoApp = i + 1
-                if twoApp < 3 + 2 * z:
-                    dubOneColor[twoApp] = 1
-            # for fives
-            if oneColor[9] == 0:
-                dubOneColor[9] = 1
-
-            #update the discard copy
-            dubDiscard[color * 10:(color + 1)*10] = dubOneColor
-
-        # step 2: convert the representation from 25 bits to 50 bits encoding
-        newCardDiscard = convert_25to50(card_prob)
-        
-        # step 3: sum the possibly discarded card to the existent discardSpace
-        selectedDiscard = np.multiply(dubDiscard, newCardDiscard)
-        tr.discardSpace = (selectedDiscard + np.asarray(tr.discardSpace)).tolist()
-        
         # lastMoveType DONE
-        tr.lastMoveType = [1,0,0,0]
+        tr.lastMoveType = [1, 0, 0, 0]
 
         # lastMoveTarget DONE
-        tr.lastMoveTarget = [0,0]   
+        tr.lastMoveTarget = [0, 0]
 
         # colorRevealed DONE
         tr.colorRevealed = [0 for c in tr.colorRevealed]
-        
+
         # rankRevealed DONE
         tr.rankRevealed = [0 for r in tr.rankRevealed]
-        
+
         # cardRevealed DONE
         tr.cardRevealed = [0 for _ in tr.cardRevealed]
 
@@ -205,25 +215,41 @@ def state_tr(obs, move, players):
         tr.cardPlayed = card_prob.tolist()
 
         # prevPlay DONE
-        #1st bit: was successful
+        # 1st bit: was successful
         tr.prevPlay[0] = 1 - chanceToExplode
 
-        #2nd bit: did it add an info token (successful and n.5)
+        # 2nd bit: did it add an info token (successful and n.5)
         future_fives = [future_firework[i*5 + 4] for i in range(5)]
         prob_fives = [card_prob[i*5 + 4] for i in range(5)]
         chanceToSucceedAndFive = np.multiply(future_fives, prob_fives).sum()
         tr.prevPlay[1] = chanceToSucceedAndFive
 
+        # infoTokens
+        for token in range(len(tr.infoTokens)):
+            if tr.infoTokens[token] < 1:
+                new_token = tr.infoTokens[token] + chanceToSucceedAndFive
+                if new_token <= 1:
+                    tr.infoTokens[token] = new_token
+                else:
+                    tr.infoTokens[token] = 1
+                    new_token -= 1
+                    if token + 1 > len(tr.infoTokens):
+                        overFlow = True
+                    else:
+                        tr.infoTokens[token + 1] = new_token
+                break
+
         # cardKnowledge
         no_hint_card = belief.prob(np.ones(25))
-        # TODO are all cards with no hints full of 1s? or if the card is on the table there is a 0?
+        # TODO are all cards with no hints full of 1s?
+        # or if the card is on the table there is a 0?
         tr.cardKnowledge[ix*35: ix*35 + 25] = no_hint_card
 
     elif move['action_type'] == 'DISCARD':
 
         ix = move['card_index']
         cardKnowledge = tr.cardKnowledge
-        hints = cardKnowledge[ix*35 : ix*35+25]
+        hints = cardKnowledge[ix*35: ix*35+25]
 
         # calculate the probability
         card_prob = belief.prob(hints)
@@ -232,8 +258,8 @@ def state_tr(obs, move, players):
 
         # playerMissingCards DONE
         if tr.currentDeck[0] == 0:
-             tr.playerMissingCards[0] = 1
-        
+            tr.playerMissingCards[0] = 1
+
         # currentDeck DONE
         # we take out the last card from the deck
         tr.currentDeck = tr.currentDeck[1:] + [0]
@@ -245,52 +271,13 @@ def state_tr(obs, move, players):
         tr.infoTokens = [1] + tr.infoTokens[:7]
 
         # lifeTokens NOT CHANGE
-        
+
         # discardSpace DONE
         # step 1: select the spaces where possibly the discard can go
-        dubDiscard = [0 for _ in tr.discardSpace]
-        for color in range(5):
-            oneColor = tr.discardSpace[color*10:(color + 1)*10]
-            dubOneColor = dubDiscard[color * 10:(color + 1)*10]
-            oneApp = 0 #appearance of number 1
-            for i in range(0,3):
-                if oneColor[i] > 0:
-                    oneApp = i + 1
-            if oneApp < 3:
-                dubOneColor[oneApp] = 1
-            # for the three colors that have 2 cards each
-            for z in range(3):
-                twoApp = 3 + 2 * z
-                for i in range(3 + 2 * z,5 + 2 * z):
-                    if oneColor[i] > 0:
-                        twoApp = i + 1
-                if twoApp < 3 + 2 * z:
-                    dubOneColor[twoApp] = 1
-            # for fives
-            if oneColor[9] == 0:
-                dubOneColor[9] = 1
+        tr.discardSpace, overFlow = update_discard(tr.discardSpace, card_prob)
 
-            #update the discard copy
-            dubDiscard[color * 10:(color + 1)*10] = dubOneColor
-
-        # step 2: convert the representation from 25 bits to 50 bits encoding
-        newCardDiscard = convert_25to50(card_prob)
-        
-        # step 3: sum the possibly discarded card to the existent discardSpace
-        selectedDiscard = np.multiply(dubDiscard, newCardDiscard)
-        tr.discardSpace = (selectedDiscard + np.asarray(tr.discardSpace)).tolist()
-
-        # retrieve the knowledge
-        cardKnowledge = tr.cardKnowledge
-        hints = cardKnowledge[ix*35 : ix*35+25]
-
-        # calculate the probability
-        card_prob = belief.prob(hints)
-
-        # simulated discard space
-        # this is essentially to make sure that we encode the right vector for the specific move
         # that we're looking at
-        tr.lastMoveType = [0,1,0,0]
+        tr.lastMoveType = [0, 1, 0, 0]
 
         # lastMoveTarget DONE
         tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget]
@@ -307,7 +294,7 @@ def state_tr(obs, move, players):
         # positionPlayed
         tr.positionPlayed = [0 for _ in tr.positionPlayed]
         tr.positionPlayed[ix] = 1
-    
+
         # cardPlayed DONE
         # the card played is probabilistic
         tr.cardPlayed = card_prob.tolist()
@@ -316,28 +303,28 @@ def state_tr(obs, move, players):
         tr.prevPlay = [0, 0]
 
         # cardKnowledge TODO
-        
+
     else:
         # if this is a hint move
 
         target_offset = move['target_offset']
-        
+
         # handSpace NOT CHANGE
         # currentDeck NOT CHANGE
         # boardSpace NOT CHANGE
 
         # infoTokens DONE
         tr.infoTokens = tr.infoTokens[1:] + [0]
-        
+
         # lifeTokens NOT CHANGE
         # discardSpace NOT CHANGE
 
         # lastMoveTarget
         # the target is the last active player + target offset
-        
-        tr.lastMoveTarget = [0 for i in tr.lastMoveTarget] # reset the list
+
+        tr.lastMoveTarget = [0 for i in tr.lastMoveTarget]  # reset the list
         moveTarget = (tr.lastActivePlayer.index(1) + target_offset) % players
-        tr.lastMoveTarget[moveTarget] = 1 # one-hot encoded
+        tr.lastMoveTarget[moveTarget] = 1  # one-hot encoded
 
         # positionPlayed
         # reset all position played - we are not playing but giving a hint
@@ -349,19 +336,21 @@ def state_tr(obs, move, players):
 
         # prevPlay
         # no action is played, so there is no statistic for prevPlay
-        tr.prevPlay = [0,0]
+        tr.prevPlay = [0, 0]
 
         # cardKnoweldge TODO
 
         # cardRevealed (1/2)
         tr.cardRevealed = [0 for _ in tr.cardRevealed]
         bitHandSize = 25 * tr.handSize
-        start_hand = (target_offset - 1)* bitHandSize
+        start_hand = (target_offset - 1) * bitHandSize
         selectedHand = tr.handSpace[start_hand: start_hand + bitHandSize]
+
+        handsize = tr.handSize - tr.playerMissingCards[target_offset]
 
         if move['action_type'] == 'REVEAL_RANK':
             # lastMoveType
-            tr.lastMoveType = [0,0,0,1]
+            tr.lastMoveType = [0, 0, 0, 1]
 
             # colorRevealed
             # reset all color revealed - no color has been revealed this turn
@@ -373,7 +362,7 @@ def state_tr(obs, move, players):
             tr.rankRevealed[move['rank']] = 1
 
             # cardRevelaed (2/2)
-            for i in range(tr.handSize):
+            for i in range(handsize):
                 rankCard = selectedHand[i*25:(i+1)*25].index(1) % 5
                 if rankCard == move['rank']:
                     tr.cardRevealed[i] = 1
@@ -382,26 +371,24 @@ def state_tr(obs, move, players):
             # MAYBE ?? NOT SURE IF THIS IS THE PROBLEM
 
         else:
-            # else if 'REVEAL_COLOR' (left it implicit)
-            # lastMoveType
-            tr.lastMoveType = [0,0,1,0]
+            # else if 'REVEAL_COLOR'
 
             # colorRevealed DONE
             tr.colorRevealed = [0 for _ in tr.colorRevealed]
-            colorNum = Color2Num(move['color'])
+            colorNum = Color2Num[move['color']]
             tr.colorRevealed[colorNum] = 1
-            
+
             # rankRevealed DONE
             tr.rankRevealed = [0 for _ in tr.rankRevealed]
 
             # cardRevealed (2/2)
-            for i in range(tr.handSize):
-                #print(selectedHand[i*25:(i+1)*25])
+            for i in range(handsize):
                 colorCard = int(selectedHand[i*25:(i + 1)*25].index(1) / 5)
                 if colorCard == colorNum:
                     tr.cardRevealed[i] = 1
-            #print(tr.cardRevealed)
-            # CAN'T UNDERSTAND WHY THIS IS NOT WORKING
+
+            # lastMoveType
+            tr.lastMoveType = [0, 0, 1, 0]
 
     tr.encodeVector()
     new_obs = tr.stateVector

@@ -89,9 +89,10 @@ def compareVectors(pred, expected, players):
             print(transPred.lifeTokens)
             print(transExp.lifeTokens)
     if transPred.infoTokens != transExp.infoTokens:
-        print("failed infoTokens")
-        print(transPred.infoTokens)
-        print(transExp.infoTokens)
+        if np.abs(sum(transPred.infoTokens) - sum(transExp.infoTokens)) > 1:
+            print("failed infoTokens")
+            print(transPred.infoTokens)
+            print(transExp.infoTokens)
     if transPred.lastActivePlayer != transExp.lastActivePlayer:
         print("failed lastActivePlayer")
         print(transPred.lastActivePlayer)
