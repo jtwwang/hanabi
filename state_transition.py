@@ -82,8 +82,7 @@ def update_discard(discardSpace, card):
     # variable to control whether the bits overflow or not
     overFlow = True
 
-    # if any bit has sum over 1, it moves the remainder to the following
-    # spot
+    # if any bit has sum over 1, it moves the remainder to the following spot
     for color in range(5):
         oneColor = discardSpace[color*10:(color+1)*10]
         if oneColor[0] > 1:
@@ -121,207 +120,165 @@ def state_tr(obs, move, players):
         first = tr.lastActivePlayer[0]
         tr.lastActivePlayer = tr.lastActivePlayer[1:] + [first]
 
-    if move['action_type'] == 'PLAY':
-        # index of the card played
-        ix = move['card_index']
+    if move['action_type'] == 'PLAY' or move['action_type'] == 'DISCARD':
 
-        # handSpace NOT CHANGED
-
-        # playerMissingCards DONE
-        if tr.currentDeck[0] == 0:
-            tr.playerMissingCards[0] = 1
-
-        # currentDeck DONE
-        tr.currentDeck = tr.currentDeck[1:] + [0]
-
-        """                         **** BoardSpace ****
-        The probability of extracting the next piece is updated with the
-        probability of the card that we might have in our hand,
-        according to the hints
-        """
-        cardKnowledge = tr.cardKnowledge
-        hints = cardKnowledge[ix*35: ix*35+25]
+        ix = move['card_index']  # index of card played or discarded
+        hints = tr.cardKnowledge[ix*35: ix*35+25]
 
         # calculate the probability
         card_prob = belief.prob(hints)
 
-        # create a copy
-        fireworks = tr.boardSpace
-
-        # future projection of the fireworks
-        future_firework = []
-
-        # empty the fireworks
-        tr.boardSpace = [0 for _ in fireworks]
-        for color in range(5):
-            # take a single color and advance it by one
-            firework = fireworks[color * 5: color * 5 + 5]
-            firework = [1 - sum(firework)] + firework[:4]
-            future_firework += firework
-            for rank in range(5):
-                fire = firework[rank]
-                # update the probability with the possible extraction
-                tr.boardSpace[color * 5 + rank] += fire * \
-                    card_prob[color * 5 + rank]
-                if rank > 0:
-                    # and update the existing firework piece
-                    tr.boardSpace[color * 5 + rank - 1] += fire * \
-                        (1 - card_prob[color * 5 + rank])
-
-        # lifeTokens DONE
-        # TODO: test two transitions consecutively, to see if it computes right
-        chanceToExplode = 1 - (np.multiply(future_firework, card_prob)).sum()
-        remaining_prob = 1
-        for life in range(2, -1, -1):
-            probableLife = tr.lifeTokens[life] - \
-                (tr.lifeTokens[life] * chanceToExplode)
-            remaining_prob -= tr.lifeTokens[life]
-            if life > 0:
-                if tr.lifeTokens[life - 1] == 1:
-                    if tr.lifeTokens[life] == 1:
-                        tr.lifeTokens[life] = probableLife
-                        break
-                    else:
-                        tr.lifeTokens[life] = probableLife
-                        tr.lifeTokens[life-1] = 1 - \
-                            (remaining_prob * chanceToExplode)
-                        break
-                else:
-                    tr.lifeTokens[life] = probableLife
-
-        # discardSpace TODO: elinate possibilities accordingly to boardSpace
-        tr.discardSpace, overFlow = update_discard(tr.discardSpace, card_prob)
-
-        # lastMoveType DONE
-        tr.lastMoveType = [1, 0, 0, 0]
-
-        # lastMoveTarget DONE
-        tr.lastMoveTarget = [0, 0]
-
-        # colorRevealed DONE
-        tr.colorRevealed = [0 for c in tr.colorRevealed]
-
-        # rankRevealed DONE
-        tr.rankRevealed = [0 for r in tr.rankRevealed]
-
-        # cardRevealed DONE
-        tr.cardRevealed = [0 for _ in tr.cardRevealed]
-
-        # positionPlayed DONE
-        tr.positionPlayed = [0 for p in tr.positionPlayed]
-        tr.positionPlayed[ix] = 1
-
-        # cardPlayed DONE
+        # the cardPlayed is probabilistic
         tr.cardPlayed = card_prob.tolist()
 
-        # prevPlay DONE
-        # 1st bit: was successful
-        tr.prevPlay[0] = 1 - chanceToExplode
+        # playerMissingCard
+        if tr.currentDeck[0] == 0:
+            tr.playerMissingCards[0] = 1
 
-        # 2nd bit: did it add an info token (successful and n.5)
-        future_fives = [future_firework[i*5 + 4] for i in range(5)]
-        prob_fives = [card_prob[i*5 + 4] for i in range(5)]
-        chanceToSucceedAndFive = np.multiply(future_fives, prob_fives).sum()
-        tr.prevPlay[1] = chanceToSucceedAndFive
+        # we take the last card from the deck
+        tr.currentDeck = tr.currentDeck[1:] + [0]
 
-        # infoTokens
-        for token in range(len(tr.infoTokens)):
-            if tr.infoTokens[token] < 1:
-                new_token = tr.infoTokens[token] + chanceToSucceedAndFive
-                if new_token <= 1:
-                    tr.infoTokens[token] = new_token
-                else:
-                    tr.infoTokens[token] = 1
-                    new_token -= 1
-                    if token + 1 > len(tr.infoTokens):
-                        overFlow = True
-                    else:
-                        tr.infoTokens[token + 1] = new_token
-                break
+        # the following are empty
+        tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget]
+        tr.colorRevealed = [0 for _ in tr.colorRevealed]
+        tr.rankRevealed = [0 for _ in tr.rankRevealed]
+        tr.cardRevealed = [0 for _ in tr.cardRevealed]
 
         # cardKnowledge
-        no_hint_card = belief.prob(np.ones(25))
-        # TODO are all cards with no hints full of 1s?
-        # or if the card is on the table there is a 0?
+        belief.add_known(card_prob)  # add the knowledge of the discarded card
+        no_hint_card = belief.prob(np.ones(25))  # compute the new card
         tr.cardKnowledge[ix*35: ix*35 + 25] = no_hint_card
 
-    elif move['action_type'] == 'DISCARD':
+        # TODO: change the last 10 bits of the new card
+        # TODO: do the case in which a card is missing
 
-        ix = move['card_index']
-        cardKnowledge = tr.cardKnowledge
-        hints = cardKnowledge[ix*35: ix*35+25]
+        if move['action_type'] == 'PLAY':
 
-        # calculate the probability
-        card_prob = belief.prob(hints)
+            """                         **** BoardSpace ****
+            The probability of extracting the next piece is updated with the
+            probability of the card that we might have in our hand,
+            according to the hints
+            """
 
-        # handSpace DOESN'T CHANGE
+            # create a copy
+            fireworks = tr.boardSpace
 
-        # playerMissingCards DONE
-        if tr.currentDeck[0] == 0:
-            tr.playerMissingCards[0] = 1
+            # future projection of the fireworks
+            future_firework = []
 
-        # currentDeck DONE
-        # we take out the last card from the deck
-        tr.currentDeck = tr.currentDeck[1:] + [0]
+            # empty the fireworks
+            tr.boardSpace = [0 for _ in fireworks]
+            for color in range(5):
+                # take a single color and advance it by one
+                firework = fireworks[color * 5: color * 5 + 5]
+                firework = [1 - sum(firework)] + firework[:4]
+                future_firework += firework
+                for rank in range(5):
+                    fire = firework[rank]
+                    # update the probability with the possible extraction
+                    tr.boardSpace[color * 5 + rank] += fire * \
+                        card_prob[color * 5 + rank]
+                    if rank > 0:
+                        # and update the existing firework piece
+                        tr.boardSpace[color * 5 + rank - 1] += fire * \
+                            (1 - card_prob[color * 5 + rank])
 
-        # boardSpace DOESN'T CHANGE
+            # lifeTokens DONE
+            # TODO: test two transitions consecutively, to see if it computes right
+            chanceToExplode = 1 - \
+                (np.multiply(future_firework, card_prob)).sum()
+            remaining_prob = 1
+            for life in range(2, -1, -1):
+                probableLife = tr.lifeTokens[life] - \
+                    (tr.lifeTokens[life] * chanceToExplode)
+                remaining_prob -= tr.lifeTokens[life]
+                if life > 0:
+                    if tr.lifeTokens[life - 1] == 1:
+                        if tr.lifeTokens[life] == 1:
+                            tr.lifeTokens[life] = probableLife
+                            break
+                        else:
+                            tr.lifeTokens[life] = probableLife
+                            tr.lifeTokens[life-1] = 1 - \
+                                (remaining_prob * chanceToExplode)
+                            break
+                    else:
+                        tr.lifeTokens[life] = probableLife
 
-        # infoTokens DONE
-        # add one token every time
-        tr.infoTokens = [1] + tr.infoTokens[:7]
+            # update discard space
+            discardCard = card_prob - np.multiply(future_firework, card_prob)
+            tr.discardSpace, overFlow = \
+                update_discard(tr.discardSpace, discardCard)
 
-        # lifeTokens NOT CHANGE
+            tr.lastMoveType = [1, 0, 0, 0]
 
-        # discardSpace DONE
-        # step 1: select the spaces where possibly the discard can go
-        tr.discardSpace, overFlow = update_discard(tr.discardSpace, card_prob)
+            # positionPlayed DONE
+            tr.positionPlayed = [0 for p in tr.positionPlayed]
+            tr.positionPlayed[ix] = 1
 
-        # that we're looking at
-        tr.lastMoveType = [0, 1, 0, 0]
+            # prevPlay DONE
+            # 1st bit: was successful
+            tr.prevPlay[0] = 1 - chanceToExplode
 
-        # lastMoveTarget DONE
-        tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget]
+            # 2nd bit: did it add an info token (successful and n.5)
+            future_fives = [future_firework[i*5 + 4] for i in range(5)]
+            prob_fives = [card_prob[i*5 + 4] for i in range(5)]
+            chanceToSucceedAndFive = np.multiply(
+                future_fives, prob_fives).sum()
+            tr.prevPlay[1] = chanceToSucceedAndFive
 
-        # colorRevealed DONE
-        tr.colorRevealed = [0 for _ in tr.colorRevealed]
+            # infoTokens
+            for token in range(len(tr.infoTokens)):
+                if tr.infoTokens[token] < 1:
+                    new_token = tr.infoTokens[token] + chanceToSucceedAndFive
+                    if new_token <= 1:
+                        tr.infoTokens[token] = new_token
+                    else:
+                        tr.infoTokens[token] = 1
+                        new_token -= 1
+                        if token + 1 > len(tr.infoTokens):
+                            overFlow = True
+                        else:
+                            tr.infoTokens[token + 1] = new_token
+                    break
 
-        # rankRevealed DONE
-        tr.rankRevealed = [0 for _ in tr.rankRevealed]
+        elif move['action_type'] == 'DISCARD':
 
-        # cardRevealed DONE
-        tr.cardRevealed = [0 for _ in tr.cardRevealed]
+            # boardSpace NO CHANGE
+            # lifeTokens NO CHANGE
 
-        # positionPlayed
-        tr.positionPlayed = [0 for _ in tr.positionPlayed]
-        tr.positionPlayed[ix] = 1
+            # infoTokens: add one token every time
+            tr.infoTokens = [1] + tr.infoTokens[:7]
 
-        # cardPlayed DONE
-        # the card played is probabilistic
-        tr.cardPlayed = card_prob.tolist()
+            # discardSpace DONE
+            tr.discardSpace, overFlow = update_discard(
+                tr.discardSpace, card_prob)
 
-        # prevPlay
-        tr.prevPlay = [0, 0]
+            # lastMoveType is static
+            tr.lastMoveType = [0, 1, 0, 0]
 
-        # cardKnowledge TODO
+            # positionPlayed
+            tr.positionPlayed = [0 for _ in tr.positionPlayed]
+            tr.positionPlayed[ix] = 1
+
+            # prevPlay
+            tr.prevPlay = [0, 0]
 
     else:
         # if this is a hint move
-
         target_offset = move['target_offset']
 
         # handSpace NOT CHANGE
         # currentDeck NOT CHANGE
         # boardSpace NOT CHANGE
+        # lifeTokens NOT CHANGE
+        # discardSpace NOT CHANGE
 
         # infoTokens DONE
         tr.infoTokens = tr.infoTokens[1:] + [0]
 
-        # lifeTokens NOT CHANGE
-        # discardSpace NOT CHANGE
-
         # lastMoveTarget
         # the target is the last active player + target offset
-
         tr.lastMoveTarget = [0 for i in tr.lastMoveTarget]  # reset the list
         moveTarget = (tr.lastActivePlayer.index(1) + target_offset) % players
         tr.lastMoveTarget[moveTarget] = 1  # one-hot encoded
@@ -338,19 +295,22 @@ def state_tr(obs, move, players):
         # no action is played, so there is no statistic for prevPlay
         tr.prevPlay = [0, 0]
 
-        # cardKnoweldge TODO
-
         # cardRevealed (1/2)
         tr.cardRevealed = [0 for _ in tr.cardRevealed]
         bitHandSize = 25 * tr.handSize
+        bitKnowSize = 35 * tr.handSize
         start_hand = (target_offset - 1) * bitHandSize
+        start_know = (target_offset - 1) * bitKnowSize
         selectedHand = tr.handSpace[start_hand: start_hand + bitHandSize]
+        selectedKnowledge = tr.cardKnowledge[start_know: start_know + bitKnowSize]
 
         handsize = tr.handSize - tr.playerMissingCards[target_offset]
 
         if move['action_type'] == 'REVEAL_RANK':
             # lastMoveType
             tr.lastMoveType = [0, 0, 0, 1]
+
+            rank = move['rank']
 
             # colorRevealed
             # reset all color revealed - no color has been revealed this turn
@@ -359,16 +319,30 @@ def state_tr(obs, move, players):
             # rankRevealed
             # select the correct rank to reveal from the move dict
             tr.rankRevealed = [0 for r in tr.rankRevealed]
-            tr.rankRevealed[move['rank']] = 1
+            tr.rankRevealed[rank] = 1
 
-            # cardRevelaed (2/2)
+            # create a mask for cardKnowledge
+            mask = np.zeros(25)
+            for color in range(5):
+                mask[color*5 + rank] = 1
+            mask_inverse = 1 - mask
+
             for i in range(handsize):
                 rankCard = selectedHand[i*25:(i+1)*25].index(1) % 5
+                know_card = selectedKnowledge[i*35:i*35 + 25]
                 if rankCard == move['rank']:
+                    # cardRevealed
                     tr.cardRevealed[i] = 1
-            # TODO check if rank card knowledge is already in cardKnowledge
-            # if it is cardKnowledge, then get rid of that card in cardRevealed
-            # MAYBE ?? NOT SURE IF THIS IS THE PROBLEM
+                    selectedKnowledge[i*35:i*35 + 25] = np.multiply(mask, know_card)
+                    selectedKnowledge[i*35+30:(i+1)*35] = tr.rankRevealed
+                else:
+                    selectedKnowledge[i*35:i*35 + 25] = np.multiply(mask_inverse, know_card)
+                    selectedKnowledge[i*35+30+rank] = 0
+
+            # replace with the update knowledge
+            tr.cardKnowledge[start_know: start_know + bitKnowSize] = selectedKnowledge
+
+            # TODO case in which is probabilistic - or maybe not doing it
 
         else:
             # else if 'REVEAL_COLOR'
@@ -381,15 +355,32 @@ def state_tr(obs, move, players):
             # rankRevealed DONE
             tr.rankRevealed = [0 for _ in tr.rankRevealed]
 
-            # cardRevealed (2/2)
+            # create a mask for cardKnowledge
+            mask = np.zeros(25)
+            mask[colorNum*5:(colorNum+1)*5] = 1
+            mask_inverse = 1 - mask
+
+            # cardRevealed
             for i in range(handsize):
                 colorCard = int(selectedHand[i*25:(i + 1)*25].index(1) / 5)
+                know_card = selectedKnowledge[i*35:i*35 + 25]
                 if colorCard == colorNum:
                     tr.cardRevealed[i] = 1
+                    selectedKnowledge[i*35:i*35 + 25] = np.multiply(mask, know_card)
+                    selectedKnowledge[i*35+25:i*35 + 30] = tr.colorRevealed
+                else:
+                    selectedKnowledge[i*35:i*35 + 25] = np.multiply(mask_inverse, know_card)
+                    selectedKnowledge[i*35+25+colorNum] = 0
+
+            # replace with the update knowledge
+            tr.cardKnowledge[start_know: start_know + bitKnowSize] = selectedKnowledge
+
+            # TODO case in which is probabilistic
 
             # lastMoveType
             tr.lastMoveType = [0, 0, 1, 0]
 
+    # re-encode the updated vector
     tr.encodeVector()
     new_obs = tr.stateVector
 
