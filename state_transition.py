@@ -120,6 +120,8 @@ def state_tr(obs, move, players):
         first = tr.lastActivePlayer[0]
         tr.lastActivePlayer = tr.lastActivePlayer[1:] + [first]
 
+    tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget] # reset the list
+
     if move['action_type'] == 'PLAY' or move['action_type'] == 'DISCARD':
 
         ix = move['card_index']  # index of card played or discarded
@@ -131,26 +133,39 @@ def state_tr(obs, move, players):
         # the cardPlayed is probabilistic
         tr.cardPlayed = card_prob.tolist()
 
-        # playerMissingCard
-        if tr.currentDeck[0] == 0:
-            tr.playerMissingCards[0] = 1
-
-        # we take the last card from the deck
-        tr.currentDeck = tr.currentDeck[1:] + [0]
-
         # the following are empty
-        tr.lastMoveTarget = [0 for _ in tr.lastMoveTarget]
         tr.colorRevealed = [0 for _ in tr.colorRevealed]
         tr.rankRevealed = [0 for _ in tr.rankRevealed]
         tr.cardRevealed = [0 for _ in tr.cardRevealed]
 
-        # cardKnowledge
-        belief.add_known(card_prob)  # add the knowledge of the discarded card
-        no_hint_card = belief.prob(np.ones(25))  # compute the new card
-        tr.cardKnowledge[ix*35: ix*35 + 25] = no_hint_card
+        # reorder cardKnowledge
+        for i in range(ix, tr.handSize - 1):
+            tr.cardKnowledge[i*35:(i+1)*35], tr.cardKnowledge[(i+1)*35:(i+2)*35] = \
+                tr.cardKnowledge[(i+1)*35:(i+2)*35], tr.cardKnowledge[i*35:(i+1)*35]
+        last_card = (tr.handSize-1)*35
 
-        # TODO: change the last 10 bits of the new card
-        # TODO: do the case in which a card is missing
+        if tr.currentDeck[0] == 0:
+            # if the deck is empty, signal that the player is gonna miss a card
+            # and update the new card to be completely empty
+            tr.playerMissingCards[0] = 1
+            tr.cardKnowledge[last_card:last_card + 35] = [0 for _ in range(35)]
+        else:
+            # update cardKnowledge
+            belief.add_known(card_prob)  # add the knowledge of the played/discard
+            no_hint_card = belief.prob(np.ones(25))  # compute the new card
+            tr.cardKnowledge[last_card:last_card + 25] = no_hint_card
+
+            color_know = []
+            rank_know = np.zeros(5)
+            for color in range(5):
+                this_color = no_hint_card[color*5: (color+1)*5]
+                color_know.append(sum(this_color))
+                rank_know = rank_know + this_color
+            tr.cardKnowledge[last_card+25:last_card+30] = color_know
+            tr.cardKnowledge[last_card+30:last_card+35] = rank_know.tolist()
+
+        # we take the last card from the deck
+        tr.currentDeck = tr.currentDeck[1:] + [0]
 
         if move['action_type'] == 'PLAY':
 
@@ -277,21 +292,18 @@ def state_tr(obs, move, players):
         # infoTokens DONE
         tr.infoTokens = tr.infoTokens[1:] + [0]
 
-        # lastMoveTarget
         # the target is the last active player + target offset
-        tr.lastMoveTarget = [0 for i in tr.lastMoveTarget]  # reset the list
         moveTarget = (tr.lastActivePlayer.index(1) + target_offset) % players
         tr.lastMoveTarget[moveTarget] = 1  # one-hot encoded
 
-        # positionPlayed
         # reset all position played - we are not playing but giving a hint
-        tr.positionPlayed = [0 for p in tr.positionPlayed]
+        tr.positionPlayed = [0 for _ in tr.positionPlayed]
 
-        # cardPlayed
         # reset all cards played - we are giving a hint not playing
-        tr.cardPlayed = [0 for c in tr.cardPlayed]
+        tr.cardPlayed = [0 for _ in tr.cardPlayed]
+        tr.rankRevealed = [0 for _ in tr.rankRevealed] # reset
+        tr.colorRevealed = [0 for _ in tr.colorRevealed] # reset
 
-        # prevPlay
         # no action is played, so there is no statistic for prevPlay
         tr.prevPlay = [0, 0]
 
@@ -312,13 +324,7 @@ def state_tr(obs, move, players):
 
             rank = move['rank']
 
-            # colorRevealed
-            # reset all color revealed - no color has been revealed this turn
-            tr.colorRevealed = [0 for c in tr.colorRevealed]
-
-            # rankRevealed
             # select the correct rank to reveal from the move dict
-            tr.rankRevealed = [0 for r in tr.rankRevealed]
             tr.rankRevealed[rank] = 1
 
             # create a mask for cardKnowledge
@@ -327,11 +333,14 @@ def state_tr(obs, move, players):
                 mask[color*5 + rank] = 1
             mask_inverse = 1 - mask
 
+            # cardRevealed and cardKnowledge
             for i in range(handsize):
-                rankCard = selectedHand[i*25:(i+1)*25].index(1) % 5
+                try:
+                    rankCard = selectedHand[i*25:(i+1)*25].index(1) % 5
+                except ValueError:
+                    continue # skip the rest of the loop
                 know_card = selectedKnowledge[i*35:i*35 + 25]
                 if rankCard == move['rank']:
-                    # cardRevealed
                     tr.cardRevealed[i] = 1
                     selectedKnowledge[i*35:i*35 + 25] = np.multiply(mask, know_card)
                     selectedKnowledge[i*35+30:(i+1)*35] = tr.rankRevealed
@@ -342,27 +351,23 @@ def state_tr(obs, move, players):
             # replace with the update knowledge
             tr.cardKnowledge[start_know: start_know + bitKnowSize] = selectedKnowledge
 
-            # TODO case in which is probabilistic - or maybe not doing it
-
         else:
             # else if 'REVEAL_COLOR'
 
-            # colorRevealed DONE
-            tr.colorRevealed = [0 for _ in tr.colorRevealed]
             colorNum = Color2Num[move['color']]
             tr.colorRevealed[colorNum] = 1
-
-            # rankRevealed DONE
-            tr.rankRevealed = [0 for _ in tr.rankRevealed]
 
             # create a mask for cardKnowledge
             mask = np.zeros(25)
             mask[colorNum*5:(colorNum+1)*5] = 1
             mask_inverse = 1 - mask
 
-            # cardRevealed
+            # cardRevealed and cardKnowledge
             for i in range(handsize):
-                colorCard = int(selectedHand[i*25:(i + 1)*25].index(1) / 5)
+                try:
+                    colorCard = int(selectedHand[i*25:(i + 1)*25].index(1) / 5)
+                except ValueError:
+                    continue # skip the rest of the loop
                 know_card = selectedKnowledge[i*35:i*35 + 25]
                 if colorCard == colorNum:
                     tr.cardRevealed[i] = 1
@@ -374,8 +379,6 @@ def state_tr(obs, move, players):
 
             # replace with the update knowledge
             tr.cardKnowledge[start_know: start_know + bitKnowSize] = selectedKnowledge
-
-            # TODO case in which is probabilistic
 
             # lastMoveType
             tr.lastMoveType = [0, 0, 1, 0]

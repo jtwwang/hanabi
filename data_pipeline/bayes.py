@@ -28,7 +28,7 @@ class Belief():
         self.players = players
 
         # initialize matrix for known cards
-        self.full_know = np.zeros(25, dtype=np.uint8)
+        self.full_know = np.zeros(25, dtype=np.float32)
 
         # set the matrix of available cards
         self.build_availability()
@@ -39,8 +39,8 @@ class Belief():
         This function is usually called just once at the beginning
         """
 
-        self.available = np.empty(25, dtype=np.uint8)
-        av = np.array([3, 2, 2, 2, 1], dtype=np.uint8)
+        self.available = np.empty(25, dtype=np.float32)
+        av = np.array([3, 2, 2, 2, 1], dtype=np.float32)
         for color in range(5):
             self.available[color * 5: (color + 1) * 5] = av
 
@@ -92,7 +92,7 @@ class Belief():
                 else:
                     tr.boardSpace[c * 5 + r] = n
 
-        self.full_know -= np.asarray(tr.boardSpace, dtype=np.uint8)
+        self.full_know -= np.asarray(tr.boardSpace, dtype=np.float32)
 
         # update the discard knowledge
         discard = np.asarray(tr.discardSpace)
@@ -108,4 +108,4 @@ class Belief():
         # update the observed hand knowledge
         for i in range(self.n_cards * (self.players - 1)):
             self.full_know -= np.asarray(
-                tr.handSpace[i * 25:(i + 1) * 25], dtype=np.uint8)
+                tr.handSpace[i * 25:(i + 1) * 25], dtype=np.float32)
