@@ -34,14 +34,21 @@ def one_hot_list(data_list, classes):
     return np.asarray(new_list)
 
 
-def split_dataset(examples, labels, val_split):
+def split_dataset(data_list, val_split):
     """
     Args:
         examples (np.ndarray)
         labels (np.ndarray)
     """
-    size_test = int(val_split * examples.shape[0])
-    X_test, X_train = examples[:size_test], examples[size_test:]
-    y_test, y_train = labels[:size_test], labels[size_test:]
+    size_test = int(val_split * data_list[0].shape[0])
 
-    return X_train, y_train, X_test, y_test
+    # initialize empty list for output
+    training_list = []
+    test_list = []
+
+    for set in data_list:
+        set_test, set_training = set[:size_test], set[size_test:]
+        training_list.append(set_training)
+        test_list.append(set_test)
+
+    return training_list, test_list

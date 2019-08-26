@@ -19,9 +19,11 @@ import numpy as np
 
 
 class dense_pred(policy_pred):
-    def __init__(self, agent_class):
+    def __init__(self, agent_class,predictor_name='predictor'):
         self.model_type = "dense"
-        super(dense_pred, self).__init__(agent_class, self.model_type)
+        super(dense_pred, self).__init__(agent_class, 
+            model_type=self.model_type,
+            predictor_name=predictor_name)
 
     def create_model(self):
         x = Sequential()
@@ -32,20 +34,6 @@ class dense_pred(policy_pred):
         x.add(Dense(self.action_space))
         self.model = x
         return x
-
-    def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
-        """
-        args:
-                agent_class (string)
-                num_player (int)
-        """
-        super(dense_pred, self).extract_data(agent_class,
-                                             val_split,
-                                             games=games,
-                                             balance=balance)
-
-        self.input_dim = self.X_train.shape[1]
-        self.action_space = self.y_train.shape[1]
 
     def reshape_data(self, X):
         if X.shape == (self.action_space,):  # Only one sample inputted

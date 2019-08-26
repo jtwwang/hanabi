@@ -13,15 +13,7 @@
 import getopt
 import sys
 
-from predictors.conv_pred import conv_pred
-from predictors.dense_pred import dense_pred
-from predictors.lstm_pred import lstm_pred
-
-model_dict = {
-    "lstm": lstm_pred,
-    "dense": dense_pred,
-    "conv": conv_pred
-}
+from predictors.load_predictors import load_predictor
 
 if __name__ == "__main__":
     flags = {'model_class': "conv",
@@ -35,7 +27,7 @@ if __name__ == "__main__":
              'summary': False,
              'games': -1,
              'balance': False,
-             'model_name': "predictor.h5"}
+             'predictor_name': "predictor"}
 
     options, arguments = getopt.getopt(sys.argv[1:], '',
                                        ['model_class=',
@@ -49,7 +41,7 @@ if __name__ == "__main__":
                                         'summary=',
                                         'games=',
                                         'balance=',
-                                        'model_name='])
+                                        'predictor_name='])
     if arguments:
         sys.exit()
     for flag, value in options:
@@ -57,21 +49,23 @@ if __name__ == "__main__":
         flags[flag] = type(flags[flag])(value)
 
     agent_class = flags['agent_class']
-    model_class = model_dict[flags['model_class']]
+    predictor_name = flags['predictor_name']
 
-    pp = model_class(agent_class)
+    pp = load_predictor(flags['model_class'])(agent_class,predictor_name=predictor_name)
     pp.extract_data(agent_class,
                     val_split=flags['val_split'],
                     games=flags['games'],
                     balance=flags['balance'])
-
+    
     if flags['load']:
-        pp.load(flags['model_name'])
+        pp.load(predictor_name)
 
     if flags['summary']:
+        if pp.model is None:
+            pp.create_model()
         print(pp.model.summary())
 
     pp.fit(epochs=flags['epochs'],
            batch_size=flags['batch_size'],
            learning_rate=flags['lr'])
-    pp.save(flags['model_name'])
+    pp.save()
