@@ -56,9 +56,9 @@ if __name__ == "__main__":
                     val_split=flags['val_split'],
                     games=flags['games'],
                     balance=flags['balance'])
-    
+
     if flags['load']:
-        pp.load(predictor_name)
+        pp.load()
 
     if flags['summary']:
         if pp.model is None:

@@ -72,7 +72,7 @@ class policy_pred(object):
         self.make_dir(self.checkpoint_dir)
 
         # create callbacks for tensorboard
-        self.tensorboard = TensorBoard(log_dir=self.path)
+        self.tensorboard = TensorBoard(log_dir=self.predictor_dir)
 
     def make_dir(self, path):
         """
@@ -84,7 +84,7 @@ class policy_pred(object):
         try:
             os.makedirs(path)
             print("Successfully created the directory %s", path)
-        except OSError as exc: 
+        except OSError as exc:
             if exc.errno == errno.EEXIST and os.path.isdir(path):
                 #print("%s already exists." % path)
                 pass
