@@ -31,9 +31,9 @@ def load_predictor(model_class):
     elif model_class == 'split':
         from split_input_pred import split_input_pred
         return split_input_pred
-    elif model_class == 'multihead':
-        from multihead_pred import multihead
-        return multihead
+    elif model_class == 'treenet':
+        from treenet import treenet
+        return treenet
     elif model_class == 'conv_tf':
         from conv_tf import conv_pred
         return conv_pred
