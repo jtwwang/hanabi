@@ -27,9 +27,12 @@ tf.enable_eager_execution()
 
 
 class treenet(policy_pred):
-    def __init__(self, agent_class, predictor_name):
-        self.model_type = "treenet"
-        super(treenet, self).__init__(agent_class, self.model_type)
+    def __init__(self, agent_class, predictor_name, model_type=None):
+        if model_type is None:
+            model_type = "treenet"
+        super(treenet, self).__init__(agent_class=agent_class,
+                                      model_type=model_type,
+                                      predictor_name=predictor_name)
 
     def policy_head(self, inputs, output_dim, name_head):
         # fully connected layer
@@ -51,13 +54,16 @@ class treenet(policy_pred):
         x = conv_block(inputs, 64, 5, 2, 2, 2)
         x = conv_block(x, 64, 3, 2, 2, 2)
 
-        head_1 = self.policy_head(x, self.action_space, 'ph1')
-        head_2 = self.policy_head(x, self.action_space, 'ph2')
-        head_3 = self.policy_head(x, self.action_space, 'ph3')
+        self.n_heads = 3
+
+        heads = []
+        for i in range(self.n_heads):
+            name_head = 'ph' + str(i)
+            heads.append(self.policy_head(x, self.action_space, name_head))
 
         self.model = Model(inputs=inputs,
-                           outputs=[head_1, head_2, head_3],
-                           name="multihead")
+                           outputs=heads,
+                           name="treenet")
         return self.model
 
     def reshape_data(self, X_raw):
@@ -92,10 +98,16 @@ class treenet(policy_pred):
         if self.model is None:
             self.create_model()
 
-        losses = {'ph1': "categorical_crossentropy",
-                  'ph2': "categorical_crossentropy",
-                  'ph3': "categorical_crossentropy"}
-        loss_weights = {'ph1': 1.0, 'ph2': 1.0, "ph3": 1.0}
+        losses = {}
+        loss_weights = {}
+        labels = {}
+        validation_labels = {}
+        for i in range(self.n_heads):
+            name_head = 'ph' + str(i)
+            losses[name_head] = "categorical_crossentropy"
+            loss_weights[name_head] = 1.0
+            labels[name_head] = self.y_train
+            validation_labels[name_head] = self.y_test
 
         self.model.compile(loss=losses,
                            loss_weights=loss_weights,
@@ -104,15 +116,10 @@ class treenet(policy_pred):
 
         self.model.fit(
             self.X_train,
-            {'ph1': self.y_train,
-             'ph2': self.y_train,
-             'ph3': self.y_train},
+            labels,
             epochs=epochs,
             batch_size=batch_size,
-            validation_data=[self.X_test,
-                             {'ph1': self.y_test,
-                              'ph2': self.y_test,
-                              'ph3': self.y_test}],
+            validation_data=[self.X_test, validation_labels],
             callbacks=[self.tensorboard],
             shuffle=True,
             verbose=2
@@ -120,9 +127,9 @@ class treenet(policy_pred):
 
         acc = CategoricalAccuracy()
         avg_pred = np.zeros(self.y_test.shape)
-        (p1, p2, p3) = self.model.predict(self.X_test,
-                                          batch_size=batch_size,
-                                          verbose=0)
-        avg_pred = (p1 + p2 + p3) / 3
+        predictions = self.model.predict(self.X_test,
+                                         batch_size=batch_size,
+                                         verbose=0)
+        avg_pred = sum(predictions) / self.n_heads
         acc.update_state(self.y_test, avg_pred)
         print('Final result: %f' % acc.result().numpy())
