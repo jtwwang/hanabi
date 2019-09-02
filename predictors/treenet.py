@@ -16,14 +16,12 @@ from .policy_pred import policy_pred
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Flatten, Input, Dropout
 from tensorflow.keras import optimizers
-from tensorflow.keras.metrics import CategoricalAccuracy
+
+from data_pipeline.util import accuracy
 
 from .blocks import conv_block
 
 import numpy as np
-import tensorflow as tf
-
-tf.enable_eager_execution()
 
 
 class treenet(policy_pred):
@@ -34,8 +32,17 @@ class treenet(policy_pred):
                                       model_type=model_type,
                                       predictor_name=predictor_name)
 
+        self.n_heads = 3 # more heads don't seem necessary
+
     def policy_head(self, inputs, output_dim, name_head):
-        # fully connected layer
+        """
+        Architecture for each of the heads
+
+        args:
+            inputs: a tensor
+            output_dim: the number of classes we are predicting
+            name_head: the name to give to the output layer
+        """
         x = conv_block(inputs, 64, 3, 2, 2, 2)
         x = conv_block(x, 64, 3, 2, 2, 2)
         x = Flatten()(x)
@@ -54,8 +61,6 @@ class treenet(policy_pred):
         x = conv_block(inputs, 64, 5, 2, 2, 2)
         x = conv_block(x, 64, 3, 2, 2, 2)
 
-        self.n_heads = 3
-
         heads = []
         for i in range(self.n_heads):
             name_head = 'ph' + str(i)
@@ -73,6 +78,12 @@ class treenet(policy_pred):
         # Add an additional dimension for filters
         X = np.reshape(X_raw, (X_raw.shape[0], X_raw.shape[1], 1))
         return X
+
+    def predict(self, X, batch_size=64):
+        predictions = self.model.predict(X,
+                                         batch_size=batch_size,
+                                         verbose=0)
+        return sum(predictions) / self.n_heads
 
     def fit(self, epochs=100, batch_size=64, learning_rate=0.01):
         """
@@ -125,11 +136,6 @@ class treenet(policy_pred):
             verbose=2
         )
 
-        acc = CategoricalAccuracy()
-        avg_pred = np.zeros(self.y_test.shape)
-        predictions = self.model.predict(self.X_test,
-                                         batch_size=batch_size,
-                                         verbose=0)
-        avg_pred = sum(predictions) / self.n_heads
-        acc.update_state(self.y_test, avg_pred)
-        print('Final result: %f' % acc.result().numpy())
+        pred = self.predict(self.X_test, batch_size)
+        acc = accuracy(pred, self.y_test)
+        print('Final result: %f' % acc)

@@ -12,6 +12,19 @@
 
 import numpy as np
 
+def accuracy(logits, labels):
+    """
+    args:
+        logits: array of floats
+        labels: one-hot encoded array
+    """
+    count = logits.shape[0]
+    total = 0.0
+    for i in range(count):
+        if np.argmax(logits[i]) == np.argmax(labels[i]):
+            total += 1.0
+    return total/float(count)
+
 def one_hot(data, classes):
     """
     Args:

@@ -34,6 +34,9 @@ def load_predictor(model_class):
     elif model_class == 'treenet':
         from treenet import treenet
         return treenet
+    elif model_class == 'CMCL':
+        from cmcl import CMCL
+        return CMCL
     elif model_class == 'conv_tf':
         from conv_tf import conv_pred
         return conv_pred
