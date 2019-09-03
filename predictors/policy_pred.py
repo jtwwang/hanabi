@@ -9,8 +9,20 @@
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
-
 from __future__ import print_function
+import os
+import sys
+import errno
+import math
+import pandas as pd
+import IPython as ip
+
+# shut up info and warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+from tensorflow.python.util import deprecation
+deprecation._PRINT_DEPRECATION_WARNINGS = False
+
+
 from data_pipeline.experience import Experience
 from data_pipeline.balance_data import balance_data
 from data_pipeline.util import one_hot, split_dataset
@@ -24,8 +36,7 @@ import sys
 import errno
 import math
 
-# shut up info and warnings
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 
 
 def cosine_proximity(y_true, y_pred):
@@ -62,16 +73,18 @@ class policy_pred(object):
         self.action_space = None
         self.model = None
 
-        # Create the directory for this particular model
-        self.model_dir = os.path.join("model", agent_class)
+        # Set up the directory for the saved predictor model
+        self.model_dir = 'model'
         if model_type is not None:
+            self.model_type=model_type
             self.model_dir = os.path.join(self.model_dir, model_type)
             self.make_dir(self.model_dir)
         else:
             print("Please specify a model to use")
             sys.exit(0)
         print("Writing to", self.model_dir)
-        self.predictor_dir = os.path.join(self.model_dir, predictor_name)
+        self.predictor_name = predictor_name
+        self.predictor_dir = os.path.join(self.model_dir,predictor_name)
         self.make_dir(self.predictor_dir)
         self.tensorboard_dir = os.path.join(self.predictor_dir, 'tensorboard')
         self.make_dir(self.tensorboard_dir)
@@ -79,7 +92,45 @@ class policy_pred(object):
         self.make_dir(self.checkpoint_dir)
 
         # create callbacks for tensorboard
-        self.tensorboard = TensorBoard(log_dir=self.predictor_dir)
+        self.tensorboard = TensorBoard(log_dir=self.tensorboard_dir)
+        # create logs
+        self.logpath = os.path.join(self.model_dir, 'logs.csv')
+        self.logs = self.get_logs()
+
+    def get_logs(self):
+
+        if os.path.exists(self.logpath):
+            logs = pd.read_csv(self.logpath)
+        else:
+            feature_names = ['pred_name', 'episodes', 'epochs', 'batch_size',
+                'acc', 'loss', 'val_acc', 'val_loss']
+            logs = pd.DataFrame(columns=feature_names)
+        return logs
+
+    def load_interactive(self):
+        print("Below are the models for {}:".format(self.model_type))
+        print(self.logs)
+        pred_idx = raw_input("Select the index of the model you wish to load:")
+        self.predictor_name = self.logs.loc[pred_idx]['pred_name']
+        self.predictor_dir = os.path.join(self.model_dir,self.predictor_name)
+        self.load()
+
+    def load(self):
+        """
+        Load the saved model
+
+        args:
+            self.predictor_path (string): the name of the predictor to load
+        """
+        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
+        try:
+            self.model=load_model(self.predictor_path)
+            print("Model loaded!")
+        except IOError:
+            print("Create a new model before loading.")
+            sys.exit(0)
+
+
 
     def make_dir(self, path):
         """
@@ -123,6 +174,7 @@ class policy_pred(object):
         self.X_train = self.reshape_data(self.X_train)
         self.X_test = self.reshape_data(self.X_test)
 
+
         adam = optimizers.Adam(
             lr=learning_rate,
             beta_1=0.9,
@@ -140,15 +192,23 @@ class policy_pred(object):
         train_sequence = HanabiSequence(self.X_train, self.y_train, batch_size)
         test_sequence = HanabiSequence(self.X_test, self.y_test, batch_size)
 
-        self.model.fit_generator(
+        history = self.model.fit_generator(
             train_sequence,
             epochs=epochs,
             verbose=2,
             validation_data=test_sequence,
             callbacks=[self.tensorboard],
             workers=0,
-            shuffle=True
+            shuffle=True,
+            use_multiprocessing=True
         )
+        log = history.history
+        log['pred_name'] = self.predictor_name
+        log['epochs'] = epochs
+        log['batch_size'] = batch_size
+        log['episodes'] = 'TODO'
+        self.log = pd.DataFrame(log)
+
 
     def predict(self, X):
         """
@@ -171,19 +231,11 @@ class policy_pred(object):
         self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
         self.model.save(self.predictor_path)
 
-    def load(self):
-        """
-        Load the saved model
+        self.logs=self.logs.append(self.log,sort=False,ignore_index=True)
+        ip.embed()
 
-        args:
-            self.predictor_path (string): the name of the predictor to load
-        """
-        self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
-        try:
-            self.model = load_model(self.predictor_path)
-        except IOError:
-            print("Create a new model before loading.")
-            sys.exit(0)
+
+        self.logs.to_csv(self.logpath)
 
     def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
         """

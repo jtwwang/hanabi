@@ -24,6 +24,7 @@ if __name__ == "__main__":
              'val_split': 0.3,
              'cv': -1,
              'load': False,
+             'load_interactive': False,
              'summary': False,
              'games': -1,
              'balance': False,
@@ -38,6 +39,7 @@ if __name__ == "__main__":
                                         'val_split=',
                                         'cv=',
                                         'load=',
+                                        'load_interactive=',
                                         'summary=',
                                         'games=',
                                         'balance=',
@@ -46,7 +48,16 @@ if __name__ == "__main__":
         sys.exit()
     for flag, value in options:
         flag = flag[2:]  # Strip leading --.
-        flags[flag] = type(flags[flag])(value)
+        argtype = type(flags[flag])
+        if argtype == bool:
+            if value in ['True', 'true', '1']:
+                flags[flag] = True
+            elif value in ['False', 'false', '0']:
+                flags[flag] = False
+            else:
+                raise ValueError('Arguments not valid')
+        else:
+            flags[flag] = (argtype)(value)
 
     agent_class = flags['agent_class']
     predictor_name = flags['predictor_name']
@@ -57,7 +68,9 @@ if __name__ == "__main__":
                     games=flags['games'],
                     balance=flags['balance'])
 
-    if flags['load']:
+    if flags['load_interactive']:
+        pp.load_interactive()
+    elif flags['load']:
         pp.load()
 
     if flags['summary']:
