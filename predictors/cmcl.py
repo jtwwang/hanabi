@@ -12,9 +12,13 @@
 
 from __future__ import print_function
 from .treenet import treenet
+from blocks import conv_block
 
+from tensorflow.keras.models import Model
 from tensorflow.keras import optimizers
 from tensorflow.keras import backend as K
+from tensorflow.keras.layers import Dropout, Dense, Flatten, Input
+from tensorflow.keras import regularizers
 
 from data_pipeline.util import accuracy
 
@@ -28,8 +32,50 @@ tf.disable_eager_execution()
 class CMCL(treenet):
     def __init__(self, agent_class, predictor_name):
         super(CMCL, self).__init__(agent_class, predictor_name, "CMCL")
-        self.beta = 0.75  # penalty parameter
-        self.k = 2  # overlap parameter - must be less than num models
+        self.beta = 0.5  # penalty parameter
+        self.k = 2  # overlap parameter - must be less than n_heads
+        self.n_heads = 4
+
+    def policy_head(self, inputs, output_dim, name_head):
+        """
+        Architecture for each of the heads
+
+        args:
+            inputs: a tensor
+            output_dim: the number of classes we are predicting
+            name_head: the name to give to the output layer
+        """
+
+        x = conv_block(inputs, 50, 3, 2, 2, 2)
+        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = Dropout(0.1)(x)
+        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = Flatten()(x)
+        x = Dense(64, activation='relu',
+                  kernel_regularizer=regularizers.l2(5e-4))(x)
+        x = Dropout(0.2)(x)
+        x = Dense(output_dim,
+                  activation='softmax',
+                  name=name_head)(x)
+        return x
+
+    def create_model(self):
+        """
+        Function to create the model
+        """
+        inputs = Input(shape=(self.input_dim, 1))
+        x = conv_block(inputs, 50, 5, 2, 3, 2)
+
+
+        heads = []
+        for i in range(self.n_heads):
+            name_head = 'ph' + str(i)
+            heads.append(self.policy_head(x, self.action_space, name_head))
+
+        self.model = Model(inputs=inputs,
+                           outputs=heads,
+                           name="treenet")
+        return self.model
 
     def loss(self, logits_list, labels):
         """

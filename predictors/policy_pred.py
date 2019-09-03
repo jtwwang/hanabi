@@ -18,6 +18,7 @@ from tensorflow.keras.callbacks import TensorBoard
 from tensorflow.keras.models import load_model
 from tensorflow.keras import optimizers
 from tensorflow.keras.utils import Sequence
+import tensorflow.keras.backend as K
 import os
 import sys
 import errno
@@ -25,6 +26,12 @@ import math
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
+
+def cosine_proximity(y_true, y_pred):
+    y_true = K.l2_normalize(y_true, axis=-1)
+    y_pred = K.l2_normalize(y_pred, axis=-1)
+    return -K.sum(y_true * y_pred, axis=-1)
 
 
 class HanabiSequence(Sequence):
@@ -64,9 +71,9 @@ class policy_pred(object):
             print("Please specify a model to use")
             sys.exit(0)
         print("Writing to", self.model_dir)
-        self.predictor_dir = os.path.join(self.model_dir,predictor_name)
+        self.predictor_dir = os.path.join(self.model_dir, predictor_name)
         self.make_dir(self.predictor_dir)
-        self.tensorboard_dir = os.path.join(self.predictor_dir,'tensorboard')
+        self.tensorboard_dir = os.path.join(self.predictor_dir, 'tensorboard')
         self.make_dir(self.tensorboard_dir)
         self.checkpoint_dir = os.path.join(self.predictor_dir, "checkpoints")
         self.make_dir(self.checkpoint_dir)
@@ -86,7 +93,7 @@ class policy_pred(object):
             print("Successfully created the directory %s", path)
         except OSError as exc:
             if exc.errno == errno.EEXIST and os.path.isdir(path):
-                #print("%s already exists." % path)
+                # print("%s already exists." % path)
                 pass
         # if not os.path.exists(dir):
         #     try:
@@ -127,9 +134,8 @@ class policy_pred(object):
         if self.model is None:
             self.create_model()  # create the model if not already loaded
 
-        self.model.compile(loss='categorical_crossentropy',
+        self.model.compile(loss=cosine_proximity,
                            optimizer=adam, metrics=['accuracy'])
-
 
         train_sequence = HanabiSequence(self.X_train, self.y_train, batch_size)
         test_sequence = HanabiSequence(self.X_test, self.y_test, batch_size)
@@ -139,7 +145,6 @@ class policy_pred(object):
             epochs=epochs,
             verbose=2,
             validation_data=test_sequence,
-            validation_freq=5,
             callbacks=[self.tensorboard],
             workers=0,
             shuffle=True
@@ -153,7 +158,7 @@ class policy_pred(object):
                 prediction given the model and the input X
         """
         X = self.reshape_data(X)
-        if self.model == None:
+        if self.model is None:
             self.create_model()
         pred = self.model.predict(X)
         return pred
@@ -163,7 +168,7 @@ class policy_pred(object):
         args:
             self.predictor_path (string): the name to give to the predictor
         """
-        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
+        self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
         self.model.save(self.predictor_path)
 
     def load(self):
@@ -173,13 +178,12 @@ class policy_pred(object):
         args:
             self.predictor_path (string): the name of the predictor to load
         """
-        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
+        self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
         try:
-            self.model=load_model(self.predictor_path)
+            self.model = load_model(self.predictor_path)
         except IOError:
             print("Create a new model before loading.")
             sys.exit(0)
-
 
     def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
         """
