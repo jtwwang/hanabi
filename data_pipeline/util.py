@@ -25,16 +25,17 @@ def accuracy(logits, labels):
             total += 1.0
     return total/float(count)
 
-def one_hot(data, classes):
+
+def one_hot(data, classes, epsilon = 0.0):
     """
     Args:
         data (np.ndarray)
         classes (int)
     """
-    entries = data.shape[0]
-    one_hot_data = np.zeros((entries, classes))
-    one_hot_data[np.arange(entries), data[:entries]] = 1
 
+    entries = data.shape[0]
+    one_hot_data = np.zeros((entries, classes)) + (epsilon/float(classes))
+    one_hot_data[np.arange(entries), data[:entries]] = 1.0 - epsilon
     return one_hot_data
 
 

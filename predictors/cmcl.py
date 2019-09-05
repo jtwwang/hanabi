@@ -23,6 +23,7 @@ from tensorflow.keras import regularizers
 from data_pipeline.util import accuracy
 
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import time
 
@@ -33,8 +34,9 @@ class CMCL(treenet):
     def __init__(self, agent_class, predictor_name):
         super(CMCL, self).__init__(agent_class, predictor_name, "CMCL")
         self.beta = 0.5  # penalty parameter
+        self.n_heads = 4 # number of heads
         self.k = 2  # overlap parameter - must be less than n_heads
-        self.n_heads = 4
+        self.WD_FACTOR = 10e-4 # weight decay
 
     def policy_head(self, inputs, output_dim, name_head):
         """
@@ -51,8 +53,7 @@ class CMCL(treenet):
         x = Dropout(0.1)(x)
         x = conv_block(x, 50, 3, 2, 2, 2)
         x = Flatten()(x)
-        x = Dense(64, activation='relu',
-                  kernel_regularizer=regularizers.l2(5e-4))(x)
+        x = Dense(64, activation='relu')(x)
         x = Dropout(0.2)(x)
         x = Dense(output_dim,
                   activation='softmax',
@@ -65,7 +66,6 @@ class CMCL(treenet):
         """
         inputs = Input(shape=(self.input_dim, 1))
         x = conv_block(inputs, 50, 5, 2, 3, 2)
-
 
         heads = []
         for i in range(self.n_heads):
@@ -85,6 +85,11 @@ class CMCL(treenet):
             logits_list: List of logits calculated from models to ensemble.
             labels: Label input corresponding to the calculated batch.
         """
+        # regularization
+        weights = self.model.get_weights()
+        rloss = self.WD_FACTOR * tf.add_n([tf.nn.l2_loss(w) for w in weights])
+        total_loss = rloss
+
         # classification loss
         closs_list = [K.categorical_crossentropy(labels, logits)
                       for logits in logits_list]
@@ -100,7 +105,6 @@ class CMCL(treenet):
         temp, min_index = tf.nn.top_k(-K.transpose(loss_list), self.k)
         min_index = K.transpose(min_index)
 
-        total_loss = 0
         for m in range(self.n_heads):
             for topk in range(self.k):
                 condition = K.equal(min_index[topk], m)
@@ -152,6 +156,9 @@ class CMCL(treenet):
 
         opt = self.custom_optimizer()
 
+        # initialize log
+        log = {'acc':[], 'val_acc':[]}
+
         for e in range(epochs):
             print("Epoch %i/%i" % (e+1, epochs))
             start = time.time()
@@ -175,6 +182,16 @@ class CMCL(treenet):
             acc = accuracy(self.y_train, train_pred)
             val_acc = accuracy(self.y_test, test_pred)
 
+            log['acc'].append(acc)
+            log['val_acc'].append(val_acc)
+
             end = time.time()
             print("%i/%i - %is - acc: %f - val_acc: %f"
                   % (train_entries, train_entries, (end-start), acc, val_acc))
+
+        # create log
+        log['pred_name'] = self.predictor_name
+        log['epochs'] = epochs
+        log['batch_size'] = batch_size
+        log['episodes'] = 'TODO'
+        self.log = pd.DataFrame(log)

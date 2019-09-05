@@ -11,7 +11,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
 from __future__ import print_function
-from .policy_pred import policy_pred, cosine_proximity
+from .policy_pred import cosine_proximity
+from .conv_pred import conv_pred
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Flatten, Input, Dropout
@@ -22,9 +23,10 @@ from data_pipeline.util import accuracy
 from .blocks import conv_block
 
 import numpy as np
+import pandas as pd
 
 
-class treenet(policy_pred):
+class treenet(conv_pred):
     def __init__(self, agent_class, predictor_name, model_type=None):
         if model_type is None:
             model_type = "treenet"
@@ -73,14 +75,6 @@ class treenet(policy_pred):
                            name="treenet")
         return self.model
 
-    def reshape_data(self, X_raw):
-        if X_raw.shape == (self.action_space,):  # If only one sample is put in
-            X_raw = np.reshape(X_raw, (1, X_raw.shape[0]))
-
-        # Add an additional dimension for filters
-        X = np.reshape(X_raw, (X_raw.shape[0], X_raw.shape[1], 1))
-        return X
-
     def predict(self, X, batch_size=64):
         predictions = self.model.predict(X,
                                          batch_size=batch_size,
@@ -127,7 +121,7 @@ class treenet(policy_pred):
                            optimizer=adam,
                            metrics=['accuracy'])
 
-        self.model.fit(
+        history = self.model.fit(
             self.X_train,
             labels,
             epochs=epochs,
@@ -141,3 +135,11 @@ class treenet(policy_pred):
         pred = self.predict(self.X_test, batch_size)
         acc = accuracy(pred, self.y_test)
         print('Final Accuracy: %f' % acc)
+
+        # create log
+        log = history.history
+        log['pred_name'] = self.predictor_name
+        log['epochs'] = epochs
+        log['batch_size'] = batch_size
+        log['episodes'] = 'TODO'
+        self.log = pd.DataFrame(log)
