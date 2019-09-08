@@ -11,18 +11,18 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 
 from __future__ import print_function
-from .policy_pred import cosine_proximity
+from .losses import cosine_proximity
 from .conv_pred import conv_pred
 
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Dense, Flatten, Input, Dropout
-from tensorflow.keras import optimizers, regularizers
+from tensorflow.keras import optimizers
+from tensorflow.keras.initializers import he_normal
 
 from data_pipeline.util import accuracy
 
 from .blocks import conv_block
 
-import numpy as np
 import pandas as pd
 
 
@@ -30,11 +30,12 @@ class treenet(conv_pred):
     def __init__(self, agent_class, predictor_name, model_type=None):
         if model_type is None:
             model_type = "treenet"
+        self.model_type = model_type
         super(treenet, self).__init__(agent_class=agent_class,
-                                      model_type=model_type,
+                                      model_type=self.model_type,
                                       predictor_name=predictor_name)
 
-        self.n_heads = 4 # standard size for ensemble
+        self.n_heads = 4  # standard size for ensemble
 
     def policy_head(self, inputs, output_dim, name_head):
         """
@@ -45,12 +46,12 @@ class treenet(conv_pred):
             output_dim: the number of classes we are predicting
             name_head: the name to give to the output layer
         """
-        x = conv_block(inputs, 50, 3, 2, 2, 2)
+
+        x = conv_block(inputs, 64, 3, 2, 2, 2)
         x = Dropout(0.1)(x)
-        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
         x = Flatten()(x)
-        x = Dense(64, activation='relu',
-                  kernel_regularizer=regularizers.l2(5e-4))(x)
+        x = Dense(64, activation='relu')(x)
         x = Dropout(0.2)(x)
         x = Dense(output_dim,
                   activation=None,
@@ -62,8 +63,8 @@ class treenet(conv_pred):
         Function to create the model
         """
         inputs = Input(shape=(self.input_dim, 1))
-        x = conv_block(inputs, 50, 5, 2, 3, 2)
-        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = conv_block(inputs, 16, 5, 2, 3, 2)
+        x = conv_block(x, 32, 3, 2, 2, 2)
 
         heads = []
         for i in range(self.n_heads):
@@ -72,7 +73,11 @@ class treenet(conv_pred):
 
         self.model = Model(inputs=inputs,
                            outputs=heads,
-                           name="treenet")
+                           name=self.model_type)
+
+        for layer in self.model.layers:
+            layer.kernel_intializer = he_normal()
+
         return self.model
 
     def predict(self, X, batch_size=64):

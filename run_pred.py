@@ -18,7 +18,7 @@ from predictors.load_predictors import load_predictor
 if __name__ == "__main__":
     flags = {'model_class': "conv",
              'epochs': 40,
-             'batch_size': 16,
+             'batch_size': 64,
              'lr': 0.001,
              'agent_class': 'RainbowAgent',
              'val_split': 0.3,
@@ -57,7 +57,14 @@ if __name__ == "__main__":
             else:
                 raise ValueError('Arguments not valid')
         else:
-            flags[flag] = (argtype)(value)
+            # special case for agent_class, create list of all agents
+            if flag == 'agent_class':
+                if type(flags[flag]) is list:
+                    flags[flag].append(value)
+                else:
+                    flags[flag] = [value]
+            else:
+                flags[flag] = (argtype)(value)
 
     agent_class = flags['agent_class']
     predictor_name = flags['predictor_name']

@@ -37,9 +37,9 @@ def load_predictor(model_class):
     elif model_class == 'CMCL':
         from cmcl import CMCL
         return CMCL
-    elif model_class == 'conv_tf':
-        from conv_tf import conv_pred
-        return conv_pred
+    elif model_class == 'transfer_tn':
+        from transfer_tn import transfer_tn
+        return transfer_tn
     elif model_class == 'ensemble':
         from ensemble import ensemble
         return ensemble
