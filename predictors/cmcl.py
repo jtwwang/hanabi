@@ -18,7 +18,6 @@ from tensorflow.keras.models import Model
 from tensorflow.keras import optimizers
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import Dropout, Dense, Flatten, Input
-from tensorflow.keras import regularizers
 
 from data_pipeline.util import accuracy
 
@@ -34,9 +33,9 @@ class CMCL(treenet):
     def __init__(self, agent_class, predictor_name):
         super(CMCL, self).__init__(agent_class, predictor_name, "CMCL")
         self.beta = 0.5  # penalty parameter
-        self.n_heads = 4 # number of heads
+        self.n_heads = 4  # number of heads
         self.k = 2  # overlap parameter - must be less than n_heads
-        self.WD_FACTOR = 10e-4 # weight decay
+        self.WD_FACTOR = 10e-4  # weight decay
 
     def policy_head(self, inputs, output_dim, name_head):
         """
@@ -48,10 +47,10 @@ class CMCL(treenet):
             name_head: the name to give to the output layer
         """
 
-        x = conv_block(inputs, 50, 3, 2, 2, 2)
-        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = conv_block(inputs, 32, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
         x = Dropout(0.1)(x)
-        x = conv_block(x, 50, 3, 2, 2, 2)
+        x = conv_block(x, 64, 3, 2, 2, 2)
         x = Flatten()(x)
         x = Dense(64, activation='relu')(x)
         x = Dropout(0.2)(x)
@@ -65,7 +64,7 @@ class CMCL(treenet):
         Function to create the model
         """
         inputs = Input(shape=(self.input_dim, 1))
-        x = conv_block(inputs, 50, 5, 2, 3, 2)
+        x = conv_block(inputs, 16, 5, 2, 3, 2)
 
         heads = []
         for i in range(self.n_heads):
@@ -157,7 +156,7 @@ class CMCL(treenet):
         opt = self.custom_optimizer()
 
         # initialize log
-        log = {'acc':[], 'val_acc':[]}
+        log = {'acc': [], 'val_acc': []}
 
         for e in range(epochs):
             print("Epoch %i/%i" % (e+1, epochs))
