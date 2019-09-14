@@ -24,8 +24,6 @@ from __future__ import division
 import pyhanabi
 from pyhanabi import color_char_to_idx
 
-
-
 MOVE_TYPES = [_.name for _ in pyhanabi.HanabiMoveType]
 
 #-------------------------------------------------------------------------------
@@ -126,7 +124,7 @@ class HanabiEnv(Environment):
 
   def hist_append(self, action_type, card_index=None, color=None, rank=None, target_offset=None):
     obs = self._make_observation_all_players()
-    current_player = obs['player_observations'][0]['current_player']
+    current_player = self.state.cur_player()
     self_obs = obs['player_observations'][current_player]
 
     """ Using Pyhanabi, the current_player seems to be off. """
@@ -169,7 +167,6 @@ class HanabiEnv(Environment):
     self.hist[current_player].append(action)
 
   # END HISTORY FUNCTIONS
-
 
   def reset(self):
     r"""Resets the environment for a new game.
@@ -441,7 +438,7 @@ class HanabiEnv(Environment):
         for player_id in range(self.players)]  # pylint: disable=bad-continuation
     obs["player_observations"] = player_observations
     obs["current_player"] = self.state.cur_player()
-    obs["action_hist"] = self.hist
+
     return obs
 
   def _extract_dict_from_backend(self, player_id, observation):
@@ -498,6 +495,9 @@ class HanabiEnv(Environment):
     # ipdb.set_trace()
     obs_dict["vectorized"] = self.observation_encoder.encode(observation)
     obs_dict["pyhanabi"] = observation
+
+    # Action history
+    obs_dict["action_hist"] = self.hist
 
     return obs_dict
 

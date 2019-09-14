@@ -12,16 +12,30 @@
 
 import numpy as np
 
-def one_hot(data, classes):
+def accuracy(logits, labels):
+    """
+    args:
+        logits: array of floats
+        labels: one-hot encoded array
+    """
+    count = logits.shape[0]
+    total = 0.0
+    for i in range(count):
+        if np.argmax(logits[i]) == np.argmax(labels[i]):
+            total += 1.0
+    return total/float(count)
+
+
+def one_hot(data, classes, epsilon = 0.0):
     """
     Args:
         data (np.ndarray)
         classes (int)
     """
-    entries = data.shape[0]
-    one_hot_data = np.zeros((entries, classes))
-    one_hot_data[np.arange(entries), data[:entries]] = 1
 
+    entries = data.shape[0]
+    one_hot_data = np.zeros((entries, classes)) + (epsilon/float(classes))
+    one_hot_data[np.arange(entries), data[:entries]] = 1.0 - epsilon
     return one_hot_data
 
 

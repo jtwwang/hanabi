@@ -10,28 +10,25 @@
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied
 from __future__ import print_function
+from .losses import cosine_proximity
+from tensorflow.keras.utils import Sequence
+from tensorflow.keras import optimizers
+from tensorflow.keras.models import load_model
+from tensorflow.keras.callbacks import TensorBoard
+from data_pipeline.util import one_hot, split_dataset
+from data_pipeline.balance_data import balance_data
+from data_pipeline.experience import Experience
+from tensorflow.python.util import deprecation
 import os
 import sys
 import errno
 import math
 import pandas as pd
-import IPython as ip
+import numpy as np
 
 # shut up info and warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
-from tensorflow.python.util import deprecation
 deprecation._PRINT_DEPRECATION_WARNINGS = False
-
-
-from data_pipeline.experience import Experience
-from data_pipeline.balance_data import balance_data
-from data_pipeline.util import one_hot, split_dataset
-from tensorflow.keras.callbacks import TensorBoard
-from tensorflow.keras.models import load_model
-from tensorflow.keras import optimizers
-from tensorflow.keras.utils import Sequence
-
-
 
 
 class HanabiSequence(Sequence):
@@ -65,7 +62,7 @@ class policy_pred(object):
         # Set up the directory for the saved predictor model
         self.model_dir = 'model'
         if model_type is not None:
-            self.model_type=model_type
+            self.model_type = model_type
             self.model_dir = os.path.join(self.model_dir, model_type)
             self.make_dir(self.model_dir)
         else:
@@ -73,9 +70,9 @@ class policy_pred(object):
             sys.exit(0)
         print("Writing to", self.model_dir)
         self.predictor_name = predictor_name
-        self.predictor_dir = os.path.join(self.model_dir,predictor_name)
+        self.predictor_dir = os.path.join(self.model_dir, predictor_name)
         self.make_dir(self.predictor_dir)
-        self.tensorboard_dir = os.path.join(self.predictor_dir,'tensorboard')
+        self.tensorboard_dir = os.path.join(self.predictor_dir, 'tensorboard')
         self.make_dir(self.tensorboard_dir)
         self.checkpoint_dir = os.path.join(self.predictor_dir, "checkpoints")
         self.make_dir(self.checkpoint_dir)
@@ -87,12 +84,12 @@ class policy_pred(object):
         self.logs = self.get_logs()
 
     def get_logs(self):
-        
+
         if os.path.exists(self.logpath):
             logs = pd.read_csv(self.logpath)
         else:
             feature_names = ['pred_name', 'episodes', 'epochs', 'batch_size',
-                'acc', 'loss', 'val_acc', 'val_loss']
+                             'acc', 'loss', 'val_acc', 'val_loss']
             logs = pd.DataFrame(columns=feature_names)
         return logs
 
@@ -101,7 +98,7 @@ class policy_pred(object):
         print(self.logs)
         pred_idx = raw_input("Select the index of the model you wish to load:")
         self.predictor_name = self.logs.loc[pred_idx]['pred_name']
-        self.predictor_dir = os.path.join(self.model_dir,self.predictor_name)
+        self.predictor_dir = os.path.join(self.model_dir, self.predictor_name)
         self.load()
 
     def load(self):
@@ -111,15 +108,13 @@ class policy_pred(object):
         args:
             self.predictor_path (string): the name of the predictor to load
         """
-        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
+        self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
         try:
-            self.model=load_model(self.predictor_path)
+            self.model = load_model(self.predictor_path)
             print("Model loaded!")
         except IOError:
             print("Create a new model before loading.")
             sys.exit(0)
-
-
 
     def make_dir(self, path):
         """
@@ -131,17 +126,10 @@ class policy_pred(object):
         try:
             os.makedirs(path)
             print("Successfully created the directory %s", path)
-        except OSError as exc: 
+        except OSError as exc:
             if exc.errno == errno.EEXIST and os.path.isdir(path):
-                #print("%s already exists." % path)
+                # print("%s already exists." % path)
                 pass
-        # if not os.path.exists(dir):
-        #     try:
-        #         os.makedirs(dir)
-        #     except OSError:
-        #         print("Creation of the directory %s failed" % self.model_dir)
-        #     else:
-        #         print("Successfully created the directory %s" % self.model_dir)
 
     def reshape_data(self, X):
         pass
@@ -163,7 +151,6 @@ class policy_pred(object):
         self.X_train = self.reshape_data(self.X_train)
         self.X_test = self.reshape_data(self.X_test)
 
-
         adam = optimizers.Adam(
             lr=learning_rate,
             beta_1=0.9,
@@ -175,9 +162,8 @@ class policy_pred(object):
         if self.model is None:
             self.create_model()  # create the model if not already loaded
 
-        self.model.compile(loss='categorical_crossentropy',
+        self.model.compile(loss=cosine_proximity,
                            optimizer=adam, metrics=['accuracy'])
-
 
         train_sequence = HanabiSequence(self.X_train, self.y_train, batch_size)
         test_sequence = HanabiSequence(self.X_test, self.y_test, batch_size)
@@ -187,7 +173,6 @@ class policy_pred(object):
             epochs=epochs,
             verbose=2,
             validation_data=test_sequence,
-            #validation_freq=5,
             callbacks=[self.tensorboard],
             workers=0,
             shuffle=True,
@@ -200,7 +185,6 @@ class policy_pred(object):
         log['episodes'] = 'TODO'
         self.log = pd.DataFrame(log)
 
-
     def predict(self, X):
         """
         args:
@@ -209,7 +193,7 @@ class policy_pred(object):
                 prediction given the model and the input X
         """
         X = self.reshape_data(X)
-        if self.model == None:
+        if self.model is None:
             self.create_model()
         pred = self.model.predict(X)
         return pred
@@ -219,32 +203,14 @@ class policy_pred(object):
         args:
             self.predictor_path (string): the name to give to the predictor
         """
-        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
+        self.predictor_path = os.path.join(self.predictor_dir, 'predictor.h5')
         self.model.save(self.predictor_path)
 
-        self.logs=self.logs.append(self.log,sort=False,ignore_index=True)
-        ip.embed()
-        
-  
+        self.logs = self.logs.append(self.log, sort=False, ignore_index=True)
         self.logs.to_csv(self.logpath)
 
-    def load(self):
-        """
-        Load the saved model
-
-        args:
-            self.predictor_path (string): the name of the predictor to load
-        """
-        self.predictor_path = os.path.join(self.predictor_dir,'predictor.h5')
-        try:
-            self.model=load_model(self.predictor_path)
-            print("Model loaded!")
-        except IOError:
-            print("Create a new model before loading.")
-            sys.exit(0)
-
-
-    def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False):
+    def extract_data(self, agent_class, val_split=0.3, games=-1, balance=False,
+                     epsilon=0.0):
         """
         args:
                 agent_class (string): "SimpleAgent", "RainbowAgent"
@@ -253,11 +219,30 @@ class policy_pred(object):
                 balance (bool)
         """
         print("Loading Data...", end='')
-        replay = Experience(agent_class, load=True)
-        moves, _, obs, eps = replay.load(games=games)
+        all_moves = None
+        all_obs = None
+        for agent in agent_class:
+            replay = Experience(agent, load=True)
+            moves, _, obs, eps = replay.load(games=games)
+            if all_moves is None:
+                all_moves = moves
+            else:
+                all_moves = np.concatenate((all_moves, moves), axis=0)
+            if all_obs is None:
+                all_obs = obs
+            else:
+                all_obs = np.concatenate((all_obs, obs), axis=0)
+
+        if len(agent_class) > 1:
+            # randomize with fixed seed if more than one agent
+            np.random.seed(1)
+            p = np.random.permutation(all_obs.shape[0])
+            all_moves = all_moves[p]
+            all_obs = all_obs[p]
 
         # split dataset here
-        training_set, test_set = split_dataset([obs, moves], val_split)
+        training_set, test_set = split_dataset([all_obs, all_moves], val_split)
+
         X_train, X_test = training_set[0], test_set[0]
         y_train, y_test = training_set[1], test_set[1]
 
@@ -266,8 +251,8 @@ class policy_pred(object):
             X_train, y_train = balance_data(X_train, y_train)
 
         # convert to one-hot encoded tensor
-        self.y_train = one_hot(y_train, replay.n_moves)
-        self.y_test = one_hot(y_test, replay.n_moves)
+        self.y_train = one_hot(y_train, replay.n_moves, epsilon)
+        self.y_test = one_hot(y_test, replay.n_moves, epsilon)
 
         self.X_train = X_train
         self.X_test = X_test
@@ -276,7 +261,7 @@ class policy_pred(object):
         self.define_model_dim(self.X_train.shape[1], self.y_train.shape[1])
 
         print("DONE")
-        return X_train, self.y_train, X_test, self.y_test, eps
+        return X_train, self.y_train, X_test, self.y_test
 
     def define_model_dim(self, input_dim, action_space):
         """

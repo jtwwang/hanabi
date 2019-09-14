@@ -16,9 +16,8 @@ def conv_block(inputs, filters, kernel_size, strides,
         a tensor
     """
     x = Conv1D(filters=filters, kernel_size=kernel_size, strides=strides,
-               padding="same", activation=None)(inputs)
+               padding="same", activation="relu")(inputs)
     x = BatchNormalization()(x)
-    x = Activation("relu")(x)
     x = MaxPooling1D(pool_size=pool_size,
                      strides=pool_strides, padding="same")(x)
     return x

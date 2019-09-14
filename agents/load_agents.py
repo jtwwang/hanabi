@@ -28,7 +28,10 @@ def load_agent(agent_class):
         agent = NNAgent
     elif agent_class == 'MCAgent':
         from agents.mc_agent import MCAgent
-        agent = MCAgent
+        agent = MCAgent_agent
+    elif agent_class == 'PMCTSAgent':
+        from agents.pmcts_agent import PMCTS_Agent
+        agent = PMCTS_Agent
     elif agent_class == 'ProbabilisticAgent':
         from agents.probabilistic_agent import ProbabilisticAgent
         agent = ProbabilisticAgent
